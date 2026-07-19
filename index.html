@@ -100,6 +100,10 @@
   #photoPreview { margin-top: 8px; }
   #photoPreview img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
   .hint { font-size: 12px; color: #9DB2C7; margin-top: 4px; }
+  .aiBtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  #pickResults { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  #pickResults img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border: 2px solid #D8E1EA; border-radius: 10px; cursor: pointer; }
+  .aiStatus { font-size: 13px; color: #4A90D9; font-weight: 700; margin-top: 6px; min-height: 18px; }
   #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
   .parentOn #editNote { display: block; }
 </style>
@@ -131,6 +135,22 @@
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
+    <h2 style="font-size:17px">Intelligence artificielle (Gemini)</h2>
+    <div class="prow">
+      <label>Clé API Gemini — gratuite sur aistudio.google.com/apikey</label>
+      <input type="text" id="gkey" placeholder="Collez la clé ici (elle reste sur la tablette)">
+      <div class="hint">Active la belle voix, la création de pictos et la reformulation des phrases. Sans clé, l'app fonctionne comme avant.</div>
+    </div>
+    <div class="prow">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+        <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
+      </label>
+    </div>
+    <button class="pbtn ghost" id="genVoicesBtn">🎙️ Générer toutes les voix (une seule fois)</button>
+    <div class="aiStatus" id="aiStatus"></div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
     <h2 style="font-size:17px">Ajouter une image</h2>
     <div class="prow">
       <label>Mot à prononcer</label>
@@ -143,9 +163,16 @@
     <div class="prow">
       <label>Image : une photo (recommandé) ou un émoji</label>
       <input type="file" id="newPhoto" accept="image/*">
+      <div class="aiBtns">
+        <button class="pbtn ghost" id="arasaacBtn">🔍 Chercher un picto</button>
+        <button class="pbtn ghost" id="genImgBtn">✨ Générer (IA)</button>
+        <button class="pbtn ghost" id="cleanBtn">🪄 Photo → picto (IA)</button>
+      </div>
+      <div id="pickResults"></div>
+      <div class="aiStatus" id="aiStatus2"></div>
       <div id="photoPreview"></div>
       <input type="text" id="newEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
-      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins.</div>
+      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).</div>
     </div>
     <button class="pbtn primary" id="addBtn">Ajouter</button>
 
@@ -231,6 +258,8 @@ const store = {
 let customItems = store.get("custom", []);
 let hidden = new Set(store.get("hidden", []));
 let rate = store.get("rate", 0.9);
+let geminiKey = store.get("gkey", "");
+let reformOn = store.get("reform", true);
 let currentCat = "core";
 let parentMode = false;
 let strip = [];
@@ -249,7 +278,7 @@ if ("speechSynthesis" in window) {
   speechSynthesis.onvoiceschanged = pickVoice;
 }
 
-function speak(text) {
+function deviceSpeak(text) {
   // Dans Fully Kiosk, le WebView Android n'a pas speechSynthesis :
   // on passe par l'interface JavaScript de Fully (licence PLUS,
   // activer "Enable JavaScript Interface" dans les réglages Fully).
@@ -263,6 +292,163 @@ function speak(text) {
   if (frVoice) u.voice = frVoice;
   u.rate = rate;
   speechSynthesis.speak(u);
+}
+
+/* ================= IA (Gemini) =================
+   La clé API est saisie par le parent et reste dans le localStorage
+   de la tablette — jamais dans le code (qui est public sur GitHub). */
+const GEMINI = {
+  text:  "gemini-2.5-flash-lite",
+  image: "gemini-2.5-flash-image",
+  tts:   "gemini-2.5-flash-preview-tts",
+  voice: "Kore", // NE PAS CHANGER : cette voix devient LA voix de l'enfant
+};
+
+async function gemini(model, body) {
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+  );
+  if (!r.ok) throw new Error("Erreur Gemini (" + r.status + ")");
+  return r.json();
+}
+
+/* ---- Voix naturelle : générée une fois, puis cache IndexedDB ---- */
+function idbOpen() {
+  return new Promise((res, rej) => {
+    const q = indexedDB.open("virgile", 1);
+    q.onupgradeneeded = () => q.result.createObjectStore("voices");
+    q.onsuccess = () => res(q.result);
+    q.onerror = () => rej(q.error);
+  });
+}
+async function idbGet(key) {
+  try {
+    const db = await idbOpen();
+    return new Promise((res) => {
+      const q = db.transaction("voices").objectStore("voices").get(key);
+      q.onsuccess = () => res(q.result || null);
+      q.onerror = () => res(null);
+    });
+  } catch { return null; }
+}
+async function idbSet(key, val) {
+  try {
+    const db = await idbOpen();
+    return new Promise((res) => {
+      const tx = db.transaction("voices", "readwrite");
+      tx.objectStore("voices").put(val, key);
+      tx.oncomplete = res;
+      tx.onerror = res;
+    });
+  } catch {}
+}
+
+// Gemini TTS renvoie du PCM brut 16 bits 24 kHz : on l'emballe en WAV
+function pcmToWav(b64, sampleRate) {
+  const bin = atob(b64);
+  const n = bin.length;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, "RIFF"); v.setUint32(4, 36 + n, true); ws(8, "WAVE"); ws(12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  ws(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, bin.charCodeAt(i));
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+async function ttsGemini(text) {
+  const j = await gemini(GEMINI.tts, {
+    contents: [{ parts: [{ text }] }],
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: GEMINI.voice } } },
+    },
+  });
+  return pcmToWav(j.candidates[0].content.parts[0].inlineData.data, 24000);
+}
+
+const player = new Audio();
+let playerUrl = null;
+async function speak(text) {
+  if (geminiKey) {
+    try {
+      const key = GEMINI.voice + "|" + text;
+      let blob = await idbGet(key);
+      if (!blob) { blob = await ttsGemini(text); idbSet(key, blob); }
+      if (playerUrl) URL.revokeObjectURL(playerUrl);
+      playerUrl = URL.createObjectURL(blob);
+      player.src = playerUrl;
+      player.playbackRate = rate;
+      await player.play();
+      return;
+    } catch {}
+  }
+  deviceSpeak(text);
+}
+
+/* ---- Images : ARASAAC (gratuit) + génération / détourage Gemini ---- */
+async function searchArasaac(word) {
+  const r = await fetch("https://api.arasaac.org/api/pictograms/fr/search/" + encodeURIComponent(word));
+  if (!r.ok) return [];
+  const list = await r.json();
+  return list.slice(0, 8).map(p => `https://static.arasaac.org/pictograms/${p._id}/${p._id}_300.png`);
+}
+
+// Redimensionne n'importe quelle image (URL ou dataURL) en carré 256px sur fond blanc
+function toSquare256(srcUrl) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, size, size);
+      const s = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      res(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = rej;
+    img.src = srcUrl;
+  });
+}
+
+function extractImage(j) {
+  const part = j.candidates[0].content.parts.find(p => p.inlineData);
+  if (!part) throw new Error("Pas d'image dans la réponse");
+  return "data:" + part.inlineData.mimeType + ";base64," + part.inlineData.data;
+}
+
+async function genPicto(word) {
+  const j = await gemini(GEMINI.image, { contents: [{ parts: [{ text:
+    "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
+    ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." }] }] });
+  return extractImage(j);
+}
+
+async function cleanPhoto(dataUrl) {
+  const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
+  const j = await gemini(GEMINI.image, { contents: [{ parts: [
+    { inlineData: { mimeType: mime, data: b64 } },
+    { text: "Détoure le sujet principal de cette photo et place-le sur un fond blanc uni. Rends-le net et lisible comme un pictogramme de communication pour enfant. Aucun texte." },
+  ] }] });
+  return extractImage(j);
+}
+
+/* ---- Reformulation de la bande-phrase ---- */
+async function reformulate(labels) {
+  const j = await gemini(GEMINI.text, { contents: [{ parts: [{ text:
+    "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, sur son application de communication : " +
+    labels.join(", ") +
+    ". Écris UNE seule phrase courte et naturelle en français, à la première personne, qui exprime ce qu'il veut dire. Réponds uniquement avec la phrase." }] }] });
+  return j.candidates[0].content.parts[0].text.trim();
 }
 
 /* ================= Rendu ================= */
@@ -326,8 +512,11 @@ function renderStrip() {
   }
 }
 
-document.getElementById("playBtn").onclick = () => {
+document.getElementById("playBtn").onclick = async () => {
   if (strip.length === 0) return;
+  if (geminiKey && reformOn && strip.length > 1 && navigator.onLine) {
+    try { speak(await reformulate(strip.map(i => i.label))); return; } catch {}
+  }
   speak(strip.map(i => i.say || i.label).join(". "));
 };
 document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip(); };
@@ -365,6 +554,8 @@ function toggleHidden(id) {
 const panel = document.getElementById("panel");
 function openPanel() {
   document.getElementById("rate").value = rate;
+  document.getElementById("gkey").value = geminiKey;
+  document.getElementById("reformChk").checked = reformOn;
   const sel = document.getElementById("newCat");
   sel.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
   panel.classList.add("open");
@@ -378,23 +569,96 @@ document.getElementById("rate").oninput = (e) => { rate = parseFloat(e.target.va
 document.getElementById("testVoice").onclick = () => speak("Bonjour Virgile !");
 
 /* ---- Ajout d'un picto ---- */
-document.getElementById("newPhoto").onchange = (e) => {
+function setPendingPhoto(dataUrl) {
+  pendingPhoto = dataUrl;
+  document.getElementById("photoPreview").innerHTML = `<img src="${pendingPhoto}">`;
+}
+
+document.getElementById("newPhoto").onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    // Réduction à 256px pour tenir dans le localStorage
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    const s = Math.min(img.width, img.height);
-    ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
-    pendingPhoto = canvas.toDataURL("image/jpeg", 0.8);
-    document.getElementById("photoPreview").innerHTML = `<img src="${pendingPhoto}">`;
-    URL.revokeObjectURL(img.src);
-  };
-  img.src = URL.createObjectURL(file);
+  const url = URL.createObjectURL(file);
+  try { setPendingPhoto(await toSquare256(url)); }
+  catch { alert("Impossible de lire cette image."); }
+  URL.revokeObjectURL(url);
+};
+
+/* ---- Boutons IA du formulaire d'ajout ---- */
+const status2 = document.getElementById("aiStatus2");
+function needKey() {
+  if (geminiKey) return false;
+  alert("Collez d'abord votre clé API Gemini (section Intelligence artificielle ci-dessus).");
+  return true;
+}
+
+document.getElementById("arasaacBtn").onclick = async () => {
+  const word = document.getElementById("newLabel").value.trim();
+  if (!word) { alert("Écris d'abord le mot à prononcer."); return; }
+  status2.textContent = "Recherche ARASAAC…";
+  const box = document.getElementById("pickResults");
+  box.innerHTML = "";
+  try {
+    const urls = await searchArasaac(word);
+    if (!urls.length) { status2.textContent = "Aucun picto trouvé — essayez ✨ Générer (IA)."; return; }
+    status2.textContent = "Touchez le picto que Virgile reconnaîtra le mieux :";
+    for (const u of urls) {
+      const im = document.createElement("img");
+      im.crossOrigin = "anonymous";
+      im.src = u;
+      im.onclick = async () => {
+        try { setPendingPhoto(await toSquare256(u)); box.innerHTML = ""; status2.textContent = "Picto choisi ✓"; }
+        catch { status2.textContent = "Erreur de chargement, réessayez."; }
+      };
+      box.appendChild(im);
+    }
+  } catch { status2.textContent = "Recherche impossible (internet ?)."; }
+};
+
+document.getElementById("genImgBtn").onclick = async () => {
+  if (needKey()) return;
+  const word = document.getElementById("newLabel").value.trim();
+  if (!word) { alert("Écris d'abord le mot à prononcer."); return; }
+  status2.textContent = "Génération de l'image… (~10 s)";
+  try { setPendingPhoto(await toSquare256(await genPicto(word))); status2.textContent = "Image générée ✓"; }
+  catch (e) { status2.textContent = "Échec de la génération : " + e.message; }
+};
+
+document.getElementById("cleanBtn").onclick = async () => {
+  if (needKey()) return;
+  if (!pendingPhoto) { alert("Choisis d'abord une photo (bouton ci-dessus)."); return; }
+  status2.textContent = "Détourage de la photo… (~10 s)";
+  try { setPendingPhoto(await toSquare256(await cleanPhoto(pendingPhoto))); status2.textContent = "Photo transformée en picto ✓"; }
+  catch (e) { status2.textContent = "Échec du détourage : " + e.message; }
+};
+
+/* ---- Réglages IA ---- */
+document.getElementById("gkey").onchange = (e) => {
+  geminiKey = e.target.value.trim();
+  store.set("gkey", geminiKey);
+};
+document.getElementById("reformChk").onchange = (e) => {
+  reformOn = e.target.checked;
+  store.set("reform", reformOn);
+};
+
+document.getElementById("genVoicesBtn").onclick = async () => {
+  if (needKey()) return;
+  const status = document.getElementById("aiStatus");
+  const items = allItems();
+  let done = 0;
+  for (const item of items) {
+    const text = item.say || item.label;
+    const key = GEMINI.voice + "|" + text;
+    try {
+      if (!(await idbGet(key))) idbSet(key, await ttsGemini(text));
+      done++;
+      status.textContent = `Voix générées : ${done}/${items.length}`;
+    } catch (e) {
+      status.textContent = `Arrêt à ${done}/${items.length} : ${e.message}. Relancez pour continuer.`;
+      return;
+    }
+  }
+  status.textContent = `Terminé ✓ — les ${items.length} voix sont sur la tablette (hors ligne).`;
 };
 
 document.getElementById("addBtn").onclick = () => {
