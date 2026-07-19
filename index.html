@@ -243,6 +243,8 @@
     <div class="prow">
       <label>Code d'accès Leova (serveur sécurisé, recommandé)</label>
       <input type="text" id="bsecret" placeholder="Collez le code d'accès (il reste sur la tablette)">
+      <button class="pbtn ghost" id="testBackendBtn" style="margin-top:8px">🔌 Tester le serveur</button>
+      <div class="aiStatus" id="backendStatus"></div>
       <div class="hint">Active la reformulation via le serveur Leova (Europe, RGPD) — aucune clé Gemini nécessaire pour cette fonction.</div>
     </div>
     <div class="prow">
@@ -323,7 +325,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "23"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "24"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -975,11 +977,12 @@ function renderStrip() {
 document.getElementById("playBtn").onclick = async () => {
   if (strip.length === 0) return;
   if ((backendSecret || geminiKey) && reformOn && strip.length > 1 && navigator.onLine) {
-    // 3,5 s maximum pour la reformulation, sinon on lit les mots bruts
+    // 6 s maximum pour la reformulation (démarrage à froid du serveur compris),
+    // sinon on lit les mots bruts
     try {
       const phrase = await Promise.race([
         reformulate(strip.map(i => i.label)),
-        sleep(3500).then(() => { throw new Error("timeout"); }),
+        sleep(6000).then(() => { throw new Error("timeout"); }),
       ]);
       speak(phrase);
       return;
@@ -1438,8 +1441,25 @@ document.getElementById("addCatBtn").onclick = () => {
 
 /* ---- Réglages IA ---- */
 document.getElementById("bsecret").onchange = (e) => {
-  backendSecret = e.target.value.trim();
+  // Supprime TOUS les espaces et retours à la ligne (un copier-coller depuis un
+  // terminal insère souvent un saut de ligne au milieu du code)
+  backendSecret = e.target.value.replace(/\s+/g, "");
+  e.target.value = backendSecret;
   store.set("bsecret", backendSecret);
+};
+
+document.getElementById("testBackendBtn").onclick = async () => {
+  const st = document.getElementById("backendStatus");
+  if (!backendSecret) { st.textContent = "Collez d'abord le code d'accès ci-dessus."; return; }
+  st.textContent = "Test en cours…";
+  try {
+    const phrase = await reformulateBackend(["Je veux", "École"]);
+    st.textContent = `Serveur OK ✓ — « ${phrase} »`;
+  } catch (e) {
+    st.textContent = String(e.message).includes("401")
+      ? "Code d'accès refusé (401) — revérifiez le copier-coller (le code fait 48 caractères)."
+      : "Échec : " + e.message + " (internet ?)";
+  }
 };
 document.getElementById("gkey").onchange = (e) => {
   geminiKey = e.target.value.trim();
@@ -1525,6 +1545,9 @@ document.getElementById("addBtn").onclick = () => {
 
 /* ================= Démarrage ================= */
 document.getElementById("verTag").textContent = "v" + APP_VERSION;
+// Réveille le serveur Leova dès l'ouverture (démarrage à froid absorbé avant
+// le premier ▶ de l'enfant)
+if (backendSecret && navigator.onLine) fetch(BACKEND_URL + "/health").catch(() => {});
 renderTabs();
 renderGrid();
 renderStrip();
