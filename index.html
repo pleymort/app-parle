@@ -71,6 +71,14 @@
     border-radius: 50%; border: none; background: rgba(150,165,180,.25);
     font-size: 20px; color: #7C8FA3; z-index: 40; cursor: pointer;
   }
+  /* Retour visuel pendant l'appui long : l'anneau se remplit en 2 s */
+  #gear.holding {
+    animation: gearHold 2s linear forwards;
+  }
+  @keyframes gearHold {
+    from { box-shadow: 0 0 0 3px #4A90D9 inset, 0 0 0 0 rgba(74,144,217,.35); background: rgba(150,165,180,.25); }
+    to   { box-shadow: 0 0 0 22px #4A90D9 inset, 0 0 0 10px rgba(74,144,217,.35); background: #4A90D9; color: white; }
+  }
 
   /* ---- Mode parent ---- */
   #panel {
@@ -524,12 +532,24 @@ document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip();
 /* ================= Mode parent ================= */
 const gear = document.getElementById("gear");
 let gearTimer = null;
-// Appui long de 2 secondes pour éviter une activation accidentelle par l'enfant
+// Appui long de 2 secondes pour éviter une activation accidentelle par l'enfant.
+// L'anneau bleu qui se remplit montre au parent que l'appui est bien compté.
+function gearRelease() {
+  clearTimeout(gearTimer);
+  gear.classList.remove("holding");
+}
 gear.addEventListener("pointerdown", () => {
-  gearTimer = setTimeout(() => { enterParentMode(); }, 2000);
+  gear.classList.add("holding");
+  gearTimer = setTimeout(() => {
+    gearRelease();
+    if (navigator.vibrate) navigator.vibrate(80);
+    enterParentMode();
+  }, 2000);
 });
-gear.addEventListener("pointerup", () => clearTimeout(gearTimer));
-gear.addEventListener("pointerleave", () => clearTimeout(gearTimer));
+gear.addEventListener("pointerup", gearRelease);
+gear.addEventListener("pointerleave", gearRelease);
+// Sur Android, l'appui long peut déclencher le menu contextuel : on le bloque
+gear.addEventListener("contextmenu", (e) => e.preventDefault());
 
 function enterParentMode() {
   parentMode = true;
