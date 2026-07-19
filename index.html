@@ -254,7 +254,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "13"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "14"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -325,7 +325,7 @@ const DEFAULT_ITEMS = [
   { id:"didi",    cat:"people", label:"Didi",     say:"Didi",              emoji:"👵" },
   { id:"podo",    cat:"people", label:"Podo",     say:"Podo",              emoji:"👴" },
   { id:"romain",  cat:"people", label:"Romain",   say:"Romain",            emoji:"👨‍🦱" },
-  { id:"jeajea",  cat:"people", label:"JeaJea",   say:"Jéa Jéa",           emoji:"👩‍🦰" },
+  { id:"jeajea",  cat:"people", label:"JeaJea",   say:"Jaja",              emoji:"👩‍🦰" }, // orthographe phonétique pour la voix
   { id:"maitresse",cat:"people",label:"Annièce",  say:"Annièce",           emoji:"👩‍🏫" },
   { id:"emilie",  cat:"people", label:"Émilie",   say:"Émilie",            emoji:"🧑‍🏫" },
   { id:"calin",   cat:"people", label:"Câlin",    say:"Je veux un câlin",  emoji:"🫂" },
@@ -384,6 +384,7 @@ function allItems() {
     const m = { ...i, cat: o.cat || i.cat };
     if (o.emoji) { m.emoji = o.emoji; m.photo = null; }
     else if (o.photo) { m.photo = o.photo; }
+    if (o.say) m.say = o.say;
     return m;
   }).concat(customItems);
 }
@@ -396,6 +397,18 @@ function setItemVisual(item, vis) {
     store.set("custom", customItems);
   } else {
     overrides[item.id] = { ...(overrides[item.id] || {}), photo: vis.photo || null, emoji: vis.emoji || null };
+    store.set("over", overrides);
+  }
+}
+
+/* Change la phrase prononcée (utile pour corriger une prononciation, ex "JeaJea" → "Jaja") */
+function setItemSay(item, say) {
+  if (item.id.startsWith("c_")) {
+    const it = customItems.find(x => x.id === item.id);
+    if (it) it.say = say;
+    store.set("custom", customItems);
+  } else {
+    overrides[item.id] = { ...(overrides[item.id] || {}), say };
     store.set("over", overrides);
   }
 }
@@ -661,10 +674,10 @@ async function magicPlan(concept) {
     contents: [{ parts: [{ text:
       `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
 Pictogrammes déjà présents dans l'app : ${existing}.
-La demande peut être : UN concept à créer ("le trampoline"), une LISTE ("fraise, banane, yaourt"), un THÈME à développer ("le petit-déjeuner" → les aliments typiques), ou la MODIFICATION DE L'IMAGE d'un pictogramme déjà présent ("change l'image de Gâteau, mets un cupcake").
+La demande peut être : UN concept à créer ("le trampoline"), une LISTE ("fraise, banane, yaourt"), un THÈME à développer ("le petit-déjeuner" → les aliments typiques), la MODIFICATION DE L'IMAGE d'un pictogramme déjà présent ("change l'image de Gâteau, mets un cupcake"), ou la MODIFICATION DE LA PHRASE PRONONCÉE ("quand il touche JeaJea, dis Jaja" ; pour corriger une prononciation, orthographie la phrase phonétiquement).
 Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
-"action" : "create" (nouveau pictogramme) ou "image" (changer seulement l'image d'un pictogramme existant) ;
-"target" : si action "image", le label EXACT du pictogramme existant concerné, sinon null ;
+"action" : "create" (nouveau pictogramme), "image" (changer seulement l'image d'un pictogramme existant) ou "say" (changer seulement la phrase prononcée d'un pictogramme existant) ;
+"target" : si action "image" ou "say", le label EXACT du pictogramme existant concerné, sinon null ;
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
 "say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
 "cat" : la catégorie la plus logique parmi : ${catList} ;
@@ -1036,10 +1049,14 @@ function renderMagicList() {
   for (const c of magicItems) {
     const d = document.createElement("div");
     d.className = "mcell" + (c.selected ? " sel" : "");
-    const catLabel = c.mode === "update" ? "image modifiée" : (cats().find(x => x.id === c.item.cat) || { label: "?" }).label;
-    d.innerHTML = `${pictoVisual(c.item)}<div class="mlb">${c.item.label}</div><div class="mcat">${catLabel}</div><button class="mswap" title="Changer l'image">🔄</button>`;
+    const catLabel = c.mode === "say" ? `dira « ${c.newSay} »`
+      : c.mode === "update" ? "image modifiée"
+      : (cats().find(x => x.id === c.item.cat) || { label: "?" }).label;
+    const swapBtn = c.mode === "say" ? "" : `<button class="mswap" title="Changer l'image">🔄</button>`;
+    d.innerHTML = `${pictoVisual(c.item)}<div class="mlb">${c.item.label}</div><div class="mcat">${catLabel}</div>${swapBtn}`;
     d.onclick = () => { c.selected = !c.selected; renderMagicList(); };
-    d.querySelector(".mswap").onclick = (e) => { e.stopPropagation(); cycleImage(c); };
+    const sw = d.querySelector(".mswap");
+    if (sw) sw.onclick = (e) => { e.stopPropagation(); cycleImage(c); };
     box.appendChild(d);
   }
   const n = magicItems.filter(c => c.selected).length;
@@ -1080,6 +1097,14 @@ document.getElementById("magicBtn").onclick = async () => {
       const p = plans[k];
       if (!p) continue;
 
+      // Modification de la phrase prononcée d'un picto existant
+      if (p.action === "say" && p.target && p.say) {
+        const target = allItems().find(i => i.label.toLowerCase() === String(p.target).toLowerCase());
+        if (!target) continue;
+        proposals.push({ mode: "say", item: { ...target }, newSay: p.say, urls: [], idx: 0, selected: true });
+        continue;
+      }
+
       // Modification de l'image d'un picto existant (proposée, appliquée à la validation)
       if (p.action === "image" && p.target) {
         const target = allItems().find(i => i.label.toLowerCase() === String(p.target).toLowerCase());
@@ -1119,7 +1144,8 @@ document.getElementById("magicAdd").onclick = () => {
   if (!chosen.length) return;
   let added = 0, updated = 0;
   for (const c of chosen) {
-    if (c.mode === "update") { setItemVisual(c.item, { photo: c.item.photo, emoji: c.item.emoji }); updated++; }
+    if (c.mode === "say") { setItemSay(c.item, c.newSay); ensureVoice(c.newSay); updated++; }
+    else if (c.mode === "update") { setItemVisual(c.item, { photo: c.item.photo, emoji: c.item.emoji }); updated++; }
     else { customItems.push(c.item); added++; }
   }
   store.set("custom", customItems);
