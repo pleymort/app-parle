@@ -112,6 +112,10 @@
   #pickResults { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
   #pickResults img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border: 2px solid #D8E1EA; border-radius: 10px; cursor: pointer; }
   .aiStatus { font-size: 13px; color: #4A90D9; font-weight: 700; margin-top: 6px; min-height: 18px; }
+  .magicRow { display: flex; gap: 8px; }
+  .magicRow input { width: auto; flex: 1; }
+  .magicRow .pbtn { margin: 0; }
+  #magicPreview img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
   #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
   .parentOn #editNote { display: block; }
 </style>
@@ -134,6 +138,27 @@
   <div id="panelCard">
     <h2>Réglages (parents)</h2>
     <p class="sub">Ajoutez des images, réglez la voix. Virgile ne voit pas cet écran.</p>
+
+    <h2 style="font-size:17px">✨ Ajout magique</h2>
+    <div class="prow">
+      <label>Dites ou écrivez ce que Virgile doit pouvoir demander</label>
+      <div class="magicRow">
+        <input type="text" id="magicInput" placeholder="ex : le trampoline du jardin">
+        <button class="pbtn ghost" id="magicMic" title="Dicter au micro">🎤</button>
+      </div>
+      <button class="pbtn primary" id="magicBtn" style="margin-top:8px">✨ Créer le picto</button>
+      <div class="aiStatus" id="magicStatus"></div>
+      <div id="magicResult" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <span id="magicPreview"></span>
+          <span id="magicInfo" style="font-size:13px;color:#55677A;font-weight:600"></span>
+        </div>
+        <button class="pbtn ghost" id="magicOther">🔄 Autre image</button>
+        <button class="pbtn warn" id="magicUndo">↩️ Annuler</button>
+      </div>
+    </div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
     <div class="prow">
       <label>Vitesse de la voix</label>
@@ -470,6 +495,22 @@ async function cleanPhoto(dataUrl) {
   return extractImage(j);
 }
 
+/* ---- Ajout magique : le parent donne un concept, l'IA décide de tout ---- */
+async function magicPlan(concept) {
+  const cats = CATEGORIES.map(c => `"${c.id}" (${c.label})`).join(", ");
+  const j = await gemini(GEMINI.text, {
+    contents: [{ parts: [{ text:
+      `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent veut ajouter ce concept : "${concept}".
+Réponds UNIQUEMENT un objet JSON avec ces clés :
+"label" : le mot court affiché sous le pictogramme (1 à 2 mots, première lettre en majuscule, ex "Piscine") ;
+"say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
+"cat" : la catégorie la plus logique parmi : ${cats} ;
+"search" : un nom commun simple et générique pour chercher un pictogramme dans la banque ARASAAC (ex "piscine").` }] }],
+    generationConfig: { responseMimeType: "application/json" },
+  });
+  return JSON.parse(j.candidates[0].content.parts[0].text);
+}
+
 /* ---- Reformulation de la bande-phrase ---- */
 async function reformulate(labels) {
   const j = await gemini(GEMINI.text, { contents: [{ parts: [{ text:
@@ -677,6 +718,113 @@ document.getElementById("cleanBtn").onclick = async () => {
   status2.textContent = "Détourage de la photo… (~10 s)";
   try { setPendingPhoto(await toSquare256(await cleanPhoto(pendingPhoto))); status2.textContent = "Photo transformée en picto ✓"; }
   catch (e) { status2.textContent = "Échec du détourage : " + e.message; }
+};
+
+/* ---- Ajout magique ---- */
+const magicStatus = document.getElementById("magicStatus");
+let magicItem = null, magicUrls = [], magicIdx = 0;
+
+document.getElementById("magicBtn").onclick = async () => {
+  if (needKey()) return;
+  const concept = document.getElementById("magicInput").value.trim();
+  if (!concept) { alert("Écris (ou dicte au micro) ce que Virgile doit pouvoir demander."); return; }
+  document.getElementById("magicResult").style.display = "none";
+  try {
+    magicStatus.textContent = "Je réfléchis…";
+    const plan = await magicPlan(concept);
+    if (!CATEGORIES.some(c => c.id === plan.cat)) plan.cat = "core";
+    if (!plan.label) throw new Error("réponse incomplète");
+    magicStatus.textContent = "Je cherche l'image…";
+    magicUrls = await searchArasaac(plan.search || plan.label);
+    magicIdx = 0;
+    let photo;
+    if (magicUrls.length) photo = await toSquare256(magicUrls[0]);
+    else {
+      magicStatus.textContent = "Pas trouvé dans ARASAAC — je dessine le picto… (~10 s)";
+      photo = await toSquare256(await genPicto(plan.label));
+    }
+    magicItem = { id: "c_" + Date.now(), cat: plan.cat, label: plan.label, say: plan.say || plan.label, emoji: null, photo };
+    customItems.push(magicItem);
+    store.set("custom", customItems);
+    currentCat = plan.cat;
+    renderTabs(); renderGrid();
+    ensureVoice(magicItem.say); // belle voix en arrière-plan
+    document.getElementById("magicPreview").innerHTML = `<img src="${photo}">`;
+    document.getElementById("magicInfo").textContent =
+      `« ${magicItem.label} » — dira « ${magicItem.say} » — rangé dans ${CATEGORIES.find(c => c.id === plan.cat).label}`;
+    document.getElementById("magicResult").style.display = "block";
+    magicStatus.textContent = "Ajouté ✓ — la belle voix se prépare en arrière-plan.";
+    document.getElementById("magicInput").value = "";
+  } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
+};
+
+document.getElementById("magicOther").onclick = async () => {
+  if (!magicItem) return;
+  magicIdx++;
+  try {
+    let photo;
+    if (magicIdx < magicUrls.length) photo = await toSquare256(magicUrls[magicIdx]);
+    else {
+      magicStatus.textContent = "Je dessine une nouvelle image… (~10 s)";
+      photo = await toSquare256(await genPicto(magicItem.label));
+    }
+    magicItem.photo = photo;
+    store.set("custom", customItems);
+    renderGrid();
+    document.getElementById("magicPreview").innerHTML = `<img src="${photo}">`;
+    magicStatus.textContent = "Image remplacée ✓";
+  } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
+};
+
+document.getElementById("magicUndo").onclick = () => {
+  if (!magicItem) return;
+  customItems = customItems.filter(i => i.id !== magicItem.id);
+  store.set("custom", customItems);
+  magicItem = null;
+  document.getElementById("magicResult").style.display = "none";
+  magicStatus.textContent = "Annulé.";
+  renderGrid();
+};
+
+/* Dictée : on enregistre le micro puis Gemini transcrit
+   (la reconnaissance vocale du navigateur n'existe pas dans le WebView de Fully) */
+let rec = null;
+const micBtn = document.getElementById("magicMic");
+micBtn.onclick = async () => {
+  if (needKey()) return;
+  if (rec && rec.state === "recording") { rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) {
+    magicStatus.textContent = "Micro non disponible sur cet appareil — écrivez le mot.";
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    rec = new MediaRecorder(stream);
+    rec.ondataavailable = (e) => chunks.push(e.data);
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      micBtn.textContent = "🎤";
+      magicStatus.textContent = "Je transcris…";
+      try {
+        const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+        const b64 = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result.split(",")[1]);
+          r.readAsDataURL(blob);
+        });
+        const j = await gemini(GEMINI.text, { contents: [{ parts: [
+          { inlineData: { mimeType: blob.type.split(";")[0], data: b64 } },
+          { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
+        ] }] });
+        document.getElementById("magicInput").value = j.candidates[0].content.parts[0].text.trim();
+        magicStatus.textContent = "Transcrit ✓ — touchez ✨ Créer le picto";
+      } catch (e) { magicStatus.textContent = "Transcription impossible : " + e.message; }
+    };
+    rec.start();
+    micBtn.textContent = "⏹️";
+    magicStatus.textContent = "Parlez… puis retouchez le bouton pour arrêter.";
+  } catch { magicStatus.textContent = "Accès micro refusé (autorisation à donner dans Fully / Android)."; }
 };
 
 /* ---- Réglages IA ---- */
