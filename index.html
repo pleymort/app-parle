@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4A90D9">
+<link rel="manifest" href="manifest.json">
+<title>Virgile parle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+  html, body { height: 100%; overflow: hidden; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; touch-action: manipulation; }
+  body { background: #F0F4F8; display: flex; flex-direction: column; }
+
+  /* ---- Bande-phrase (style PECS) ---- */
+  #strip {
+    display: flex; align-items: center; gap: 8px;
+    background: #FFFFFF; border-bottom: 3px solid #D8E1EA;
+    padding: 8px 10px; min-height: 96px;
+  }
+  #stripItems { display: flex; gap: 6px; flex: 1; overflow-x: auto; align-items: center; }
+  .stripCell {
+    min-width: 72px; height: 76px; border-radius: 12px; background: #EAF2FB;
+    border: 2px solid #B9D4EE; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .stripCell .em { font-size: 34px; line-height: 1; }
+  .stripCell img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+  .stripCell .lb { font-size: 11px; font-weight: 700; color: #2B5586; margin-top: 3px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stripHint { color: #9DB2C7; font-size: 15px; font-weight: 600; padding-left: 6px; }
+  .stripBtn {
+    width: 72px; height: 76px; border-radius: 14px; border: none; flex-shrink: 0;
+    font-size: 32px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  #playBtn { background: #35A853; color: white; }
+  #clearBtn { background: #F1F5F9; color: #8899AA; font-size: 26px; }
+
+  /* ---- Onglets catégories ---- */
+  #tabs {
+    display: flex; gap: 8px; padding: 10px 10px 4px; overflow-x: auto; flex-shrink: 0;
+  }
+  .tab {
+    border: none; border-radius: 16px; padding: 10px 16px; font-size: 17px; font-weight: 700;
+    background: #FFFFFF; color: #55677A; display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0; cursor: pointer; box-shadow: 0 1px 3px rgba(30,60,90,.08);
+  }
+  .tab .tem { font-size: 22px; }
+  .tab.active { background: #4A90D9; color: white; }
+
+  /* ---- Grille de pictos ---- */
+  #grid {
+    flex: 1; overflow-y: auto; padding: 10px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
+    align-content: start;
+  }
+  .picto {
+    background: white; border: none; border-radius: 20px; padding: 14px 8px 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 2px 6px rgba(30,60,90,.10); cursor: pointer;
+    min-height: 150px; transition: transform .08s;
+  }
+  .picto:active, .picto.flash { transform: scale(.93); background: #DDEBFA; }
+  .picto .em { font-size: 62px; line-height: 1.1; }
+  .picto img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; }
+  .picto .lb { font-size: 19px; font-weight: 800; color: #24425F; text-align: center; }
+  .picto.hiddenItem { opacity: .35; outline: 3px dashed #E08A8A; }
+
+  /* ---- Bouton parent ---- */
+  #gear {
+    position: fixed; bottom: 10px; right: 10px; width: 44px; height: 44px;
+    border-radius: 50%; border: none; background: rgba(150,165,180,.25);
+    font-size: 20px; color: #7C8FA3; z-index: 40; cursor: pointer;
+  }
+
+  /* ---- Mode parent ---- */
+  #panel {
+    position: fixed; inset: 0; background: rgba(20,40,60,.45); z-index: 50;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #panel.open { display: flex; }
+  #panelCard {
+    background: white; border-radius: 20px; padding: 22px; width: 100%; max-width: 440px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  #panelCard h2 { color: #24425F; font-size: 20px; margin-bottom: 4px; }
+  #panelCard p.sub { color: #7C8FA3; font-size: 13px; margin-bottom: 16px; }
+  .prow { margin-bottom: 14px; }
+  .prow label { display: block; font-size: 13px; font-weight: 700; color: #55677A; margin-bottom: 5px; }
+  .prow input[type=text], .prow select {
+    width: 100%; padding: 10px; border: 2px solid #D8E1EA; border-radius: 10px; font-size: 16px;
+  }
+  .prow input[type=range] { width: 100%; }
+  .pbtn {
+    border: none; border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700;
+    cursor: pointer; margin-right: 8px; margin-top: 4px;
+  }
+  .pbtn.primary { background: #4A90D9; color: white; }
+  .pbtn.ghost { background: #EDF2F7; color: #55677A; }
+  .pbtn.warn { background: #FDECEC; color: #C0392B; }
+  #photoPreview { margin-top: 8px; }
+  #photoPreview img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+  .hint { font-size: 12px; color: #9DB2C7; margin-top: 4px; }
+  #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
+  .parentOn #editNote { display: block; }
+</style>
+</head>
+<body>
+
+<div id="strip">
+  <div id="stripItems"><span id="stripHint">Touche les images pour parler…</span></div>
+  <button id="clearBtn" class="stripBtn" aria-label="Effacer">✕</button>
+  <button id="playBtn" class="stripBtn" aria-label="Lire la phrase">▶</button>
+</div>
+
+<div id="editNote">Mode parent : touche un picto pour le masquer / le réafficher. ⚙️ pour les réglages.</div>
+<div id="tabs"></div>
+<div id="grid"></div>
+
+<button id="gear" aria-label="Mode parent">⚙️</button>
+
+<div id="panel">
+  <div id="panelCard">
+    <h2>Réglages (parents)</h2>
+    <p class="sub">Ajoutez des images, réglez la voix. Virgile ne voit pas cet écran.</p>
+
+    <div class="prow">
+      <label>Vitesse de la voix</label>
+      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
+      <button class="pbtn ghost" id="testVoice">🔊 Tester la voix</button>
+    </div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">Ajouter une image</h2>
+    <div class="prow">
+      <label>Mot à prononcer</label>
+      <input type="text" id="newLabel" placeholder="ex : doudou, piscine, mamie…">
+    </div>
+    <div class="prow">
+      <label>Catégorie</label>
+      <select id="newCat"></select>
+    </div>
+    <div class="prow">
+      <label>Image : une photo (recommandé) ou un émoji</label>
+      <input type="file" id="newPhoto" accept="image/*">
+      <div id="photoPreview"></div>
+      <input type="text" id="newEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
+      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins.</div>
+    </div>
+    <button class="pbtn primary" id="addBtn">Ajouter</button>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+    <button class="pbtn ghost" id="closePanel">Fermer</button>
+    <button class="pbtn warn" id="exitParent">Quitter le mode parent</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= Vocabulaire de départ =================
+   Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
+   Commencez PETIT : masquez tout sauf 4-6 pictos très motivants,
+   puis réaffichez-en au fur et à mesure. */
+const CATEGORIES = [
+  { id: "core",    label: "Important", emoji: "⭐" },
+  { id: "food",    label: "Manger",    emoji: "🍎" },
+  { id: "play",    label: "Jouer",     emoji: "🧸" },
+  { id: "people",  label: "Personnes", emoji: "👨‍👩‍👦" },
+  { id: "feel",    label: "Je ressens",emoji: "😊" },
+  { id: "actions", label: "Actions",   emoji: "🏃" },
+];
+
+const DEFAULT_ITEMS = [
+  // Vocabulaire "noyau" — les mots les plus puissants
+  { id:"encore",  cat:"core", label:"Encore",     say:"Encore !",          emoji:"🔁" },
+  { id:"fini",    cat:"core", label:"Fini",       say:"C'est fini",        emoji:"✅" },
+  { id:"aide",    cat:"core", label:"Aide-moi",   say:"Aide-moi s'il te plaît", emoji:"🙋" },
+  { id:"oui",     cat:"core", label:"Oui",        say:"Oui",               emoji:"👍" },
+  { id:"non",     cat:"core", label:"Non",        say:"Non",               emoji:"👎" },
+  { id:"pause",   cat:"core", label:"Attends",    say:"Attends un peu",    emoji:"✋" },
+  { id:"mal",     cat:"core", label:"J'ai mal",   say:"J'ai mal",          emoji:"🤕" },
+  { id:"toilettes",cat:"core",label:"Toilettes",  say:"Je veux aller aux toilettes", emoji:"🚽" },
+
+  // Manger / boire
+  { id:"eau",     cat:"food", label:"Eau",        say:"Je veux de l'eau",  emoji:"💧" },
+  { id:"manger",  cat:"food", label:"Manger",     say:"Je veux manger",    emoji:"🍽️" },
+  { id:"lait",    cat:"food", label:"Lait",       say:"Je veux du lait",   emoji:"🥛" },
+  { id:"gateau",  cat:"food", label:"Gâteau",     say:"Je veux du gâteau", emoji:"🍰" },
+  { id:"pomme",   cat:"food", label:"Pomme",      say:"Je veux une pomme", emoji:"🍎" },
+  { id:"pates",   cat:"food", label:"Pâtes",      say:"Je veux des pâtes", emoji:"🍝" },
+  { id:"compote", cat:"food", label:"Compote",    say:"Je veux de la compote", emoji:"🥣" },
+
+  // Jouer
+  { id:"jouer",   cat:"play", label:"Jouer",      say:"Je veux jouer",     emoji:"🧸" },
+  { id:"dehors",  cat:"play", label:"Dehors",     say:"Je veux aller dehors", emoji:"🌳" },
+  { id:"musique", cat:"play", label:"Musique",    say:"Je veux de la musique", emoji:"🎵" },
+  { id:"tablette",cat:"play", label:"Tablette",   say:"Je veux la tablette", emoji:"📱" },
+  { id:"bulles",  cat:"play", label:"Bulles",     say:"Je veux des bulles", emoji:"🫧" },
+  { id:"balancoire",cat:"play",label:"Balançoire",say:"Je veux la balançoire", emoji:"🛝" },
+  { id:"chatouilles",cat:"play",label:"Chatouilles",say:"Je veux des chatouilles", emoji:"🤗" },
+
+  // Personnes
+  { id:"maman",   cat:"people", label:"Maman",    say:"Maman",             emoji:"👩" },
+  { id:"papa",    cat:"people", label:"Papa",     say:"Papa",              emoji:"👨" },
+  { id:"calin",   cat:"people", label:"Câlin",    say:"Je veux un câlin",  emoji:"🤗" },
+
+  // Sentiments
+  { id:"content", cat:"feel", label:"Content",    say:"Je suis content",   emoji:"😊" },
+  { id:"triste",  cat:"feel", label:"Triste",     say:"Je suis triste",    emoji:"😢" },
+  { id:"fache",   cat:"feel", label:"Fâché",      say:"Je suis fâché",     emoji:"😠" },
+  { id:"fatigue", cat:"feel", label:"Fatigué",    say:"Je suis fatigué",   emoji:"😴" },
+  { id:"peur",    cat:"feel", label:"Peur",       say:"J'ai peur",         emoji:"😨" },
+
+  // Actions
+  { id:"dormir",  cat:"actions", label:"Dormir",  say:"Je veux dormir",    emoji:"🛏️" },
+  { id:"bain",    cat:"actions", label:"Bain",    say:"Je veux prendre le bain", emoji:"🛁" },
+  { id:"promener",cat:"actions", label:"Promenade",say:"Je veux me promener", emoji:"🚶" },
+  { id:"voiture", cat:"actions", label:"Voiture", say:"On va en voiture",  emoji:"🚗" },
+];
+
+/* ================= État ================= */
+const store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem("vp_" + key); return v ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, val) { try { localStorage.setItem("vp_" + key, JSON.stringify(val)); } catch {} }
+};
+
+let customItems = store.get("custom", []);
+let hidden = new Set(store.get("hidden", []));
+let rate = store.get("rate", 0.9);
+let currentCat = "core";
+let parentMode = false;
+let strip = [];
+let pendingPhoto = null;
+
+function allItems() { return DEFAULT_ITEMS.concat(customItems); }
+
+/* ================= Voix ================= */
+let frVoice = null;
+function pickVoice() {
+  const voices = speechSynthesis.getVoices();
+  frVoice = voices.find(v => v.lang === "fr-FR") || voices.find(v => v.lang.startsWith("fr")) || null;
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speak(text) {
+  // Dans Fully Kiosk, le WebView Android n'a pas speechSynthesis :
+  // on passe par l'interface JavaScript de Fully (licence PLUS,
+  // activer "Enable JavaScript Interface" dans les réglages Fully).
+  if (window.fully && typeof fully.textToSpeech === "function") {
+    try { fully.textToSpeech(text); return; } catch {}
+  }
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "fr-FR";
+  if (frVoice) u.voice = frVoice;
+  u.rate = rate;
+  speechSynthesis.speak(u);
+}
+
+/* ================= Rendu ================= */
+const tabsEl = document.getElementById("tabs");
+const gridEl = document.getElementById("grid");
+const stripItemsEl = document.getElementById("stripItems");
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  for (const c of CATEGORIES) {
+    const b = document.createElement("button");
+    b.className = "tab" + (c.id === currentCat ? " active" : "");
+    b.innerHTML = `<span class="tem">${c.emoji}</span>${c.label}`;
+    b.onclick = () => { currentCat = c.id; renderTabs(); renderGrid(); };
+    tabsEl.appendChild(b);
+  }
+}
+
+function pictoVisual(item, big) {
+  if (item.photo) return `<img src="${item.photo}" alt="">`;
+  return `<span class="em">${item.emoji || "🔹"}</span>`;
+}
+
+function renderGrid() {
+  gridEl.innerHTML = "";
+  for (const item of allItems()) {
+    if (item.cat !== currentCat) continue;
+    const isHidden = hidden.has(item.id);
+    if (isHidden && !parentMode) continue;
+    const b = document.createElement("button");
+    b.className = "picto" + (isHidden ? " hiddenItem" : "");
+    b.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
+    b.onclick = () => {
+      if (parentMode) { toggleHidden(item.id); return; }
+      b.classList.add("flash");
+      setTimeout(() => b.classList.remove("flash"), 180);
+      speak(item.say || item.label);
+      addToStrip(item);
+    };
+    gridEl.appendChild(b);
+  }
+}
+
+function addToStrip(item) {
+  if (strip.length >= 4) strip.shift();
+  strip.push(item);
+  renderStrip();
+}
+
+function renderStrip() {
+  stripItemsEl.innerHTML = "";
+  if (strip.length === 0) {
+    stripItemsEl.innerHTML = `<span id="stripHint">Touche les images pour parler…</span>`;
+    return;
+  }
+  for (const item of strip) {
+    const d = document.createElement("div");
+    d.className = "stripCell";
+    d.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
+    stripItemsEl.appendChild(d);
+  }
+}
+
+document.getElementById("playBtn").onclick = () => {
+  if (strip.length === 0) return;
+  speak(strip.map(i => i.say || i.label).join(". "));
+};
+document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip(); };
+
+/* ================= Mode parent ================= */
+const gear = document.getElementById("gear");
+let gearTimer = null;
+// Appui long de 2 secondes pour éviter une activation accidentelle par l'enfant
+gear.addEventListener("pointerdown", () => {
+  gearTimer = setTimeout(() => { enterParentMode(); }, 2000);
+});
+gear.addEventListener("pointerup", () => clearTimeout(gearTimer));
+gear.addEventListener("pointerleave", () => clearTimeout(gearTimer));
+
+function enterParentMode() {
+  parentMode = true;
+  document.body.classList.add("parentOn");
+  openPanel();
+  renderGrid();
+}
+function exitParentMode() {
+  parentMode = false;
+  document.body.classList.remove("parentOn");
+  closePanel();
+  renderGrid();
+}
+
+function toggleHidden(id) {
+  if (hidden.has(id)) hidden.delete(id); else hidden.add(id);
+  store.set("hidden", [...hidden]);
+  renderGrid();
+}
+
+/* ---- Panneau réglages ---- */
+const panel = document.getElementById("panel");
+function openPanel() {
+  document.getElementById("rate").value = rate;
+  const sel = document.getElementById("newCat");
+  sel.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
+  panel.classList.add("open");
+}
+function closePanel() { panel.classList.remove("open"); }
+
+document.getElementById("closePanel").onclick = closePanel;
+document.getElementById("exitParent").onclick = exitParentMode;
+document.getElementById("gear").onclick = () => { if (parentMode) openPanel(); };
+document.getElementById("rate").oninput = (e) => { rate = parseFloat(e.target.value); store.set("rate", rate); };
+document.getElementById("testVoice").onclick = () => speak("Bonjour Virgile !");
+
+/* ---- Ajout d'un picto ---- */
+document.getElementById("newPhoto").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    // Réduction à 256px pour tenir dans le localStorage
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const s = Math.min(img.width, img.height);
+    ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+    pendingPhoto = canvas.toDataURL("image/jpeg", 0.8);
+    document.getElementById("photoPreview").innerHTML = `<img src="${pendingPhoto}">`;
+    URL.revokeObjectURL(img.src);
+  };
+  img.src = URL.createObjectURL(file);
+};
+
+document.getElementById("addBtn").onclick = () => {
+  const label = document.getElementById("newLabel").value.trim();
+  const emoji = document.getElementById("newEmoji").value.trim();
+  const cat = document.getElementById("newCat").value;
+  if (!label) { alert("Écris le mot à prononcer."); return; }
+  if (!pendingPhoto && !emoji) { alert("Ajoute une photo ou un émoji."); return; }
+  customItems.push({
+    id: "c_" + Date.now(),
+    cat, label,
+    say: label,
+    emoji: emoji || null,
+    photo: pendingPhoto || null,
+  });
+  store.set("custom", customItems);
+  document.getElementById("newLabel").value = "";
+  document.getElementById("newEmoji").value = "";
+  document.getElementById("newPhoto").value = "";
+  document.getElementById("photoPreview").innerHTML = "";
+  pendingPhoto = null;
+  currentCat = cat;
+  renderTabs(); renderGrid();
+  closePanel();
+};
+
+/* ================= Démarrage ================= */
+renderTabs();
+renderGrid();
+renderStrip();
+
+/* Garde l'écran allumé tant que l'app est affichée (Chrome Android).
+   Fully Kiosk a aussi son propre réglage "Keep Screen On" qui prend le relais. */
+async function keepAwake() {
+  try {
+    if ("wakeLock" in navigator) await navigator.wakeLock.request("screen");
+  } catch {}
+}
+keepAwake();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") keepAwake();
+});
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

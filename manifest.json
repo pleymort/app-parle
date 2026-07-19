@@ -1,0 +1,19 @@
+{
+  "name": "Virgile parle",
+  "short_name": "Virgile",
+  "description": "Application de communication (CAA) pour Virgile",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#F0F4F8",
+  "theme_color": "#4A90D9",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
