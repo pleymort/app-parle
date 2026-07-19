@@ -1,0 +1,17 @@
+{
+  "name": "leova-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Leova — proxy IA (Cloud Run + Vertex AI). Centralise les appels IA côté serveur (aucune clé dans l'app), mesure l'usage, applique le paywall freemium. Tout en UE (RGPD).",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@google-cloud/vertexai": "^1.9.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
