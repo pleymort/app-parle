@@ -121,6 +121,23 @@
   #magicList .mlb { font-size: 12px; font-weight: 700; color: #24425F; }
   #magicList .mcat { font-size: 10px; color: #9DB2C7; font-weight: 600; }
   #magicList .mcell .em { font-size: 48px; }
+  #magicList .mcell { position: relative; opacity: .45; }
+  #magicList .mcell.sel { opacity: 1; }
+  #magicList .mcell.sel::after {
+    content: "✓"; position: absolute; top: -6px; right: -6px;
+    background: #35A853; color: white; border-radius: 50%;
+    width: 22px; height: 22px; font-size: 14px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #magicList .mswap {
+    border: none; background: #EDF2F7; border-radius: 8px;
+    font-size: 14px; padding: 3px 10px; margin-top: 4px; cursor: pointer;
+  }
+  .catRow { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .catRow input { padding: 8px; border: 2px solid #D8E1EA; border-radius: 10px; font-size: 16px; }
+  .catRow .cemoji { width: 58px; text-align: center; }
+  .catRow .clabel { flex: 1; min-width: 0; }
+  .catRow .cdel { border: none; background: #FDECEC; color: #C0392B; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
   #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
   .parentOn #editNote { display: block; }
   /* En mode parent : le doigt sert au glisser-déposer, pas au défilement */
@@ -164,8 +181,9 @@
       <div class="aiStatus" id="magicStatus"></div>
       <div id="magicResult" style="display:none">
         <div id="magicList"></div>
-        <div class="hint">Touchez une vignette pour changer son image.</div>
-        <button class="pbtn warn" id="magicUndo">↩️ Tout annuler</button>
+        <div class="hint">Touchez une vignette pour la cocher/décocher · 🔄 pour changer son image.</div>
+        <button class="pbtn primary" id="magicAdd">✔ Ajouter</button>
+        <button class="pbtn warn" id="magicUndo">✖ Annuler</button>
       </div>
     </div>
 
@@ -192,6 +210,13 @@
     </div>
     <button class="pbtn ghost" id="genVoicesBtn">🎙️ Générer toutes les voix (une seule fois)</button>
     <div class="aiStatus" id="aiStatus"></div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">Catégories</h2>
+    <p class="sub" style="margin-bottom:8px">Changez l'émoji ou le nom, ou créez-en une nouvelle.</p>
+    <div id="catList"></div>
+    <button class="pbtn ghost" id="addCatBtn">➕ Nouvelle catégorie</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
@@ -229,13 +254,13 @@
 <script>
 "use strict";
 
-const APP_VERSION = "10"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "11"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
    Commencez PETIT : masquez tout sauf 4-6 pictos très motivants,
    puis réaffichez-en au fur et à mesure. */
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: "core",    label: "Important", emoji: "⭐" },
   { id: "food",    label: "Manger",    emoji: "🍎" },
   { id: "play",    label: "Jouer",     emoji: "🧸" },
@@ -308,6 +333,12 @@ let geminiKey = store.get("gkey", "");
 let reformOn = store.get("reform", true);
 let overrides = store.get("over", {}); // modifications des pictos de base : {id: {photo, emoji, cat}}
 let gridOrder = store.get("ord", {});  // ordre des pictos par catégorie : {cat: [ids]}
+let catOver = store.get("catover", {}); // renommages des catégories de base : {id: {label, emoji}}
+let customCats = store.get("cats", []); // catégories créées : [{id, label, emoji}]
+
+function cats() {
+  return DEFAULT_CATEGORIES.map(c => ({ ...c, ...(catOver[c.id] || {}) })).concat(customCats);
+}
 let currentCat = "core";
 let parentMode = false;
 let strip = [];
@@ -591,7 +622,7 @@ async function cleanPhoto(dataUrl) {
 
 /* ---- Ajout magique : le parent donne un concept, l'IA décide de tout ---- */
 async function magicPlan(concept) {
-  const cats = CATEGORIES.map(c => `"${c.id}" (${c.label})`).join(", ");
+  const catList = cats().map(c => `"${c.id}" (${c.label})`).join(", ");
   const existing = allItems().map(i => `"${i.label}"`).join(", ");
   const j = await gemini("text", {
     contents: [{ parts: [{ text:
@@ -603,11 +634,12 @@ Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
 "target" : si action "image", le label EXACT du pictogramme existant concerné, sinon null ;
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
 "say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
-"cat" : la catégorie la plus logique parmi : ${cats} ;
+"cat" : la catégorie la plus logique parmi : ${catList} ;
 "search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
 "imageHint" : si le parent donne une consigne sur l'apparence de l'image (forme, couleur, objet précis que l'enfant reconnaît), cette consigne en une phrase, sinon null ;
 "emoji" : si le parent demande explicitement un émoji, l'émoji lui-même (le caractère), sinon null ;
 "emojiFallback" : TOUJOURS fourni — un émoji simple qui représente bien le concept (image de secours).
+Si AUCUNE catégorie existante ne convient vraiment, mets "cat" à null et fournis "catNew" : {"label": "...", "emoji": "..."} pour créer une nouvelle catégorie.
 Ne développe un thème que si le parent l'a clairement demandé ; pour un concept unique, réponds un tableau d'un seul objet.` }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -631,7 +663,7 @@ const stripItemsEl = document.getElementById("stripItems");
 
 function renderTabs() {
   tabsEl.innerHTML = "";
-  for (const c of CATEGORIES) {
+  for (const c of cats()) {
     const b = document.createElement("button");
     b.className = "tab" + (c.id === currentCat ? " active" : "");
     b.innerHTML = `<span class="tem">${c.emoji}</span>${c.label}`;
@@ -745,7 +777,7 @@ function attachParentDrag(b, item) {
           deleteItem(item);
         } else if (tab) {
           const idx = [...tabsEl.children].indexOf(tab);
-          if (idx >= 0 && CATEGORIES[idx]) { setItemCat(item, CATEGORIES[idx].id); renderGrid(); }
+          if (idx >= 0 && cats()[idx]) { setItemCat(item, cats()[idx].id); renderGrid(); }
         } else {
           gridOrder[currentCat] = [...gridEl.children].map(x => x.dataset.id).filter(Boolean);
           store.set("ord", gridOrder);
@@ -852,7 +884,8 @@ function openPanel() {
   document.getElementById("gkey").value = geminiKey;
   document.getElementById("reformChk").checked = reformOn;
   const sel = document.getElementById("newCat");
-  sel.innerHTML = CATEGORIES.map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
+  sel.innerHTML = cats().map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
+  renderCatList();
   panel.classList.add("open");
 }
 function closePanel() { panel.classList.remove("open"); }
@@ -928,36 +961,57 @@ document.getElementById("cleanBtn").onclick = async () => {
   catch (e) { status2.textContent = "Échec du détourage : " + e.message; }
 };
 
-/* ---- Ajout magique (un ou plusieurs pictos d'un coup) ---- */
+/* ---- Ajout magique : l'IA PROPOSE, le parent coche, puis valide ---- */
 const magicStatus = document.getElementById("magicStatus");
-let magicItems = []; // [{item, urls, idx}] — les pictos de la dernière création
+let magicItems = []; // propositions : {mode:"create"|"update", item, urls, idx, selected}
+
+function resolveCat(p) {
+  if (p.cat && cats().some(c => c.id === p.cat)) return p.cat;
+  if (p.catNew && p.catNew.label) {
+    const ex = cats().find(c => c.label.toLowerCase() === p.catNew.label.toLowerCase());
+    if (ex) return ex.id;
+    const id = "cc_" + p.catNew.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    customCats.push({ id, label: p.catNew.label, emoji: p.catNew.emoji || "⭐" });
+    store.set("cats", customCats);
+    renderTabs();
+    return id;
+  }
+  return "core";
+}
+
+async function cycleImage(c) {
+  // Fait défiler les autres pictos ARASAAC, puis dessine avec l'IA ;
+  // en cas d'échec du dessin, revient au début de la liste au lieu d'échouer.
+  c.idx++;
+  let vis = null;
+  if (c.idx < c.urls.length) vis = { photo: c.urls[c.idx], emoji: null };
+  else {
+    magicStatus.textContent = `Je dessine une nouvelle image pour « ${c.item.label} »… (~10 s)`;
+    try { vis = { photo: await toSquare256(await genPicto(c.item.label)), emoji: null }; magicStatus.textContent = "Image dessinée ✓"; }
+    catch (e) {
+      if (c.urls.length) { c.idx = 0; vis = { photo: c.urls[0], emoji: null }; magicStatus.textContent = "Dessin impossible — retour au début des pictos ARASAAC."; }
+      else { c.idx--; magicStatus.textContent = "Impossible de changer cette image (" + e.message + ")."; return; }
+    }
+  }
+  c.item.photo = vis.photo; c.item.emoji = vis.emoji;
+  renderMagicList();
+}
 
 function renderMagicList() {
   const box = document.getElementById("magicList");
   box.innerHTML = "";
   for (const c of magicItems) {
     const d = document.createElement("div");
-    d.className = "mcell";
-    d.innerHTML = `${pictoVisual(c.item)}<div class="mlb">${c.item.label}</div><div class="mcat">${CATEGORIES.find(x => x.id === c.item.cat).label}</div>`;
-    d.onclick = async () => {
-      // Fait défiler les autres pictos ARASAAC, puis dessine avec l'IA
-      c.idx++;
-      try {
-        let photo;
-        if (c.idx < c.urls.length) photo = c.urls[c.idx];
-        else {
-          magicStatus.textContent = `Je dessine une nouvelle image pour « ${c.item.label} »… (~10 s)`;
-          photo = await toSquare256(await genPicto(c.item.label));
-        }
-        setItemVisual(c.item, { photo });
-        c.item.photo = photo; c.item.emoji = null;
-        renderGrid();
-        renderMagicList();
-        magicStatus.textContent = "Image remplacée ✓";
-      } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
-    };
+    d.className = "mcell" + (c.selected ? " sel" : "");
+    const catLabel = c.mode === "update" ? "image modifiée" : (cats().find(x => x.id === c.item.cat) || { label: "?" }).label;
+    d.innerHTML = `${pictoVisual(c.item)}<div class="mlb">${c.item.label}</div><div class="mcat">${catLabel}</div><button class="mswap" title="Changer l'image">🔄</button>`;
+    d.onclick = () => { c.selected = !c.selected; renderMagicList(); };
+    d.querySelector(".mswap").onclick = (e) => { e.stopPropagation(); cycleImage(c); };
     box.appendChild(d);
   }
+  const n = magicItems.filter(c => c.selected).length;
+  document.getElementById("magicAdd").textContent = `✔ Ajouter (${n})`;
+  document.getElementById("magicAdd").disabled = n === 0;
 }
 
 /* Trouve l'image d'un plan, avec replis successifs pour ne jamais échouer :
@@ -987,66 +1041,71 @@ document.getElementById("magicBtn").onclick = async () => {
   try {
     magicStatus.textContent = "Je réfléchis…";
     const plans = (await magicPlan(concept)).slice(0, 8);
-    const created = [];
-    let updated = 0, lastErr = null;
+    const proposals = [];
+    let lastErr = null;
     for (let k = 0; k < plans.length; k++) {
       const p = plans[k];
       if (!p) continue;
 
-      // Modification de l'image d'un picto existant
+      // Modification de l'image d'un picto existant (proposée, appliquée à la validation)
       if (p.action === "image" && p.target) {
-        const item = allItems().find(i => i.label.toLowerCase() === String(p.target).toLowerCase());
-        if (!item) continue;
-        magicStatus.textContent = `Nouvelle image pour « ${item.label} »…`;
+        const target = allItems().find(i => i.label.toLowerCase() === String(p.target).toLowerCase());
+        if (!target) continue;
+        magicStatus.textContent = `Nouvelle image pour « ${target.label} »…`;
         try {
-          const vis = await resolveVisual(p, item.label);
-          setItemVisual(item, vis);
-          item.photo = vis.photo; item.emoji = vis.emoji;
-          created.push({ item, urls: vis.urls, idx: 0 });
-          updated++;
+          const vis = await resolveVisual(p, target.label);
+          proposals.push({ mode: "update", item: { ...target, photo: vis.photo, emoji: vis.emoji }, urls: vis.urls, idx: 0, selected: true });
         } catch (e) { lastErr = e; }
         continue;
       }
 
-      // Création
+      // Proposition de création (rien n'est ajouté avant validation)
       if (!p.label) continue;
-      if (!CATEGORIES.some(c => c.id === p.cat)) p.cat = "core";
-      magicStatus.textContent = `Création ${k + 1}/${plans.length} : ${p.label}…`;
+      const cat = resolveCat(p);
+      magicStatus.textContent = `Proposition ${k + 1}/${plans.length} : ${p.label}…`;
       try {
         const vis = await resolveVisual(p, p.label);
-        const item = { id: "c_" + Date.now() + "_" + k, cat: p.cat, label: p.label, say: p.say || p.label, emoji: vis.emoji, photo: vis.photo };
-        customItems.push(item);
-        created.push({ item, urls: vis.urls, idx: 0 });
+        proposals.push({
+          mode: "create",
+          item: { id: "c_" + Date.now() + "_" + k, cat, label: p.label, say: p.say || p.label, emoji: vis.emoji, photo: vis.photo },
+          urls: vis.urls, idx: 0, selected: true,
+        });
       } catch (e) { lastErr = e; continue; }
     }
-    if (!created.length) throw new Error("aucun picto n'a pu être créé ou modifié" + (lastErr ? " (détail : " + lastErr.message + ")" : ""));
-    magicItems = created;
-    store.set("custom", customItems);
-    currentCat = created[0].item.cat;
-    renderTabs(); renderGrid();
-    // Belles voix en arrière-plan, espacées pour respecter le quota TTS (~3/min)
-    created.filter(c => !c.updatedOnly).forEach((c, i) => setTimeout(() => ensureVoice(c.item.say), i * 25000));
+    if (!proposals.length) throw new Error("aucune proposition n'a pu être préparée" + (lastErr ? " (détail : " + lastErr.message + ")" : ""));
+    magicItems = proposals;
     renderMagicList();
     document.getElementById("magicResult").style.display = "block";
-    const nbNew = created.length - updated;
-    magicStatus.textContent =
-      (nbNew ? `${nbNew} picto${nbNew > 1 ? "s" : ""} ajouté${nbNew > 1 ? "s" : ""}` : "") +
-      (nbNew && updated ? " et " : "") +
-      (updated ? `${updated} image${updated > 1 ? "s" : ""} modifiée${updated > 1 ? "s" : ""}` : "") +
-      " ✓";
+    magicStatus.textContent = "Touchez une vignette pour la cocher/décocher, 🔄 pour changer l'image, puis validez.";
     document.getElementById("magicInput").value = "";
   } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
 };
 
-document.getElementById("magicUndo").onclick = () => {
-  if (!magicItems.length) return;
-  const ids = new Set(magicItems.map(c => c.item.id));
-  customItems = customItems.filter(i => !ids.has(i.id));
+document.getElementById("magicAdd").onclick = () => {
+  const chosen = magicItems.filter(c => c.selected);
+  if (!chosen.length) return;
+  let added = 0, updated = 0;
+  for (const c of chosen) {
+    if (c.mode === "update") { setItemVisual(c.item, { photo: c.item.photo, emoji: c.item.emoji }); updated++; }
+    else { customItems.push(c.item); added++; }
+  }
   store.set("custom", customItems);
+  // Belles voix en arrière-plan, espacées pour respecter le quota TTS (~3/min)
+  chosen.filter(c => c.mode === "create").forEach((c, i) => setTimeout(() => ensureVoice(c.item.say), i * 25000));
+  currentCat = chosen[0].item.cat;
   magicItems = [];
   document.getElementById("magicResult").style.display = "none";
-  magicStatus.textContent = "Annulé.";
-  renderGrid();
+  renderTabs(); renderGrid();
+  magicStatus.textContent =
+    (added ? `${added} picto${added > 1 ? "s" : ""} ajouté${added > 1 ? "s" : ""}` : "") +
+    (added && updated ? " et " : "") +
+    (updated ? `${updated} image${updated > 1 ? "s" : ""} modifiée${updated > 1 ? "s" : ""}` : "") + " ✓";
+};
+
+document.getElementById("magicUndo").onclick = () => {
+  magicItems = [];
+  document.getElementById("magicResult").style.display = "none";
+  magicStatus.textContent = "Propositions abandonnées — rien n'a été ajouté.";
 };
 
 /* Dictée : on enregistre le micro puis Gemini transcrit
@@ -1088,6 +1147,43 @@ micBtn.onclick = async () => {
     micBtn.textContent = "⏹️";
     magicStatus.textContent = "Parlez… puis retouchez le bouton pour arrêter.";
   } catch { magicStatus.textContent = "Accès micro refusé (autorisation à donner dans Fully / Android)."; }
+};
+
+/* ---- Éditeur de catégories ---- */
+function saveCat(id, patch) {
+  const custom = customCats.find(c => c.id === id);
+  if (custom) { Object.assign(custom, patch); store.set("cats", customCats); }
+  else { catOver[id] = { ...(catOver[id] || {}), ...patch }; store.set("catover", catOver); }
+  renderTabs();
+}
+
+function renderCatList() {
+  const box = document.getElementById("catList");
+  box.innerHTML = "";
+  for (const c of cats()) {
+    const isCustom = customCats.some(x => x.id === c.id);
+    const row = document.createElement("div");
+    row.className = "catRow";
+    row.innerHTML = `<input class="cemoji" type="text" value="${c.emoji}" maxlength="4">
+      <input class="clabel" type="text" value="${c.label}">` +
+      (isCustom ? `<button class="cdel" title="Supprimer">🗑</button>` : "");
+    row.querySelector(".cemoji").onchange = (e) => saveCat(c.id, { emoji: e.target.value.trim() || "⭐" });
+    row.querySelector(".clabel").onchange = (e) => saveCat(c.id, { label: e.target.value.trim() || c.label });
+    if (isCustom) row.querySelector(".cdel").onclick = () => {
+      if (allItems().some(i => i.cat === c.id)) { alert("Cette catégorie contient des pictos : déplacez-les d'abord (glisser-déposer sur un autre onglet)."); return; }
+      customCats = customCats.filter(x => x.id !== c.id);
+      store.set("cats", customCats);
+      if (currentCat === c.id) currentCat = "core";
+      renderCatList(); renderTabs(); renderGrid();
+    };
+    box.appendChild(row);
+  }
+}
+
+document.getElementById("addCatBtn").onclick = () => {
+  customCats.push({ id: "cc_" + Date.now(), label: "Nouvelle", emoji: "⭐" });
+  store.set("cats", customCats);
+  renderCatList(); renderTabs();
 };
 
 /* ---- Réglages IA ---- */
