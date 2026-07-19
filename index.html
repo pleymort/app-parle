@@ -256,7 +256,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "18"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "19"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -457,6 +457,15 @@ if ("speechSynthesis" in window) {
 }
 
 function deviceSpeak(text) {
+  // App native (Capacitor) : moteur de synthèse vocale natif Android/iOS.
+  // Remplace le besoin de Fully Kiosk pour la voix.
+  const cap = window.Capacitor;
+  if (cap && cap.isNativePlatform && cap.isNativePlatform() && cap.Plugins && cap.Plugins.TextToSpeech) {
+    const tts = cap.Plugins.TextToSpeech;
+    try { tts.stop(); } catch {}
+    tts.speak({ text, lang: "fr-FR", rate }).catch(() => {});
+    return;
+  }
   // Dans Fully Kiosk, le WebView Android n'a pas speechSynthesis :
   // on passe par l'interface JavaScript de Fully (licence PLUS,
   // activer "Enable JavaScript Interface" dans les réglages Fully).
@@ -1354,7 +1363,10 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") keepAwake();
 });
 
-if ("serviceWorker" in navigator && location.protocol === "https:") {
+// En natif (Capacitor), pas de service worker : l'app est déjà locale,
+// il ferait doublon avec le cache et gênerait les mises à jour.
+const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+if (!isNative && "serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 </script>

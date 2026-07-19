@@ -1,0 +1,13 @@
+{
+  "name": "virgile-parle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Virgile parle — app de communication (CAA), version native Capacitor (Android + iOS)",
+  "scripts": {
+    "copy:web": "node scripts/copy-web.mjs",
+    "sync": "npm run copy:web && npx cap sync",
+    "open:android": "npm run sync && npx cap open android",
+    "run:android": "npm run sync && npx cap run android"
+  }
+}

@@ -1,2 +1,9 @@
 .claude/
 README.md
+
+# Capacitor / build natif
+node_modules/
+www/
+android/
+ios/
+.DS_Store
