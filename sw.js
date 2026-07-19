@@ -1,4 +1,4 @@
-const CACHE = "virgile-parle-v5";
+const CACHE = "virgile-parle-v6";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -16,7 +16,20 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request))
-  );
+  // Pages : réseau d'abord (les mises à jour arrivent dès le rechargement),
+  // avec repli sur le cache quand la tablette est hors ligne.
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      fetch(e.request)
+        .then((r) => {
+          const copy = r.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return r;
+        })
+        .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./")))
+    );
+    return;
+  }
+  // Le reste (manifest, icône) : cache d'abord.
+  e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
 });

@@ -115,7 +115,11 @@
   .magicRow { display: flex; gap: 8px; }
   .magicRow input { width: auto; flex: 1; }
   .magicRow .pbtn { margin: 0; }
-  #magicPreview img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
+  #magicList { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  #magicList .mcell { width: 76px; text-align: center; cursor: pointer; }
+  #magicList .mcell img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 2px solid #D8E1EA; }
+  #magicList .mlb { font-size: 12px; font-weight: 700; color: #24425F; }
+  #magicList .mcat { font-size: 10px; color: #9DB2C7; font-weight: 600; }
   #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
   .parentOn #editNote { display: block; }
 </style>
@@ -141,20 +145,17 @@
 
     <h2 style="font-size:17px">✨ Ajout magique</h2>
     <div class="prow">
-      <label>Dites ou écrivez ce que Virgile doit pouvoir demander</label>
+      <label>Dites ou écrivez ce que Virgile doit pouvoir demander — un mot, une liste, ou un thème</label>
       <div class="magicRow">
-        <input type="text" id="magicInput" placeholder="ex : le trampoline du jardin">
+        <input type="text" id="magicInput" placeholder='ex : "trampoline" · "fraise, banane, yaourt" · "le petit-déjeuner"'>
         <button class="pbtn ghost" id="magicMic" title="Dicter au micro">🎤</button>
       </div>
-      <button class="pbtn primary" id="magicBtn" style="margin-top:8px">✨ Créer le picto</button>
+      <button class="pbtn primary" id="magicBtn" style="margin-top:8px">✨ Créer</button>
       <div class="aiStatus" id="magicStatus"></div>
       <div id="magicResult" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-          <span id="magicPreview"></span>
-          <span id="magicInfo" style="font-size:13px;color:#55677A;font-weight:600"></span>
-        </div>
-        <button class="pbtn ghost" id="magicOther">🔄 Autre image</button>
-        <button class="pbtn warn" id="magicUndo">↩️ Annuler</button>
+        <div id="magicList"></div>
+        <div class="hint">Touchez une vignette pour changer son image.</div>
+        <button class="pbtn warn" id="magicUndo">↩️ Tout annuler</button>
       </div>
     </div>
 
@@ -500,15 +501,18 @@ async function magicPlan(concept) {
   const cats = CATEGORIES.map(c => `"${c.id}" (${c.label})`).join(", ");
   const j = await gemini(GEMINI.text, {
     contents: [{ parts: [{ text:
-      `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent veut ajouter ce concept : "${concept}".
-Réponds UNIQUEMENT un objet JSON avec ces clés :
+      `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
+Cela peut être UN concept ("le trampoline"), une LISTE ("fraise, banane, yaourt") ou un THÈME à développer ("le petit-déjeuner" → les aliments typiques).
+Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets (un par pictogramme à créer), chacun avec ces clés :
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, première lettre en majuscule, ex "Piscine") ;
 "say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
 "cat" : la catégorie la plus logique parmi : ${cats} ;
-"search" : un nom commun simple et générique pour chercher un pictogramme dans la banque ARASAAC (ex "piscine").` }] }],
+"search" : un nom commun simple et générique pour chercher un pictogramme dans la banque ARASAAC (ex "piscine").
+Ne développe un thème que si le parent l'a clairement demandé ; pour un concept unique, réponds un tableau d'un seul objet.` }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
-  return JSON.parse(j.candidates[0].content.parts[0].text);
+  const parsed = JSON.parse(j.candidates[0].content.parts[0].text);
+  return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
 }
 
 /* ---- Reformulation de la bande-phrase ---- */
@@ -720,9 +724,37 @@ document.getElementById("cleanBtn").onclick = async () => {
   catch (e) { status2.textContent = "Échec du détourage : " + e.message; }
 };
 
-/* ---- Ajout magique ---- */
+/* ---- Ajout magique (un ou plusieurs pictos d'un coup) ---- */
 const magicStatus = document.getElementById("magicStatus");
-let magicItem = null, magicUrls = [], magicIdx = 0;
+let magicItems = []; // [{item, urls, idx}] — les pictos de la dernière création
+
+function renderMagicList() {
+  const box = document.getElementById("magicList");
+  box.innerHTML = "";
+  for (const c of magicItems) {
+    const d = document.createElement("div");
+    d.className = "mcell";
+    d.innerHTML = `<img src="${c.item.photo}"><div class="mlb">${c.item.label}</div><div class="mcat">${CATEGORIES.find(x => x.id === c.item.cat).label}</div>`;
+    d.onclick = async () => {
+      // Fait défiler les autres pictos ARASAAC, puis dessine avec l'IA
+      c.idx++;
+      try {
+        let photo;
+        if (c.idx < c.urls.length) photo = await toSquare256(c.urls[c.idx]);
+        else {
+          magicStatus.textContent = `Je dessine une nouvelle image pour « ${c.item.label} »… (~10 s)`;
+          photo = await toSquare256(await genPicto(c.item.label));
+        }
+        c.item.photo = photo;
+        store.set("custom", customItems);
+        renderGrid();
+        renderMagicList();
+        magicStatus.textContent = "Image remplacée ✓";
+      } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
+    };
+    box.appendChild(d);
+  }
+}
 
 document.getElementById("magicBtn").onclick = async () => {
   if (needKey()) return;
@@ -731,56 +763,49 @@ document.getElementById("magicBtn").onclick = async () => {
   document.getElementById("magicResult").style.display = "none";
   try {
     magicStatus.textContent = "Je réfléchis…";
-    const plan = await magicPlan(concept);
-    if (!CATEGORIES.some(c => c.id === plan.cat)) plan.cat = "core";
-    if (!plan.label) throw new Error("réponse incomplète");
-    magicStatus.textContent = "Je cherche l'image…";
-    magicUrls = await searchArasaac(plan.search || plan.label);
-    magicIdx = 0;
-    let photo;
-    if (magicUrls.length) photo = await toSquare256(magicUrls[0]);
-    else {
-      magicStatus.textContent = "Pas trouvé dans ARASAAC — je dessine le picto… (~10 s)";
-      photo = await toSquare256(await genPicto(plan.label));
+    const plans = (await magicPlan(concept)).slice(0, 8);
+    const created = [];
+    for (let k = 0; k < plans.length; k++) {
+      const p = plans[k];
+      if (!p || !p.label) continue;
+      if (!CATEGORIES.some(c => c.id === p.cat)) p.cat = "core";
+      magicStatus.textContent = `Création ${k + 1}/${plans.length} : ${p.label}…`;
+      let urls = [];
+      try { urls = await searchArasaac(p.search || p.label); } catch {}
+      let photo = null;
+      try {
+        if (urls.length) photo = await toSquare256(urls[0]);
+        else {
+          magicStatus.textContent = `Je dessine « ${p.label} »… (~10 s)`;
+          photo = await toSquare256(await genPicto(p.label));
+        }
+      } catch { continue; }
+      const item = { id: "c_" + Date.now() + "_" + k, cat: p.cat, label: p.label, say: p.say || p.label, emoji: null, photo };
+      customItems.push(item);
+      created.push({ item, urls, idx: 0 });
     }
-    magicItem = { id: "c_" + Date.now(), cat: plan.cat, label: plan.label, say: plan.say || plan.label, emoji: null, photo };
-    customItems.push(magicItem);
+    if (!created.length) throw new Error("aucun picto n'a pu être créé");
+    magicItems = created;
     store.set("custom", customItems);
-    currentCat = plan.cat;
+    currentCat = created[0].item.cat;
     renderTabs(); renderGrid();
-    ensureVoice(magicItem.say); // belle voix en arrière-plan
-    document.getElementById("magicPreview").innerHTML = `<img src="${photo}">`;
-    document.getElementById("magicInfo").textContent =
-      `« ${magicItem.label} » — dira « ${magicItem.say} » — rangé dans ${CATEGORIES.find(c => c.id === plan.cat).label}`;
+    // Belles voix en arrière-plan, espacées pour respecter le quota TTS (~3/min)
+    created.forEach((c, i) => setTimeout(() => ensureVoice(c.item.say), i * 25000));
+    renderMagicList();
     document.getElementById("magicResult").style.display = "block";
-    magicStatus.textContent = "Ajouté ✓ — la belle voix se prépare en arrière-plan.";
+    magicStatus.textContent = created.length === 1
+      ? `Ajouté ✓ — dira « ${created[0].item.say} ». La belle voix se prépare en arrière-plan.`
+      : `${created.length} pictos ajoutés ✓ — les belles voix se préparent en arrière-plan.`;
     document.getElementById("magicInput").value = "";
   } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
 };
 
-document.getElementById("magicOther").onclick = async () => {
-  if (!magicItem) return;
-  magicIdx++;
-  try {
-    let photo;
-    if (magicIdx < magicUrls.length) photo = await toSquare256(magicUrls[magicIdx]);
-    else {
-      magicStatus.textContent = "Je dessine une nouvelle image… (~10 s)";
-      photo = await toSquare256(await genPicto(magicItem.label));
-    }
-    magicItem.photo = photo;
-    store.set("custom", customItems);
-    renderGrid();
-    document.getElementById("magicPreview").innerHTML = `<img src="${photo}">`;
-    magicStatus.textContent = "Image remplacée ✓";
-  } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
-};
-
 document.getElementById("magicUndo").onclick = () => {
-  if (!magicItem) return;
-  customItems = customItems.filter(i => i.id !== magicItem.id);
+  if (!magicItems.length) return;
+  const ids = new Set(magicItems.map(c => c.item.id));
+  customItems = customItems.filter(i => !ids.has(i.id));
   store.set("custom", customItems);
-  magicItem = null;
+  magicItems = [];
   document.getElementById("magicResult").style.display = "none";
   magicStatus.textContent = "Annulé.";
   renderGrid();
