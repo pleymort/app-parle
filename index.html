@@ -256,7 +256,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "15"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "16"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -273,83 +273,87 @@ const DEFAULT_CATEGORIES = [
 
 const DEFAULT_ITEMS = [
   /* ⭐ Essentiel — les "mots-pouvoir" (vocabulaire noyau).
+     Chaque carte prononce UN mot court (= son label) : on enchaîne les cartes
+     dans la bande-phrase, puis ▶ lit l'ensemble (reformulé en phrase naturelle
+     par l'IA, ou les mots à la suite sans IA). On ne met "say" que pour corriger
+     une prononciation (ex "JeaJea" → "Jaja").
      Les mots marqués [M] correspondent aux signes Makaton que Virgile connaît :
      même mot signé = même picto = même voix. */
-  { id:"encore",  cat:"core", label:"Encore",     say:"Encore !",          emoji:"🔁" }, // [M]
-  { id:"fini",    cat:"core", label:"Fini",       say:"C'est fini",        emoji:"✅" }, // [M]
-  { id:"aide",    cat:"core", label:"Aide-moi",   say:"Aide-moi s'il te plaît", emoji:"🙋" }, // [M]
-  { id:"jeveux",  cat:"core", label:"Je veux",    say:"Je veux",           emoji:"👉" }, // [M] Je + Vouloir
-  { id:"oui",     cat:"core", label:"Oui",        say:"Oui",               emoji:"👍" }, // [M]
-  { id:"non",     cat:"core", label:"Non",        say:"Non",               emoji:"👎" }, // [M]
-  { id:"stop",    cat:"core", label:"Stop",       say:"Stop !",            emoji:"🛑" },
-  { id:"pause",   cat:"core", label:"Attends",    say:"Attends un peu",    emoji:"✋" },
-  { id:"break",   cat:"core", label:"Pause",      say:"J'ai besoin d'une pause", emoji:"⏸️" },
-  { id:"mal",     cat:"core", label:"J'ai mal",   say:"J'ai mal",          emoji:"🤕" }, // [M]
-  { id:"toilettes",cat:"core",label:"Toilettes",  say:"Je veux aller aux toilettes", emoji:"🚽" },
-  { id:"merci",   cat:"core", label:"Merci",      say:"Merci",             emoji:"🙏" }, // [M]
-  { id:"svp",     cat:"core", label:"S'il te plaît", say:"S'il te plaît",  emoji:"🥺" }, // [M]
-  { id:"bonjour", cat:"core", label:"Bonjour",    say:"Bonjour !",         emoji:"🙋" }, // [M]
-  { id:"aurevoir",cat:"core", label:"Au revoir",  say:"Au revoir !",       emoji:"👋" }, // [M]
+  { id:"encore",  cat:"core", label:"Encore",     emoji:"🔁" }, // [M]
+  { id:"fini",    cat:"core", label:"Fini",       emoji:"✅" }, // [M]
+  { id:"aide",    cat:"core", label:"Aide-moi",   emoji:"🙋" }, // [M]
+  { id:"jeveux",  cat:"core", label:"Je veux",    emoji:"👉" }, // [M] Je + Vouloir
+  { id:"oui",     cat:"core", label:"Oui",        emoji:"👍" }, // [M]
+  { id:"non",     cat:"core", label:"Non",        emoji:"👎" }, // [M]
+  { id:"stop",    cat:"core", label:"Stop",       emoji:"🛑" },
+  { id:"pause",   cat:"core", label:"Attends",    emoji:"✋" },
+  { id:"break",   cat:"core", label:"Pause",      emoji:"⏸️" },
+  { id:"mal",     cat:"core", label:"J'ai mal",   emoji:"🤕" }, // [M]
+  { id:"toilettes",cat:"core",label:"Toilettes",  emoji:"🚽" },
+  { id:"merci",   cat:"core", label:"Merci",      emoji:"🙏" }, // [M]
+  { id:"svp",     cat:"core", label:"S'il te plaît", emoji:"🥺" }, // [M]
+  { id:"bonjour", cat:"core", label:"Bonjour",    emoji:"🙋" }, // [M]
+  { id:"aurevoir",cat:"core", label:"Au revoir",  emoji:"👋" }, // [M]
 
   /* 🍎 Manger / boire */
-  { id:"eau",     cat:"food", label:"Eau",        say:"Je veux de l'eau",  emoji:"💧" }, // [M]
-  { id:"pizza",   cat:"food", label:"Pizza",      say:"Je veux de la pizza", emoji:"🍕" }, // [M] ★motivateur
-  { id:"frites",  cat:"food", label:"Frites",     say:"Je veux des frites", emoji:"🍟" }, // [M]
-  { id:"pain",    cat:"food", label:"Pain",       say:"Je veux du pain",   emoji:"🥖" }, // ★motivateur
-  { id:"gouter",  cat:"food", label:"Goûter",     say:"Je veux le goûter", emoji:"🍪" },
-  { id:"manger",  cat:"food", label:"Manger",     say:"Je veux manger",    emoji:"🍽️" },
-  { id:"compote", cat:"food", label:"Compote",    say:"Je veux de la compote", emoji:"🥣" },
-  { id:"pomme",   cat:"food", label:"Pomme",      say:"Je veux une pomme", emoji:"🍎" },
-  { id:"pates",   cat:"food", label:"Pâtes",      say:"Je veux des pâtes", emoji:"🍝" },
-  { id:"couper",  cat:"food", label:"Couper",     say:"Tu peux couper s'il te plaît ?", emoji:"🔪" }, // [M]
+  { id:"eau",     cat:"food", label:"Eau",        emoji:"💧" }, // [M]
+  { id:"pizza",   cat:"food", label:"Pizza",      emoji:"🍕" }, // [M] ★motivateur
+  { id:"frites",  cat:"food", label:"Frites",     emoji:"🍟" }, // [M]
+  { id:"pain",    cat:"food", label:"Pain",       emoji:"🥖" }, // ★motivateur
+  { id:"gouter",  cat:"food", label:"Goûter",     emoji:"🍪" },
+  { id:"manger",  cat:"food", label:"Manger",     emoji:"🍽️" },
+  { id:"compote", cat:"food", label:"Compote",    emoji:"🥣" },
+  { id:"pomme",   cat:"food", label:"Pomme",      emoji:"🍎" },
+  { id:"pates",   cat:"food", label:"Pâtes",      emoji:"🍝" },
+  { id:"couper",  cat:"food", label:"Couper",     emoji:"🔪" }, // [M]
 
   /* 🧸 Jouer */
-  { id:"piscine", cat:"play", label:"Piscine",    say:"Je veux aller à la piscine", emoji:"🏊" }, // ★motivateur
-  { id:"nager",   cat:"play", label:"Nager",      say:"Je veux nager",     emoji:"🌊" }, // [M]
-  { id:"balancoire",cat:"play",label:"Balançoire",say:"Je veux la balançoire", emoji:"🛝" }, // ★motivateur
-  { id:"puzzle",  cat:"play", label:"Puzzle",     say:"Je veux faire un puzzle", emoji:"🧩" }, // ★motivateur
-  { id:"peppa",   cat:"play", label:"Peppa Pig",  say:"Je veux regarder Peppa Pig", emoji:"🐷" }, // ★motivateur
-  { id:"simon",   cat:"play", label:"Simon",      say:"Je veux regarder Simon", emoji:"🐰" }, // ★motivateur
-  { id:"spiderman",cat:"play",label:"Spiderman",  say:"Je veux regarder Spiderman", emoji:"🕷️" }, // ★motivateur
-  { id:"dessinanime",cat:"play",label:"Dessin animé", say:"Je veux regarder un dessin animé", emoji:"📺" },
-  { id:"tablette",cat:"play", label:"Tablette",   say:"Je veux la tablette", emoji:"📱" },
-  { id:"dehors",  cat:"play", label:"Dehors",     say:"Je veux aller dehors", emoji:"🌳" },
-  { id:"jouer",   cat:"play", label:"Jouer",      say:"Je veux jouer",     emoji:"🧸" },
-  { id:"chatouilles",cat:"play",label:"Chatouilles",say:"Je veux des chatouilles", emoji:"🤗" },
-  { id:"livre",   cat:"play", label:"Livre",      say:"Je veux lire un livre", emoji:"📖" },
-  { id:"musique", cat:"play", label:"Musique",    say:"Je veux de la musique", emoji:"🎵" },
+  { id:"piscine", cat:"play", label:"Piscine",    emoji:"🏊" }, // ★motivateur
+  { id:"nager",   cat:"play", label:"Nager",      emoji:"🌊" }, // [M]
+  { id:"balancoire",cat:"play",label:"Balançoire",emoji:"🛝" }, // ★motivateur
+  { id:"puzzle",  cat:"play", label:"Puzzle",     emoji:"🧩" }, // ★motivateur
+  { id:"peppa",   cat:"play", label:"Peppa Pig",  emoji:"🐷" }, // ★motivateur
+  { id:"simon",   cat:"play", label:"Simon",      emoji:"🐰" }, // ★motivateur
+  { id:"spiderman",cat:"play",label:"Spiderman",  emoji:"🕷️" }, // ★motivateur
+  { id:"dessinanime",cat:"play",label:"Dessin animé", emoji:"📺" },
+  { id:"tablette",cat:"play", label:"Tablette",   emoji:"📱" },
+  { id:"dehors",  cat:"play", label:"Dehors",     emoji:"🌳" },
+  { id:"jouer",   cat:"play", label:"Jouer",      emoji:"🧸" },
+  { id:"chatouilles",cat:"play",label:"Chatouilles",emoji:"🤗" },
+  { id:"livre",   cat:"play", label:"Livre",      emoji:"📖" },
+  { id:"musique", cat:"play", label:"Musique",    emoji:"🎵" },
 
   /* 👨‍👩‍👦 Personnes — remplacez les émojis par de vraies photos ! */
-  { id:"maman",   cat:"people", label:"Maman",    say:"Maman",             emoji:"👩" },
-  { id:"papa",    cat:"people", label:"Papa",     say:"Papa",              emoji:"👨" },
-  { id:"meme",    cat:"people", label:"Mémé",     say:"Mémé",              emoji:"👵" },
-  { id:"pepe",    cat:"people", label:"Pépé",     say:"Pépé",              emoji:"👴" },
-  { id:"didi",    cat:"people", label:"Didi",     say:"Didi",              emoji:"👵" },
-  { id:"podo",    cat:"people", label:"Podo",     say:"Podo",              emoji:"👴" },
-  { id:"romain",  cat:"people", label:"Romain",   say:"Romain",            emoji:"👨‍🦱" },
-  { id:"jeajea",  cat:"people", label:"JeaJea",   say:"Jaja",              emoji:"👩‍🦰" }, // orthographe phonétique pour la voix
-  { id:"maitresse",cat:"people",label:"Annièce",  say:"Annièce",           emoji:"👩‍🏫" },
-  { id:"emilie",  cat:"people", label:"Émilie",   say:"Émilie",            emoji:"🧑‍🏫" },
-  { id:"calin",   cat:"people", label:"Câlin",    say:"Je veux un câlin",  emoji:"🫂" },
+  { id:"maman",   cat:"people", label:"Maman",    emoji:"👩" },
+  { id:"papa",    cat:"people", label:"Papa",     emoji:"👨" },
+  { id:"meme",    cat:"people", label:"Mémé",     emoji:"👵" },
+  { id:"pepe",    cat:"people", label:"Pépé",     emoji:"👴" },
+  { id:"didi",    cat:"people", label:"Didi",     emoji:"👵" },
+  { id:"podo",    cat:"people", label:"Podo",     emoji:"👴" },
+  { id:"romain",  cat:"people", label:"Romain",   emoji:"👨‍🦱" },
+  { id:"jeajea",  cat:"people", label:"JeaJea",   say:"Jaja", emoji:"👩‍🦰" }, // "say" = prononciation phonétique
+  { id:"maitresse",cat:"people",label:"Annièce",  emoji:"👩‍🏫" },
+  { id:"emilie",  cat:"people", label:"Émilie",   emoji:"🧑‍🏫" },
+  { id:"calin",   cat:"people", label:"Câlin",    emoji:"🫂" },
 
   /* 😊 Je ressens */
-  { id:"content", cat:"feel", label:"Content",    say:"Je suis content",   emoji:"😊" },
-  { id:"triste",  cat:"feel", label:"Triste",     say:"Je suis triste",    emoji:"😢" },
-  { id:"fache",   cat:"feel", label:"Fâché",      say:"Je suis fâché",     emoji:"😠" },
-  { id:"peur",    cat:"feel", label:"Peur",       say:"J'ai peur",         emoji:"😨" },
-  { id:"fatigue", cat:"feel", label:"Fatigué",    say:"Je suis fatigué",   emoji:"😴" },
+  { id:"content", cat:"feel", label:"Content",    emoji:"😊" },
+  { id:"triste",  cat:"feel", label:"Triste",     emoji:"😢" },
+  { id:"fache",   cat:"feel", label:"Fâché",      emoji:"😠" },
+  { id:"peur",    cat:"feel", label:"Peur",       emoji:"😨" },
+  { id:"fatigue", cat:"feel", label:"Fatigué",    emoji:"😴" },
 
   /* 🏃 Actions et routines */
-  { id:"dormir",  cat:"actions", label:"Dodo",    say:"Je veux faire dodo", emoji:"🛏️" }, // [M]
-  { id:"bain",    cat:"actions", label:"Bain",    say:"Je veux prendre le bain", emoji:"🛁" },
-  { id:"dents",   cat:"actions", label:"Brosser les dents", say:"On brosse les dents", emoji:"🪥" }, // point difficile
-  { id:"mains",   cat:"actions", label:"Laver les mains", say:"Je me lave les mains", emoji:"🧼" },
-  { id:"voiture", cat:"actions", label:"Voiture", say:"On va en voiture",  emoji:"🚗" }, // [M]
-  { id:"maison",  cat:"actions", label:"Maison",  say:"Je veux rentrer à la maison", emoji:"🏠" }, // [M]
-  { id:"ecole",   cat:"actions", label:"École",   say:"On va à l'école",   emoji:"🏫" }, // [M]
-  { id:"cartable",cat:"actions", label:"Cartable",say:"Mon cartable",      emoji:"🎒" }, // [M]
-  { id:"tomber",  cat:"actions", label:"Tombé",   say:"Je suis tombé",     emoji:"💥" }, // [M]
-  { id:"promener",cat:"actions", label:"Promenade",say:"Je veux me promener", emoji:"🚶" },
+  { id:"dormir",  cat:"actions", label:"Dodo",    emoji:"🛏️" }, // [M]
+  { id:"bain",    cat:"actions", label:"Bain",    emoji:"🛁" },
+  { id:"dents",   cat:"actions", label:"Brosser les dents", emoji:"🪥" }, // point difficile
+  { id:"mains",   cat:"actions", label:"Laver les mains", emoji:"🧼" },
+  { id:"voiture", cat:"actions", label:"Voiture", emoji:"🚗" }, // [M]
+  { id:"maison",  cat:"actions", label:"Maison",  emoji:"🏠" }, // [M]
+  { id:"ecole",   cat:"actions", label:"École",   emoji:"🏫" }, // [M]
+  { id:"cartable",cat:"actions", label:"Cartable",emoji:"🎒" }, // [M]
+  { id:"tomber",  cat:"actions", label:"Tombé",   emoji:"💥" }, // [M]
+  { id:"promener",cat:"actions", label:"Promenade",emoji:"🚶" },
 ];
 
 /* ================= État ================= */
@@ -681,7 +685,7 @@ Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
 "action" : "create" (nouveau pictogramme), "image" (changer seulement l'image d'un pictogramme existant) ou "say" (changer seulement la phrase prononcée d'un pictogramme existant) ;
 "target" : si action "image" ou "say", le label EXACT du pictogramme existant concerné, sinon null ;
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
-"say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
+"say" : le MOT court (ou groupe de 1-2 mots) que la tablette prononce quand l'enfant touche la carte — le plus souvent identique au "label". Surtout PAS une phrase : les cartes s'enchaînent pour former la phrase, lue ensuite par le bouton ▶. Ne diffère du label que pour corriger une prononciation (ex label "JeaJea" → say "Jaja") ;
 "cat" : la catégorie la plus logique parmi : ${catList} ;
 "search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
 "imageHint" : si le parent donne une consigne sur l'apparence de l'image (forme, couleur, objet précis que l'enfant reconnaît), cette consigne en une phrase, sinon null ;
@@ -880,7 +884,7 @@ document.getElementById("playBtn").onclick = async () => {
       return;
     } catch {}
   }
-  speak(strip.map(i => i.say || i.label).join(". "));
+  speak(strip.map(i => i.say || i.label).join(" "));
 };
 document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip(); };
 
