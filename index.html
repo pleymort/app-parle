@@ -379,22 +379,42 @@ async function ttsGemini(text) {
   return pcmToWav(j.candidates[0].content.parts[0].inlineData.data, 24000);
 }
 
+/* Règle d'or CAA : le son part TOUJOURS immédiatement.
+   Belle voix si déjà en cache, sinon voix de l'appareil tout de suite
+   et génération Gemini en arrière-plan pour la prochaine fois. */
 const player = new Audio();
 let playerUrl = null;
+let speakSeq = 0; // évite qu'un vieil audio parte en retard après d'autres taps
+const genQueue = new Set();
+
+async function ensureVoice(text) {
+  if (!geminiKey || genQueue.has(text)) return;
+  genQueue.add(text);
+  try {
+    const key = GEMINI.voice + "|" + text;
+    if (!(await idbGet(key))) await idbSet(key, await ttsGemini(text));
+  } catch {} finally { genQueue.delete(text); }
+}
+
 async function speak(text) {
+  const seq = ++speakSeq;
   if (geminiKey) {
-    try {
-      const key = GEMINI.voice + "|" + text;
-      let blob = await idbGet(key);
-      if (!blob) { blob = await ttsGemini(text); idbSet(key, blob); }
-      if (playerUrl) URL.revokeObjectURL(playerUrl);
-      playerUrl = URL.createObjectURL(blob);
-      player.src = playerUrl;
-      player.playbackRate = rate;
-      await player.play();
-      return;
-    } catch {}
+    const cached = await idbGet(GEMINI.voice + "|" + text);
+    if (cached) {
+      if (seq !== speakSeq) return;
+      try {
+        if (playerUrl) URL.revokeObjectURL(playerUrl);
+        playerUrl = URL.createObjectURL(cached);
+        player.src = playerUrl;
+        player.playbackRate = rate;
+        await player.play();
+        return;
+      } catch {}
+    } else {
+      ensureVoice(text); // en arrière-plan, sans attendre
+    }
   }
+  if (seq !== speakSeq) return;
   deviceSpeak(text);
 }
 
@@ -523,7 +543,15 @@ function renderStrip() {
 document.getElementById("playBtn").onclick = async () => {
   if (strip.length === 0) return;
   if (geminiKey && reformOn && strip.length > 1 && navigator.onLine) {
-    try { speak(await reformulate(strip.map(i => i.label))); return; } catch {}
+    // 3,5 s maximum pour la reformulation, sinon on lit les mots bruts
+    try {
+      const phrase = await Promise.race([
+        reformulate(strip.map(i => i.label)),
+        sleep(3500).then(() => { throw new Error("timeout"); }),
+      ]);
+      speak(phrase);
+      return;
+    } catch {}
   }
   speak(strip.map(i => i.say || i.label).join(". "));
 };
@@ -661,6 +689,8 @@ document.getElementById("reformChk").onchange = (e) => {
   store.set("reform", reformOn);
 };
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 document.getElementById("genVoicesBtn").onclick = async () => {
   if (needKey()) return;
   const status = document.getElementById("aiStatus");
@@ -669,14 +699,25 @@ document.getElementById("genVoicesBtn").onclick = async () => {
   for (const item of items) {
     const text = item.say || item.label;
     const key = GEMINI.voice + "|" + text;
-    try {
-      if (!(await idbGet(key))) idbSet(key, await ttsGemini(text));
-      done++;
-      status.textContent = `Voix générées : ${done}/${items.length}`;
-    } catch (e) {
-      status.textContent = `Arrêt à ${done}/${items.length} : ${e.message}. Relancez pour continuer.`;
-      return;
+    if (await idbGet(key)) { done++; status.textContent = `Voix générées : ${done}/${items.length}`; continue; }
+    // Le niveau gratuit de Gemini limite le TTS à ~3 appels/minute :
+    // en cas d'erreur 429 on attend 30 s puis on réessaie le même mot.
+    let ok = false;
+    for (let tries = 0; tries < 5 && !ok; tries++) {
+      try { await idbSet(key, await ttsGemini(text)); ok = true; }
+      catch (e) {
+        if (String(e.message).includes("429")) {
+          status.textContent = `Limite de vitesse Gemini — pause 30 s… (${done}/${items.length}, laissez ce panneau ouvert)`;
+          await sleep(30000);
+        } else {
+          status.textContent = `Arrêt à ${done}/${items.length} : ${e.message}. Relancez plus tard, ça reprendra ici.`;
+          return;
+        }
+      }
     }
+    if (!ok) { status.textContent = `Quota atteint à ${done}/${items.length}. Relancez plus tard : la génération reprendra où elle s'est arrêtée.`; return; }
+    done++;
+    status.textContent = `Voix générées : ${done}/${items.length}`;
   }
   status.textContent = `Terminé ✓ — les ${items.length} voix sont sur la tablette (hors ligne).`;
 };
