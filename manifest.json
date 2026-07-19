@@ -1,7 +1,7 @@
 {
-  "name": "Virgile parle",
-  "short_name": "Virgile",
-  "description": "Application de communication (CAA) pour Virgile",
+  "name": "Leova",
+  "short_name": "Leova",
+  "description": "Leova — application de communication (CAA)",
   "start_url": ".",
   "display": "fullscreen",
   "orientation": "landscape",

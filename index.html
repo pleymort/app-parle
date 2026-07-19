@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#4A90D9">
 <link rel="manifest" href="manifest.json">
-<title>Virgile parle</title>
+<title>Leova</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
   html, body { height: 100%; overflow: hidden; font-family: "Segoe UI", system-ui, -apple-system, sans-serif; touch-action: manipulation; }
@@ -170,11 +170,11 @@
 <div id="panel">
   <div id="panelCard">
     <h2>Réglages (parents) <span id="verTag" style="float:right;font-size:12px;color:#B9C7D6;font-weight:600"></span></h2>
-    <p class="sub">Ajoutez des images, réglez la voix. Virgile ne voit pas cet écran.</p>
+    <p class="sub">Ajoutez des images, réglez la voix. L'enfant ne voit pas cet écran.</p>
 
     <h2 style="font-size:17px">✨ Ajout magique</h2>
     <div class="prow">
-      <label>Dites ou écrivez ce que Virgile doit pouvoir demander — un mot, une liste, ou un thème</label>
+      <label>Dites ou écrivez ce que l'enfant doit pouvoir demander — un mot, une liste, ou un thème</label>
       <div class="magicRow">
         <input type="text" id="magicInput" placeholder='ex : "trampoline" · "fraise, banane, yaourt" · "le petit-déjeuner"'>
         <button class="pbtn ghost" id="magicMic" title="Dicter au micro">🎤</button>
@@ -256,7 +256,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "19"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "20"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -277,7 +277,7 @@ const DEFAULT_ITEMS = [
      dans la bande-phrase, puis ▶ lit l'ensemble (reformulé en phrase naturelle
      par l'IA, ou les mots à la suite sans IA). On ne met "say" que pour corriger
      une prononciation (ex "JeaJea" → "Jaja").
-     Les mots marqués [M] correspondent aux signes Makaton que Virgile connaît :
+     Les mots marqués [M] correspondent aux signes Makaton que l'enfant connaît :
      même mot signé = même picto = même voix. */
   { id:"encore",  cat:"core", label:"Encore",     emoji:"🔁" }, // [M]
   { id:"fini",    cat:"core", label:"Fini",       emoji:"✅" }, // [M]
@@ -536,7 +536,7 @@ async function gemini(kind, body) {
 /* ---- Voix naturelle : générée une fois, puis cache IndexedDB ---- */
 function idbOpen() {
   return new Promise((res, rej) => {
-    const q = indexedDB.open("virgile", 1);
+    const q = indexedDB.open("leova", 1);
     q.onupgradeneeded = () => q.result.createObjectStore("voices");
     q.onsuccess = () => res(q.result);
     q.onerror = () => rej(q.error);
@@ -957,7 +957,7 @@ document.getElementById("closePanel").onclick = closePanel;
 document.getElementById("exitParent").onclick = exitParentMode;
 document.getElementById("gear").onclick = () => { if (parentMode) openPanel(); };
 document.getElementById("rate").oninput = (e) => { rate = parseFloat(e.target.value); store.set("rate", rate); };
-document.getElementById("testVoice").onclick = () => speak("Bonjour Virgile !");
+document.getElementById("testVoice").onclick = () => speak("Bonjour ! Ceci est un test de la voix.");
 
 /* ---- Ajout d'un picto ---- */
 function setPendingPhoto(dataUrl) {
@@ -991,7 +991,7 @@ document.getElementById("arasaacBtn").onclick = async () => {
   try {
     const urls = await searchArasaac(word);
     if (!urls.length) { status2.textContent = "Aucun picto trouvé — essayez ✨ Générer (IA)."; return; }
-    status2.textContent = "Touchez le picto que Virgile reconnaîtra le mieux :";
+    status2.textContent = "Touchez le picto que l'enfant reconnaîtra le mieux :";
     for (const u of urls) {
       const im = document.createElement("img");
       im.crossOrigin = "anonymous";
@@ -1103,7 +1103,7 @@ async function resolveVisual(p, label) {
 document.getElementById("magicBtn").onclick = async () => {
   if (needKey()) return;
   const concept = document.getElementById("magicInput").value.trim();
-  if (!concept) { alert("Écris (ou dicte au micro) ce que Virgile doit pouvoir demander."); return; }
+  if (!concept) { alert("Écris (ou dicte au micro) ce que l'enfant doit pouvoir demander."); return; }
   document.getElementById("magicResult").style.display = "none";
   try {
     magicStatus.textContent = "Je réfléchis…";

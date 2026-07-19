@@ -1,4 +1,4 @@
-const CACHE = "virgile-parle-v19";
+const CACHE = "leova-v20";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
