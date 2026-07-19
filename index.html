@@ -161,13 +161,18 @@
   #pinCard {
     background: #fff; border-radius: 20px; padding: 24px; width: 100%; max-width: 320px; text-align: center;
   }
-  #pinTitle { font-size: 18px; font-weight: 800; color: #24425F; margin-bottom: 14px; }
-  #pinEntry {
-    width: 170px; text-align: center; letter-spacing: 12px; font-size: 30px; font-weight: 700;
-    padding: 10px 10px 10px 22px; border: 2px solid #D8E1EA; border-radius: 12px; color: #24425F;
+  #pinTitle { font-size: 18px; font-weight: 800; color: #24425F; margin-bottom: 14px; text-wrap: balance; }
+  #pinDots { display: flex; gap: 14px; justify-content: center; margin-bottom: 6px; }
+  #pinDots span { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #B9D4EE; background: transparent; }
+  #pinDots span.on { background: #4A90D9; border-color: #4A90D9; }
+  #pinMsg { color: #C0392B; font-size: 13px; font-weight: 700; min-height: 16px; margin: 8px 0; }
+  #pinPad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 6px; }
+  #pinPad button {
+    font-size: 24px; font-weight: 700; padding: 16px 0; border: none; border-radius: 14px;
+    background: #EAF2FB; color: #24425F; cursor: pointer;
   }
-  #pinMsg { color: #C0392B; font-size: 13px; font-weight: 700; min-height: 16px; margin-top: 8px; }
-  .pinBtns { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  #pinPad button:active { background: #C9E0F8; }
+  #pinPad button.pinAux { background: #F1F5F9; color: #8899AA; font-size: 16px; }
   .kioskState { font-size: 13px; font-weight: 700; margin-top: 6px; min-height: 18px; }
 </style>
 </head>
@@ -221,7 +226,10 @@
     <p class="sub" style="margin-bottom:8px">Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app ni ouvrir autre chose. On revient aux réglages avec le code parent.</p>
     <div class="prow">
       <label>Code parent (4 chiffres) — pour ouvrir les réglages et quitter le kiosk</label>
-      <input type="tel" id="kioskPinInput" inputmode="numeric" maxlength="4" placeholder="ex : 1234" autocomplete="off">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="pinStatus" style="font-weight:700;color:#55677A"></span>
+        <button class="pbtn ghost" id="setPinBtn" style="margin:0">Définir / modifier le code</button>
+      </div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#55677A">
       <input type="checkbox" id="kioskChk"> Activer le mode kiosk
@@ -288,11 +296,21 @@
 <div id="pinOverlay">
   <div id="pinCard">
     <div id="pinTitle">Code parent</div>
-    <input type="tel" id="pinEntry" inputmode="numeric" maxlength="4" autocomplete="off">
+    <div id="pinDots"><span></span><span></span><span></span><span></span></div>
     <div id="pinMsg"></div>
-    <div class="pinBtns">
-      <button class="pbtn ghost" id="pinCancel">Annuler</button>
-      <button class="pbtn primary" id="pinOk">OK</button>
+    <div id="pinPad">
+      <button type="button" data-k="1">1</button>
+      <button type="button" data-k="2">2</button>
+      <button type="button" data-k="3">3</button>
+      <button type="button" data-k="4">4</button>
+      <button type="button" data-k="5">5</button>
+      <button type="button" data-k="6">6</button>
+      <button type="button" data-k="7">7</button>
+      <button type="button" data-k="8">8</button>
+      <button type="button" data-k="9">9</button>
+      <button type="button" class="pinAux" data-k="cancel">Annuler</button>
+      <button type="button" data-k="0">0</button>
+      <button type="button" class="pinAux" data-k="del">⌫</button>
     </div>
   </div>
 </div>
@@ -300,7 +318,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "21"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "22"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -993,7 +1011,7 @@ function openPanel() {
   document.getElementById("gkey").value = geminiKey;
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
-  document.getElementById("kioskPinInput").value = kioskPin;
+  document.getElementById("pinStatus").textContent = kioskPin ? "•••• (code défini)" : "aucun code";
   document.getElementById("kioskState").textContent = kioskOn ? "🔒 Kiosk actif" : "";
   const sel = document.getElementById("newCat");
   sel.innerHTML = cats().map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
@@ -1011,28 +1029,40 @@ document.getElementById("testVoice").onclick = () => speak("Bonjour ! Ceci est u
 /* ---- Mode kiosk (verrouillage sur l'app) + code parent ---- */
 const Kiosk = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Kiosk) || null;
 
-// Pavé de saisie du code parent, renvoie le code tapé (string) ou null si annulé.
+// Pavé de saisie du code parent : clavier numérique INTÉGRÉ (aucun clavier
+// système n'apparaît — plus sûr en kiosk). Renvoie le code (string) ou null.
+let pinResolver = null;
+let pinBuffer = "";
+function renderPinDots() {
+  document.querySelectorAll("#pinDots span").forEach((d, i) => d.classList.toggle("on", i < pinBuffer.length));
+}
+function closePin(val) {
+  document.getElementById("pinOverlay").classList.remove("open");
+  const r = pinResolver; pinResolver = null; pinBuffer = "";
+  if (r) r(val);
+}
 function askPin(title) {
   return new Promise((resolve) => {
-    const ov = document.getElementById("pinOverlay");
-    const entry = document.getElementById("pinEntry");
+    pinResolver = resolve;
+    pinBuffer = "";
     document.getElementById("pinTitle").textContent = title || "Code parent";
     document.getElementById("pinMsg").textContent = "";
-    entry.value = "";
-    ov.classList.add("open");
-    setTimeout(() => entry.focus(), 60);
-    const finish = (val) => {
-      ov.classList.remove("open");
-      document.getElementById("pinOk").onclick = null;
-      document.getElementById("pinCancel").onclick = null;
-      entry.onkeydown = null;
-      resolve(val);
-    };
-    document.getElementById("pinOk").onclick = () => finish(entry.value.trim());
-    document.getElementById("pinCancel").onclick = () => finish(null);
-    entry.onkeydown = (e) => { if (e.key === "Enter") finish(entry.value.trim()); };
+    renderPinDots();
+    document.getElementById("pinOverlay").classList.add("open");
   });
 }
+document.getElementById("pinPad").addEventListener("click", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const k = btn.dataset.k;
+  if (k === "cancel") { closePin(null); return; }
+  if (k === "del") { pinBuffer = pinBuffer.slice(0, -1); renderPinDots(); return; }
+  if (/^[0-9]$/.test(k) && pinBuffer.length < 4) {
+    pinBuffer += k;
+    renderPinDots();
+    if (pinBuffer.length === 4) { const v = pinBuffer; setTimeout(() => closePin(v), 130); }
+  }
+});
 
 // Entrée en mode parent : si le kiosk est actif, on exige le bon code d'abord.
 async function requestParentMode() {
@@ -1066,10 +1096,13 @@ async function setKiosk(on) {
   }
 }
 
-document.getElementById("kioskPinInput").oninput = (e) => {
-  kioskPin = (e.target.value || "").replace(/\D/g, "").slice(0, 4);
-  e.target.value = kioskPin;
-  store.set("kioskpin", kioskPin);
+document.getElementById("setPinBtn").onclick = async () => {
+  const p = await askPin("Nouveau code à 4 chiffres");
+  if (p && p.length === 4) {
+    kioskPin = p; store.set("kioskpin", kioskPin);
+    document.getElementById("pinStatus").textContent = "•••• (code défini)";
+    document.getElementById("kioskState").textContent = "Code enregistré ✓";
+  }
 };
 document.getElementById("kioskChk").onchange = (e) => setKiosk(e.target.checked);
 
