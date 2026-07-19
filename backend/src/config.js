@@ -5,7 +5,7 @@ export const config = {
   // Région UE. europe-west9 = Paris (résidence FR) mais tous les modèles n'y
   // sont pas ; europe-west1 (Belgique) est un repli fiable pour Gemini/Imagen.
   location: process.env.VERTEX_LOCATION || "europe-west1",
-  textModel: process.env.VERTEX_TEXT_MODEL || "gemini-2.0-flash-lite-001",
+  textModel: process.env.VERTEX_TEXT_MODEL || "gemini-2.5-flash-lite",
   // Secret partagé TEMPORAIRE (dev). À remplacer en Phase 4 par la vérification
   // d'un ID token Firebase + App Check, puis metering/paywall par utilisateur.
   appSecret: process.env.APP_SECRET || "",

@@ -13,32 +13,46 @@ Proxy qui centralise les appels IA **côté serveur** : aucune clé dans l'app, 
 3. Créer la base **Firestore** (mode Native, localisation **eur3** = Europe).
 4. Signer le **DPA Google Cloud** (traitement des données).
 
-## Déployer
+## Déployé ✓ (19 juillet 2026)
+
+- **Projet GCP** : `leova-app` (compte personnel `thibaut.gadiolet@gmail.com`,
+  facturation « Leova billing », configuration gcloud dédiée : `gcloud config
+  configurations activate leova` — `default` = config pro, non touchée).
+- **URL** : https://leova-backend-11414001422.europe-west1.run.app
+- **Secret d'app** : dans **Secret Manager** (`leova-app-secret`), injecté via
+  `--set-secrets` — jamais en clair dans les commandes ni le code. Pour le lire :
+  `gcloud secrets versions access latest --secret leova-app-secret`
+- Firestore créé (eur3), APIs activées, rôle Vertex AI User accordé au compte
+  de service. Modèle texte : `gemini-2.5-flash-lite` (le `gemini-2.0-*` initial
+  n'existe plus sur Vertex — erreur 404).
+
+## Re-déployer
 
 ```bash
 cd backend
+gcloud config configurations activate leova
 gcloud run deploy leova-backend \
   --source . \
   --region europe-west1 \
   --allow-unauthenticated \
-  --set-env-vars GOOGLE_CLOUD_PROJECT=<PROJECT_ID>,VERTEX_LOCATION=europe-west1,APP_SECRET=<un_secret>
+  --set-env-vars GOOGLE_CLOUD_PROJECT=leova-app,VERTEX_LOCATION=europe-west1 \
+  --set-secrets APP_SECRET=leova-app-secret:latest
 ```
 
-Donne au compte de service Cloud Run le rôle **Vertex AI User** :
-```bash
-gcloud projects add-iam-policy-binding <PROJECT_ID> \
-  --member="serviceAccount:<PROJECT_NUMBER>-compute@developer.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
-```
+⚠️ Pour changer UNE variable d'environnement : `--update-env-vars` (fusionne).
+`--set-env-vars` REMPLACE tout le jeu de variables — c'est ce qui a fait échouer
+la révision 00002 (GOOGLE_CLOUD_PROJECT effacé → crash au démarrage).
 
 ## Tester
 
 ```bash
-URL=$(gcloud run services describe leova-backend --region europe-west1 --format='value(status.url)')
+URL=https://leova-backend-11414001422.europe-west1.run.app
+curl -s "$URL/health"   # -> {"ok":true,...}
 curl -s -X POST "$URL/v1/reformulate" \
-  -H "x-app-secret: <un_secret>" -H "content-type: application/json" \
+  -H "x-app-secret: $(gcloud secrets versions access latest --secret leova-app-secret)" \
+  -H "content-type: application/json" \
   -d '{"labels":["Je veux","École"]}'
-# -> {"phrase":"Je veux aller à l'école."}
+# -> {"phrase":"Je veux aller à l'école."}  (testé ✓)
 ```
 
 ## Développement local
