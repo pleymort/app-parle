@@ -120,8 +120,18 @@
   #magicList .mcell img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; border: 2px solid #D8E1EA; }
   #magicList .mlb { font-size: 12px; font-weight: 700; color: #24425F; }
   #magicList .mcat { font-size: 10px; color: #9DB2C7; font-weight: 600; }
+  #magicList .mcell .em { font-size: 48px; }
   #editNote { display: none; background: #FFF3D6; color: #8A6D1B; font-weight: 700; font-size: 14px; padding: 8px 12px; text-align: center; }
   .parentOn #editNote { display: block; }
+  /* En mode parent : le doigt sert au glisser-déposer, pas au défilement */
+  .parentOn .picto { touch-action: none; }
+  #trashZone {
+    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: #FDECEC; color: #C0392B; border: 3px dashed #C0392B;
+    border-radius: 16px; padding: 14px 26px; font-size: 18px; font-weight: 800; z-index: 90;
+  }
+  #trashZone.dropTarget { background: #C0392B; color: white; }
+  .tab.dropTarget { outline: 3px solid #35A853; }
 </style>
 </head>
 <body>
@@ -132,7 +142,7 @@
   <button id="playBtn" class="stripBtn" aria-label="Lire la phrase">▶</button>
 </div>
 
-<div id="editNote">Mode parent : touche un picto pour le masquer / le réafficher. ⚙️ pour les réglages.</div>
+<div id="editNote">Mode parent : touchez un picto pour le masquer/réafficher · maintenez puis glissez pour réorganiser, déposer sur un onglet (changer de catégorie) ou sur 🗑 (supprimer) · ⚙️ pour les réglages.</div>
 <div id="tabs"></div>
 <div id="grid"></div>
 
@@ -294,12 +304,59 @@ let hidden = new Set(store.get("hidden", []));
 let rate = store.get("rate", 0.9);
 let geminiKey = store.get("gkey", "");
 let reformOn = store.get("reform", true);
+let overrides = store.get("over", {}); // modifications des pictos de base : {id: {photo, emoji, cat}}
+let gridOrder = store.get("ord", {});  // ordre des pictos par catégorie : {cat: [ids]}
 let currentCat = "core";
 let parentMode = false;
 let strip = [];
 let pendingPhoto = null;
 
-function allItems() { return DEFAULT_ITEMS.concat(customItems); }
+function allItems() {
+  return DEFAULT_ITEMS.map(i => {
+    const o = overrides[i.id];
+    if (!o) return i;
+    const m = { ...i, cat: o.cat || i.cat };
+    if (o.emoji) { m.emoji = o.emoji; m.photo = null; }
+    else if (o.photo) { m.photo = o.photo; }
+    return m;
+  }).concat(customItems);
+}
+
+/* Change l'image (photo OU émoji) d'un picto, de base ou personnalisé */
+function setItemVisual(item, vis) {
+  if (item.id.startsWith("c_")) {
+    const it = customItems.find(x => x.id === item.id);
+    if (it) { it.photo = vis.photo || null; it.emoji = vis.emoji || null; }
+    store.set("custom", customItems);
+  } else {
+    overrides[item.id] = { ...(overrides[item.id] || {}), photo: vis.photo || null, emoji: vis.emoji || null };
+    store.set("over", overrides);
+  }
+}
+
+function setItemCat(item, cat) {
+  if (item.id.startsWith("c_")) {
+    const it = customItems.find(x => x.id === item.id);
+    if (it) it.cat = cat;
+    store.set("custom", customItems);
+  } else {
+    overrides[item.id] = { ...(overrides[item.id] || {}), cat };
+    store.set("over", overrides);
+  }
+}
+
+function deleteItem(item) {
+  if (item.id.startsWith("c_")) {
+    if (!confirm(`Supprimer « ${item.label} » définitivement ?`)) return;
+    customItems = customItems.filter(i => i.id !== item.id);
+    store.set("custom", customItems);
+  } else {
+    // Les pictos de base sont masqués (récupérables), pas supprimés
+    hidden.add(item.id);
+    store.set("hidden", [...hidden]);
+  }
+  renderGrid();
+}
 
 /* ================= Voix ================= */
 let frVoice = null;
@@ -479,10 +536,11 @@ function extractImage(j) {
   return "data:" + part.inlineData.mimeType + ";base64," + part.inlineData.data;
 }
 
-async function genPicto(word) {
+async function genPicto(word, hint) {
   const j = await gemini(GEMINI.image, { contents: [{ parts: [{ text:
     "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
-    ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." }] }] });
+    ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." +
+    (hint ? " Consigne importante du parent sur l'apparence (l'enfant reconnaît mieux certaines formes) : " + hint + "." : "") }] }] });
   return extractImage(j);
 }
 
@@ -499,15 +557,21 @@ async function cleanPhoto(dataUrl) {
 /* ---- Ajout magique : le parent donne un concept, l'IA décide de tout ---- */
 async function magicPlan(concept) {
   const cats = CATEGORIES.map(c => `"${c.id}" (${c.label})`).join(", ");
+  const existing = allItems().map(i => `"${i.label}"`).join(", ");
   const j = await gemini(GEMINI.text, {
     contents: [{ parts: [{ text:
       `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
-Cela peut être UN concept ("le trampoline"), une LISTE ("fraise, banane, yaourt") ou un THÈME à développer ("le petit-déjeuner" → les aliments typiques).
-Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets (un par pictogramme à créer), chacun avec ces clés :
-"label" : le mot court affiché sous le pictogramme (1 à 2 mots, première lettre en majuscule, ex "Piscine") ;
+Pictogrammes déjà présents dans l'app : ${existing}.
+La demande peut être : UN concept à créer ("le trampoline"), une LISTE ("fraise, banane, yaourt"), un THÈME à développer ("le petit-déjeuner" → les aliments typiques), ou la MODIFICATION DE L'IMAGE d'un pictogramme déjà présent ("change l'image de Gâteau, mets un cupcake").
+Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
+"action" : "create" (nouveau pictogramme) ou "image" (changer seulement l'image d'un pictogramme existant) ;
+"target" : si action "image", le label EXACT du pictogramme existant concerné, sinon null ;
+"label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
 "say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
 "cat" : la catégorie la plus logique parmi : ${cats} ;
-"search" : un nom commun simple et générique pour chercher un pictogramme dans la banque ARASAAC (ex "piscine").
+"search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
+"imageHint" : si le parent donne une consigne sur l'apparence de l'image (forme, couleur, objet précis que l'enfant reconnaît), cette consigne en une phrase, sinon null ;
+"emoji" : si le parent demande explicitement un émoji, l'émoji lui-même (le caractère), sinon null.
 Ne développe un thème que si le parent l'a clairement demandé ; pour un concept unique, réponds un tableau d'un seul objet.` }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -547,22 +611,124 @@ function pictoVisual(item, big) {
 
 function renderGrid() {
   gridEl.innerHTML = "";
-  for (const item of allItems()) {
-    if (item.cat !== currentCat) continue;
+  const ord = gridOrder[currentCat] || [];
+  const items = allItems()
+    .map((item, i) => ({ item, i }))
+    .filter(({ item }) => item.cat === currentCat)
+    .sort((a, b) => {
+      const ia = ord.indexOf(a.item.id), ib = ord.indexOf(b.item.id);
+      return (ia === -1 ? 1e6 + a.i : ia) - (ib === -1 ? 1e6 + b.i : ib);
+    })
+    .map(({ item }) => item);
+  for (const item of items) {
     const isHidden = hidden.has(item.id);
     if (isHidden && !parentMode) continue;
     const b = document.createElement("button");
     b.className = "picto" + (isHidden ? " hiddenItem" : "");
+    b.dataset.id = item.id;
     b.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
     b.onclick = () => {
-      if (parentMode) { toggleHidden(item.id); return; }
+      if (parentMode) { if (!dragDone) toggleHidden(item.id); return; }
       b.classList.add("flash");
       setTimeout(() => b.classList.remove("flash"), 180);
       speak(item.say || item.label);
       addToStrip(item);
     };
+    attachParentDrag(b, item);
     gridEl.appendChild(b);
   }
+}
+
+/* ===== Glisser-déposer en mode parent =====
+   Maintenir un picto ~0,3 s puis glisser : réorganiser dans la grille,
+   déposer sur un onglet pour changer de catégorie, ou sur 🗑 pour supprimer. */
+let dragDone = false;
+
+function attachParentDrag(b, item) {
+  b.addEventListener("pointerdown", (ev) => {
+    if (!parentMode) return;
+    let started = false;
+    const sx = ev.clientX, sy = ev.clientY;
+    let ghost = null, trashEl = null;
+
+    const timer = setTimeout(() => {
+      started = true;
+      dragDone = false;
+      ghost = b.cloneNode(true);
+      const r = b.getBoundingClientRect();
+      Object.assign(ghost.style, {
+        position: "fixed", left: r.left + "px", top: r.top + "px",
+        width: r.width + "px", height: r.height + "px",
+        opacity: ".85", zIndex: 100, pointerEvents: "none", margin: 0,
+        boxShadow: "0 8px 24px rgba(30,60,90,.35)",
+      });
+      document.body.appendChild(ghost);
+      b.style.opacity = ".25";
+      trashEl = document.createElement("div");
+      trashEl.id = "trashZone";
+      trashEl.textContent = "🗑 Supprimer";
+      document.body.appendChild(trashEl);
+    }, 300);
+
+    function under(x, y) {
+      ghost.style.display = "none";
+      const t = document.elementFromPoint(x, y);
+      ghost.style.display = "";
+      return t;
+    }
+
+    function onMove(e) {
+      if (!started) {
+        if (Math.abs(e.clientX - sx) > 12 || Math.abs(e.clientY - sy) > 12) { clearTimeout(timer); cleanup(); }
+        return;
+      }
+      e.preventDefault();
+      ghost.style.left = (e.clientX - ghost.offsetWidth / 2) + "px";
+      ghost.style.top = (e.clientY - ghost.offsetHeight / 2) + "px";
+      const t = under(e.clientX, e.clientY);
+      document.querySelectorAll(".tab.dropTarget").forEach(x => x.classList.remove("dropTarget"));
+      trashEl.classList.remove("dropTarget");
+      const cell = t && t.closest ? t.closest(".picto") : null;
+      const tab = t && t.closest ? t.closest(".tab") : null;
+      if (t && t.closest && t.closest("#trashZone")) trashEl.classList.add("dropTarget");
+      else if (tab) tab.classList.add("dropTarget");
+      else if (cell && cell !== b && cell.parentElement === gridEl) {
+        const cells = [...gridEl.children];
+        gridEl.insertBefore(b, cells.indexOf(cell) > cells.indexOf(b) ? cell.nextSibling : cell);
+      }
+    }
+
+    function onUp(e) {
+      clearTimeout(timer);
+      if (started) {
+        dragDone = true;
+        setTimeout(() => { dragDone = false; }, 100);
+        const t = under(e.clientX, e.clientY);
+        const tab = t && t.closest ? t.closest(".tab") : null;
+        if (t && t.closest && t.closest("#trashZone")) {
+          deleteItem(item);
+        } else if (tab) {
+          const idx = [...tabsEl.children].indexOf(tab);
+          if (idx >= 0 && CATEGORIES[idx]) { setItemCat(item, CATEGORIES[idx].id); renderGrid(); }
+        } else {
+          gridOrder[currentCat] = [...gridEl.children].map(x => x.dataset.id).filter(Boolean);
+          store.set("ord", gridOrder);
+        }
+        ghost.remove(); trashEl.remove();
+        b.style.opacity = "";
+      }
+      cleanup();
+    }
+
+    function cleanup() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.removeEventListener("pointercancel", onUp);
+    }
+    document.addEventListener("pointermove", onMove, { passive: false });
+    document.addEventListener("pointerup", onUp);
+    document.addEventListener("pointercancel", onUp);
+  });
 }
 
 function addToStrip(item) {
@@ -734,7 +900,7 @@ function renderMagicList() {
   for (const c of magicItems) {
     const d = document.createElement("div");
     d.className = "mcell";
-    d.innerHTML = `<img src="${c.item.photo}"><div class="mlb">${c.item.label}</div><div class="mcat">${CATEGORIES.find(x => x.id === c.item.cat).label}</div>`;
+    d.innerHTML = `${pictoVisual(c.item)}<div class="mlb">${c.item.label}</div><div class="mcat">${CATEGORIES.find(x => x.id === c.item.cat).label}</div>`;
     d.onclick = async () => {
       // Fait défiler les autres pictos ARASAAC, puis dessine avec l'IA
       c.idx++;
@@ -745,8 +911,8 @@ function renderMagicList() {
           magicStatus.textContent = `Je dessine une nouvelle image pour « ${c.item.label} »… (~10 s)`;
           photo = await toSquare256(await genPicto(c.item.label));
         }
-        c.item.photo = photo;
-        store.set("custom", customItems);
+        setItemVisual(c.item, { photo });
+        c.item.photo = photo; c.item.emoji = null;
         renderGrid();
         renderMagicList();
         magicStatus.textContent = "Image remplacée ✓";
@@ -754,6 +920,18 @@ function renderMagicList() {
     };
     box.appendChild(d);
   }
+}
+
+/* Trouve l'image d'un plan : émoji explicite > consigne visuelle (dessin IA) > ARASAAC > dessin IA */
+async function resolveVisual(p, label) {
+  if (p.emoji) return { emoji: p.emoji, photo: null, urls: [] };
+  let urls = [];
+  if (!p.imageHint) {
+    try { urls = await searchArasaac(p.search || label); } catch {}
+    if (urls.length) return { emoji: null, photo: await toSquare256(urls[0]), urls };
+  }
+  magicStatus.textContent = `Je dessine « ${label} »… (~10 s)`;
+  return { emoji: null, photo: await toSquare256(await genPicto(label, p.imageHint)), urls };
 }
 
 document.getElementById("magicBtn").onclick = async () => {
@@ -765,37 +943,52 @@ document.getElementById("magicBtn").onclick = async () => {
     magicStatus.textContent = "Je réfléchis…";
     const plans = (await magicPlan(concept)).slice(0, 8);
     const created = [];
+    let updated = 0;
     for (let k = 0; k < plans.length; k++) {
       const p = plans[k];
-      if (!p || !p.label) continue;
+      if (!p) continue;
+
+      // Modification de l'image d'un picto existant
+      if (p.action === "image" && p.target) {
+        const item = allItems().find(i => i.label.toLowerCase() === String(p.target).toLowerCase());
+        if (!item) continue;
+        magicStatus.textContent = `Nouvelle image pour « ${item.label} »…`;
+        try {
+          const vis = await resolveVisual(p, item.label);
+          setItemVisual(item, vis);
+          item.photo = vis.photo; item.emoji = vis.emoji;
+          created.push({ item, urls: vis.urls, idx: 0 });
+          updated++;
+        } catch {}
+        continue;
+      }
+
+      // Création
+      if (!p.label) continue;
       if (!CATEGORIES.some(c => c.id === p.cat)) p.cat = "core";
       magicStatus.textContent = `Création ${k + 1}/${plans.length} : ${p.label}…`;
-      let urls = [];
-      try { urls = await searchArasaac(p.search || p.label); } catch {}
-      let photo = null;
       try {
-        if (urls.length) photo = await toSquare256(urls[0]);
-        else {
-          magicStatus.textContent = `Je dessine « ${p.label} »… (~10 s)`;
-          photo = await toSquare256(await genPicto(p.label));
-        }
+        const vis = await resolveVisual(p, p.label);
+        const item = { id: "c_" + Date.now() + "_" + k, cat: p.cat, label: p.label, say: p.say || p.label, emoji: vis.emoji, photo: vis.photo };
+        customItems.push(item);
+        created.push({ item, urls: vis.urls, idx: 0 });
       } catch { continue; }
-      const item = { id: "c_" + Date.now() + "_" + k, cat: p.cat, label: p.label, say: p.say || p.label, emoji: null, photo };
-      customItems.push(item);
-      created.push({ item, urls, idx: 0 });
     }
-    if (!created.length) throw new Error("aucun picto n'a pu être créé");
+    if (!created.length) throw new Error("aucun picto n'a pu être créé ou modifié");
     magicItems = created;
     store.set("custom", customItems);
     currentCat = created[0].item.cat;
     renderTabs(); renderGrid();
     // Belles voix en arrière-plan, espacées pour respecter le quota TTS (~3/min)
-    created.forEach((c, i) => setTimeout(() => ensureVoice(c.item.say), i * 25000));
+    created.filter(c => !c.updatedOnly).forEach((c, i) => setTimeout(() => ensureVoice(c.item.say), i * 25000));
     renderMagicList();
     document.getElementById("magicResult").style.display = "block";
-    magicStatus.textContent = created.length === 1
-      ? `Ajouté ✓ — dira « ${created[0].item.say} ». La belle voix se prépare en arrière-plan.`
-      : `${created.length} pictos ajoutés ✓ — les belles voix se préparent en arrière-plan.`;
+    const nbNew = created.length - updated;
+    magicStatus.textContent =
+      (nbNew ? `${nbNew} picto${nbNew > 1 ? "s" : ""} ajouté${nbNew > 1 ? "s" : ""}` : "") +
+      (nbNew && updated ? " et " : "") +
+      (updated ? `${updated} image${updated > 1 ? "s" : ""} modifiée${updated > 1 ? "s" : ""}` : "") +
+      " ✓";
     document.getElementById("magicInput").value = "";
   } catch (e) { magicStatus.textContent = "Échec : " + e.message; }
 };
