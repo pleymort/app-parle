@@ -254,7 +254,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "12"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "13"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1270,6 +1270,20 @@ document.getElementById("addBtn").onclick = () => {
   const cat = document.getElementById("newCat").value;
   if (!label) { alert("Écris le mot à prononcer."); return; }
   if (!pendingPhoto && !emoji) { alert("Ajoute une photo ou un émoji."); return; }
+  // Si le mot existe déjà, on remplace son image au lieu de créer un doublon
+  const existing = allItems().find(i => i.label.toLowerCase() === label.toLowerCase());
+  if (existing) {
+    setItemVisual(existing, pendingPhoto ? { photo: pendingPhoto } : { emoji });
+    document.getElementById("newLabel").value = "";
+    document.getElementById("newEmoji").value = "";
+    document.getElementById("newPhoto").value = "";
+    document.getElementById("photoPreview").innerHTML = "";
+    pendingPhoto = null;
+    currentCat = existing.cat;
+    renderTabs(); renderGrid();
+    status2.textContent = `Image de « ${existing.label} » remplacée ✓`;
+    return;
+  }
   customItems.push({
     id: "c_" + Date.now(),
     cat, label,
