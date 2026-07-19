@@ -35,14 +35,16 @@
   #playBtn { background: #35A853; color: white; }
   #clearBtn { background: #F1F5F9; color: #8899AA; font-size: 26px; }
 
-  /* ---- Onglets catégories ---- */
+  /* ---- Onglets catégories ----
+     Retour à la ligne (wrap) plutôt que défilement horizontal : toutes les
+     catégories restent visibles d'un coup d'œil, même quand on en ajoute. */
   #tabs {
-    display: flex; gap: 8px; padding: 10px 10px 4px; overflow-x: auto; flex-shrink: 0;
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 10px 4px; flex-shrink: 0;
   }
   .tab {
     border: none; border-radius: 16px; padding: 10px 16px; font-size: 17px; font-weight: 700;
     background: #FFFFFF; color: #55677A; display: flex; align-items: center; gap: 8px;
-    flex-shrink: 0; cursor: pointer; box-shadow: 0 1px 3px rgba(30,60,90,.08);
+    cursor: pointer; box-shadow: 0 1px 3px rgba(30,60,90,.08);
   }
   .tab .tem { font-size: 22px; }
   .tab.active { background: #4A90D9; color: white; }
@@ -254,7 +256,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "14"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "15"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
