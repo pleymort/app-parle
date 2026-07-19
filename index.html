@@ -229,7 +229,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "8"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "9"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -391,17 +391,50 @@ function deviceSpeak(text) {
    La clé API est saisie par le parent et reste dans le localStorage
    de la tablette — jamais dans le code (qui est public sur GitHub). */
 const GEMINI = {
-  text:  "gemini-2.5-flash-lite",
-  image: "gemini-2.5-flash-image",
-  tts:   "gemini-2.5-flash-preview-tts",
   voice: "Kore", // NE PAS CHANGER : cette voix devient LA voix de l'enfant
 };
+const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-async function gemini(model, body) {
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+/* Les noms de modèles Gemini changent avec le temps (dépréciations, nouvelles versions).
+   On découvre donc dynamiquement les modèles disponibles pour la clé du parent,
+   et on re-détecte automatiquement si l'un d'eux disparaît (erreur 404). */
+let models = store.get("models", null);
+
+async function ensureModels(force) {
+  if (models && models.text && !force) return models;
+  const r = await fetch(`${GEMINI_BASE}/models?pageSize=1000&key=${encodeURIComponent(geminiKey)}`);
+  if (!r.ok) throw new Error("clé API invalide ? (" + r.status + ")");
+  const j = await r.json();
+  const avail = (j.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+    .map(m => m.name.replace("models/", ""));
+  const ver = (n) => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  // On préfère la version la plus récente, puis le nom le plus court (= le plus stable)
+  const latest = (list) => list.slice().sort((a, b) => ver(b) - ver(a) || a.length - b.length)[0] || null;
+  const plain = (n) => !/(image|tts|embed|audio|live|thinking|robotics|computer|exp|preview)/.test(n);
+  models = {
+    text:  latest(avail.filter(n => /flash-lite/.test(n) && plain(n))) || latest(avail.filter(n => /flash/.test(n) && plain(n))) || latest(avail.filter(plain)),
+    audio: latest(avail.filter(n => /flash/.test(n) && !/flash-lite/.test(n) && plain(n))) || latest(avail.filter(plain)),
+    image: latest(avail.filter(n => /image/.test(n))),
+    tts:   latest(avail.filter(n => /tts/.test(n))),
+  };
+  store.set("models", models);
+  return models;
+}
+
+async function gemini(kind, body) {
+  const call = async (model) => fetch(
+    `${GEMINI_BASE}/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
   );
+  let m = (await ensureModels())[kind];
+  if (!m) throw new Error("aucun modèle « " + kind + " » disponible pour cette clé");
+  let r = await call(m);
+  if (r.status === 404) {
+    // Le modèle a été retiré par Google : on re-détecte puis on réessaie une fois
+    const m2 = (await ensureModels(true))[kind];
+    if (m2 && m2 !== m) r = await call(m2);
+  }
   if (!r.ok) throw new Error("Erreur Gemini (" + r.status + ")");
   return r.json();
 }
@@ -454,7 +487,7 @@ function pcmToWav(b64, sampleRate) {
 }
 
 async function ttsGemini(text) {
-  const j = await gemini(GEMINI.tts, {
+  const j = await gemini("tts", {
     contents: [{ parts: [{ text }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
@@ -539,7 +572,7 @@ function extractImage(j) {
 }
 
 async function genPicto(word, hint) {
-  const j = await gemini(GEMINI.image, { contents: [{ parts: [{ text:
+  const j = await gemini("image", { contents: [{ parts: [{ text:
     "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
     ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." +
     (hint ? " Consigne importante du parent sur l'apparence (l'enfant reconnaît mieux certaines formes) : " + hint + "." : "") }] }] });
@@ -549,7 +582,7 @@ async function genPicto(word, hint) {
 async function cleanPhoto(dataUrl) {
   const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
   const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
-  const j = await gemini(GEMINI.image, { contents: [{ parts: [
+  const j = await gemini("image", { contents: [{ parts: [
     { inlineData: { mimeType: mime, data: b64 } },
     { text: "Détoure le sujet principal de cette photo et place-le sur un fond blanc uni. Rends-le net et lisible comme un pictogramme de communication pour enfant. Aucun texte." },
   ] }] });
@@ -560,7 +593,7 @@ async function cleanPhoto(dataUrl) {
 async function magicPlan(concept) {
   const cats = CATEGORIES.map(c => `"${c.id}" (${c.label})`).join(", ");
   const existing = allItems().map(i => `"${i.label}"`).join(", ");
-  const j = await gemini(GEMINI.text, {
+  const j = await gemini("text", {
     contents: [{ parts: [{ text:
       `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
 Pictogrammes déjà présents dans l'app : ${existing}.
@@ -583,7 +616,7 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
 
 /* ---- Reformulation de la bande-phrase ---- */
 async function reformulate(labels) {
-  const j = await gemini(GEMINI.text, { contents: [{ parts: [{ text:
+  const j = await gemini("text", { contents: [{ parts: [{ text:
     "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, sur son application de communication : " +
     labels.join(", ") +
     ". Écris UNE seule phrase courte et naturelle en français, à la première personne, qui exprime ce qu'il veut dire. Réponds uniquement avec la phrase." }] }] });
@@ -1033,7 +1066,7 @@ micBtn.onclick = async () => {
           r.onload = () => res(r.result.split(",")[1]);
           r.readAsDataURL(blob);
         });
-        const j = await gemini(GEMINI.text, { contents: [{ parts: [
+        const j = await gemini("audio", { contents: [{ parts: [
           { inlineData: { mimeType: blob.type.split(";")[0], data: b64 } },
           { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
         ] }] });
@@ -1051,6 +1084,8 @@ micBtn.onclick = async () => {
 document.getElementById("gkey").onchange = (e) => {
   geminiKey = e.target.value.trim();
   store.set("gkey", geminiKey);
+  models = null; // nouvelle clé → on redétectera les modèles disponibles
+  store.set("models", null);
 };
 document.getElementById("reformChk").onchange = (e) => {
   reformOn = e.target.checked;
