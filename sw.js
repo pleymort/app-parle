@@ -1,4 +1,4 @@
-const CACHE = "virgile-parle-v16";
+const CACHE = "virgile-parle-v17";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
