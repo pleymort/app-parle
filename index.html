@@ -239,11 +239,16 @@
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">Intelligence artificielle (Gemini)</h2>
+    <h2 style="font-size:17px">Intelligence artificielle</h2>
+    <div class="prow">
+      <label>Code d'accès Leova (serveur sécurisé, recommandé)</label>
+      <input type="text" id="bsecret" placeholder="Collez le code d'accès (il reste sur la tablette)">
+      <div class="hint">Active la reformulation via le serveur Leova (Europe, RGPD) — aucune clé Gemini nécessaire pour cette fonction.</div>
+    </div>
     <div class="prow">
       <label>Clé API Gemini — gratuite sur aistudio.google.com/apikey</label>
       <input type="text" id="gkey" placeholder="Collez la clé ici (elle reste sur la tablette)">
-      <div class="hint">Active la belle voix, la création de pictos et la reformulation des phrases. Sans clé, l'app fonctionne comme avant.</div>
+      <div class="hint">Encore utilisée pour la belle voix et la création de pictos (bascule serveur à venir). Sans clé, l'app fonctionne comme avant.</div>
     </div>
     <div class="prow">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px">
@@ -318,7 +323,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "22"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "23"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -433,6 +438,10 @@ let customItems = store.get("custom", []);
 let hidden = new Set(store.get("hidden", []));
 let rate = store.get("rate", 0.9);
 let geminiKey = store.get("gkey", "");
+// Backend Leova (Cloud Run, UE) : l'URL est publique, le code d'accès reste
+// dans la tablette (localStorage) — jamais dans ce code, qui est public.
+const BACKEND_URL = "https://leova-backend-11414001422.europe-west1.run.app";
+let backendSecret = store.get("bsecret", "");
 let reformOn = store.get("reform", true);
 let overrides = store.get("over", {}); // modifications des pictos de base : {id: {photo, emoji, cat}}
 let gridOrder = store.get("ord", {});  // ordre des pictos par catégorie : {cat: [ids]}
@@ -774,8 +783,25 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
   return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
 }
 
-/* ---- Reformulation de la bande-phrase ---- */
+/* ---- Reformulation de la bande-phrase ----
+   Voie 1 : serveur Leova (Cloud Run + Vertex, UE) — activé par le code d'accès.
+   Voie 2 (repli) : appel Gemini direct avec la clé du parent. */
+async function reformulateBackend(labels) {
+  const r = await fetch(BACKEND_URL + "/v1/reformulate", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-app-secret": backendSecret },
+    body: JSON.stringify({ labels }),
+  });
+  if (!r.ok) throw new Error("backend " + r.status);
+  const phrase = (await r.json()).phrase;
+  if (!phrase) throw new Error("backend vide");
+  return phrase;
+}
+
 async function reformulate(labels) {
+  if (backendSecret) {
+    try { return await reformulateBackend(labels); } catch {}
+  }
   const j = await gemini("text", { contents: [{ parts: [{ text:
     "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, sur son application de communication : " +
     labels.join(", ") +
@@ -948,7 +974,7 @@ function renderStrip() {
 
 document.getElementById("playBtn").onclick = async () => {
   if (strip.length === 0) return;
-  if (geminiKey && reformOn && strip.length > 1 && navigator.onLine) {
+  if ((backendSecret || geminiKey) && reformOn && strip.length > 1 && navigator.onLine) {
     // 3,5 s maximum pour la reformulation, sinon on lit les mots bruts
     try {
       const phrase = await Promise.race([
@@ -1009,6 +1035,7 @@ const panel = document.getElementById("panel");
 function openPanel() {
   document.getElementById("rate").value = rate;
   document.getElementById("gkey").value = geminiKey;
+  document.getElementById("bsecret").value = backendSecret;
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
   document.getElementById("pinStatus").textContent = kioskPin ? "•••• (code défini)" : "aucun code";
@@ -1410,6 +1437,10 @@ document.getElementById("addCatBtn").onclick = () => {
 };
 
 /* ---- Réglages IA ---- */
+document.getElementById("bsecret").onchange = (e) => {
+  backendSecret = e.target.value.trim();
+  store.set("bsecret", backendSecret);
+};
 document.getElementById("gkey").onchange = (e) => {
   geminiKey = e.target.value.trim();
   store.set("gkey", geminiKey);
