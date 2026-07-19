@@ -254,7 +254,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "11"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "12"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -270,51 +270,84 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const DEFAULT_ITEMS = [
-  // Vocabulaire "noyau" — les mots les plus puissants
-  { id:"encore",  cat:"core", label:"Encore",     say:"Encore !",          emoji:"🔁" },
-  { id:"fini",    cat:"core", label:"Fini",       say:"C'est fini",        emoji:"✅" },
-  { id:"aide",    cat:"core", label:"Aide-moi",   say:"Aide-moi s'il te plaît", emoji:"🙋" },
-  { id:"oui",     cat:"core", label:"Oui",        say:"Oui",               emoji:"👍" },
-  { id:"non",     cat:"core", label:"Non",        say:"Non",               emoji:"👎" },
+  /* ⭐ Essentiel — les "mots-pouvoir" (vocabulaire noyau).
+     Les mots marqués [M] correspondent aux signes Makaton que Virgile connaît :
+     même mot signé = même picto = même voix. */
+  { id:"encore",  cat:"core", label:"Encore",     say:"Encore !",          emoji:"🔁" }, // [M]
+  { id:"fini",    cat:"core", label:"Fini",       say:"C'est fini",        emoji:"✅" }, // [M]
+  { id:"aide",    cat:"core", label:"Aide-moi",   say:"Aide-moi s'il te plaît", emoji:"🙋" }, // [M]
+  { id:"jeveux",  cat:"core", label:"Je veux",    say:"Je veux",           emoji:"👉" }, // [M] Je + Vouloir
+  { id:"oui",     cat:"core", label:"Oui",        say:"Oui",               emoji:"👍" }, // [M]
+  { id:"non",     cat:"core", label:"Non",        say:"Non",               emoji:"👎" }, // [M]
+  { id:"stop",    cat:"core", label:"Stop",       say:"Stop !",            emoji:"🛑" },
   { id:"pause",   cat:"core", label:"Attends",    say:"Attends un peu",    emoji:"✋" },
-  { id:"mal",     cat:"core", label:"J'ai mal",   say:"J'ai mal",          emoji:"🤕" },
+  { id:"break",   cat:"core", label:"Pause",      say:"J'ai besoin d'une pause", emoji:"⏸️" },
+  { id:"mal",     cat:"core", label:"J'ai mal",   say:"J'ai mal",          emoji:"🤕" }, // [M]
   { id:"toilettes",cat:"core",label:"Toilettes",  say:"Je veux aller aux toilettes", emoji:"🚽" },
+  { id:"merci",   cat:"core", label:"Merci",      say:"Merci",             emoji:"🙏" }, // [M]
+  { id:"svp",     cat:"core", label:"S'il te plaît", say:"S'il te plaît",  emoji:"🥺" }, // [M]
+  { id:"bonjour", cat:"core", label:"Bonjour",    say:"Bonjour !",         emoji:"🙋" }, // [M]
+  { id:"aurevoir",cat:"core", label:"Au revoir",  say:"Au revoir !",       emoji:"👋" }, // [M]
 
-  // Manger / boire
-  { id:"eau",     cat:"food", label:"Eau",        say:"Je veux de l'eau",  emoji:"💧" },
+  /* 🍎 Manger / boire */
+  { id:"eau",     cat:"food", label:"Eau",        say:"Je veux de l'eau",  emoji:"💧" }, // [M]
+  { id:"pizza",   cat:"food", label:"Pizza",      say:"Je veux de la pizza", emoji:"🍕" }, // [M] ★motivateur
+  { id:"frites",  cat:"food", label:"Frites",     say:"Je veux des frites", emoji:"🍟" }, // [M]
+  { id:"pain",    cat:"food", label:"Pain",       say:"Je veux du pain",   emoji:"🥖" }, // ★motivateur
+  { id:"gouter",  cat:"food", label:"Goûter",     say:"Je veux le goûter", emoji:"🍪" },
   { id:"manger",  cat:"food", label:"Manger",     say:"Je veux manger",    emoji:"🍽️" },
-  { id:"lait",    cat:"food", label:"Lait",       say:"Je veux du lait",   emoji:"🥛" },
-  { id:"gateau",  cat:"food", label:"Gâteau",     say:"Je veux du gâteau", emoji:"🍰" },
+  { id:"compote", cat:"food", label:"Compote",    say:"Je veux de la compote", emoji:"🥣" },
   { id:"pomme",   cat:"food", label:"Pomme",      say:"Je veux une pomme", emoji:"🍎" },
   { id:"pates",   cat:"food", label:"Pâtes",      say:"Je veux des pâtes", emoji:"🍝" },
-  { id:"compote", cat:"food", label:"Compote",    say:"Je veux de la compote", emoji:"🥣" },
+  { id:"couper",  cat:"food", label:"Couper",     say:"Tu peux couper s'il te plaît ?", emoji:"🔪" }, // [M]
 
-  // Jouer
-  { id:"jouer",   cat:"play", label:"Jouer",      say:"Je veux jouer",     emoji:"🧸" },
-  { id:"dehors",  cat:"play", label:"Dehors",     say:"Je veux aller dehors", emoji:"🌳" },
-  { id:"musique", cat:"play", label:"Musique",    say:"Je veux de la musique", emoji:"🎵" },
+  /* 🧸 Jouer */
+  { id:"piscine", cat:"play", label:"Piscine",    say:"Je veux aller à la piscine", emoji:"🏊" }, // ★motivateur
+  { id:"nager",   cat:"play", label:"Nager",      say:"Je veux nager",     emoji:"🌊" }, // [M]
+  { id:"balancoire",cat:"play",label:"Balançoire",say:"Je veux la balançoire", emoji:"🛝" }, // ★motivateur
+  { id:"puzzle",  cat:"play", label:"Puzzle",     say:"Je veux faire un puzzle", emoji:"🧩" }, // ★motivateur
+  { id:"peppa",   cat:"play", label:"Peppa Pig",  say:"Je veux regarder Peppa Pig", emoji:"🐷" }, // ★motivateur
+  { id:"simon",   cat:"play", label:"Simon",      say:"Je veux regarder Simon", emoji:"🐰" }, // ★motivateur
+  { id:"spiderman",cat:"play",label:"Spiderman",  say:"Je veux regarder Spiderman", emoji:"🕷️" }, // ★motivateur
+  { id:"dessinanime",cat:"play",label:"Dessin animé", say:"Je veux regarder un dessin animé", emoji:"📺" },
   { id:"tablette",cat:"play", label:"Tablette",   say:"Je veux la tablette", emoji:"📱" },
-  { id:"bulles",  cat:"play", label:"Bulles",     say:"Je veux des bulles", emoji:"🫧" },
-  { id:"balancoire",cat:"play",label:"Balançoire",say:"Je veux la balançoire", emoji:"🛝" },
+  { id:"dehors",  cat:"play", label:"Dehors",     say:"Je veux aller dehors", emoji:"🌳" },
+  { id:"jouer",   cat:"play", label:"Jouer",      say:"Je veux jouer",     emoji:"🧸" },
   { id:"chatouilles",cat:"play",label:"Chatouilles",say:"Je veux des chatouilles", emoji:"🤗" },
+  { id:"livre",   cat:"play", label:"Livre",      say:"Je veux lire un livre", emoji:"📖" },
+  { id:"musique", cat:"play", label:"Musique",    say:"Je veux de la musique", emoji:"🎵" },
 
-  // Personnes
+  /* 👨‍👩‍👦 Personnes — remplacez les émojis par de vraies photos ! */
   { id:"maman",   cat:"people", label:"Maman",    say:"Maman",             emoji:"👩" },
   { id:"papa",    cat:"people", label:"Papa",     say:"Papa",              emoji:"👨" },
-  { id:"calin",   cat:"people", label:"Câlin",    say:"Je veux un câlin",  emoji:"🤗" },
+  { id:"meme",    cat:"people", label:"Mémé",     say:"Mémé",              emoji:"👵" },
+  { id:"pepe",    cat:"people", label:"Pépé",     say:"Pépé",              emoji:"👴" },
+  { id:"didi",    cat:"people", label:"Didi",     say:"Didi",              emoji:"👵" },
+  { id:"podo",    cat:"people", label:"Podo",     say:"Podo",              emoji:"👴" },
+  { id:"romain",  cat:"people", label:"Romain",   say:"Romain",            emoji:"👨‍🦱" },
+  { id:"jeajea",  cat:"people", label:"JeaJea",   say:"Jéa Jéa",           emoji:"👩‍🦰" },
+  { id:"maitresse",cat:"people",label:"Annièce",  say:"Annièce",           emoji:"👩‍🏫" },
+  { id:"emilie",  cat:"people", label:"Émilie",   say:"Émilie",            emoji:"🧑‍🏫" },
+  { id:"calin",   cat:"people", label:"Câlin",    say:"Je veux un câlin",  emoji:"🫂" },
 
-  // Sentiments
+  /* 😊 Je ressens */
   { id:"content", cat:"feel", label:"Content",    say:"Je suis content",   emoji:"😊" },
   { id:"triste",  cat:"feel", label:"Triste",     say:"Je suis triste",    emoji:"😢" },
   { id:"fache",   cat:"feel", label:"Fâché",      say:"Je suis fâché",     emoji:"😠" },
-  { id:"fatigue", cat:"feel", label:"Fatigué",    say:"Je suis fatigué",   emoji:"😴" },
   { id:"peur",    cat:"feel", label:"Peur",       say:"J'ai peur",         emoji:"😨" },
+  { id:"fatigue", cat:"feel", label:"Fatigué",    say:"Je suis fatigué",   emoji:"😴" },
 
-  // Actions
-  { id:"dormir",  cat:"actions", label:"Dormir",  say:"Je veux dormir",    emoji:"🛏️" },
+  /* 🏃 Actions et routines */
+  { id:"dormir",  cat:"actions", label:"Dodo",    say:"Je veux faire dodo", emoji:"🛏️" }, // [M]
   { id:"bain",    cat:"actions", label:"Bain",    say:"Je veux prendre le bain", emoji:"🛁" },
+  { id:"dents",   cat:"actions", label:"Brosser les dents", say:"On brosse les dents", emoji:"🪥" }, // point difficile
+  { id:"mains",   cat:"actions", label:"Laver les mains", say:"Je me lave les mains", emoji:"🧼" },
+  { id:"voiture", cat:"actions", label:"Voiture", say:"On va en voiture",  emoji:"🚗" }, // [M]
+  { id:"maison",  cat:"actions", label:"Maison",  say:"Je veux rentrer à la maison", emoji:"🏠" }, // [M]
+  { id:"ecole",   cat:"actions", label:"École",   say:"On va à l'école",   emoji:"🏫" }, // [M]
+  { id:"cartable",cat:"actions", label:"Cartable",say:"Mon cartable",      emoji:"🎒" }, // [M]
+  { id:"tomber",  cat:"actions", label:"Tombé",   say:"Je suis tombé",     emoji:"💥" }, // [M]
   { id:"promener",cat:"actions", label:"Promenade",say:"Je veux me promener", emoji:"🚶" },
-  { id:"voiture", cat:"actions", label:"Voiture", say:"On va en voiture",  emoji:"🚗" },
 ];
 
 /* ================= État ================= */
