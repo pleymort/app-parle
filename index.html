@@ -229,7 +229,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "9"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "10"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -606,7 +606,8 @@ Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
 "cat" : la catégorie la plus logique parmi : ${cats} ;
 "search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
 "imageHint" : si le parent donne une consigne sur l'apparence de l'image (forme, couleur, objet précis que l'enfant reconnaît), cette consigne en une phrase, sinon null ;
-"emoji" : si le parent demande explicitement un émoji, l'émoji lui-même (le caractère), sinon null.
+"emoji" : si le parent demande explicitement un émoji, l'émoji lui-même (le caractère), sinon null ;
+"emojiFallback" : TOUJOURS fourni — un émoji simple qui représente bien le concept (image de secours).
 Ne développe un thème que si le parent l'a clairement demandé ; pour un concept unique, réponds un tableau d'un seul objet.` }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
@@ -899,9 +900,11 @@ document.getElementById("arasaacBtn").onclick = async () => {
       const im = document.createElement("img");
       im.crossOrigin = "anonymous";
       im.src = u;
-      im.onclick = async () => {
-        try { setPendingPhoto(await toSquare256(u)); box.innerHTML = ""; status2.textContent = "Picto choisi ✓"; }
-        catch { status2.textContent = "Erreur de chargement, réessayez."; }
+      im.onclick = () => {
+        // URL directe : pas de conversion canvas (bloquée par le WebView Android)
+        setPendingPhoto(u);
+        box.innerHTML = "";
+        status2.textContent = "Picto choisi ✓";
       };
       box.appendChild(im);
     }
@@ -941,7 +944,7 @@ function renderMagicList() {
       c.idx++;
       try {
         let photo;
-        if (c.idx < c.urls.length) photo = await toSquare256(c.urls[c.idx]);
+        if (c.idx < c.urls.length) photo = c.urls[c.idx];
         else {
           magicStatus.textContent = `Je dessine une nouvelle image pour « ${c.item.label} »… (~10 s)`;
           photo = await toSquare256(await genPicto(c.item.label));
@@ -957,16 +960,23 @@ function renderMagicList() {
   }
 }
 
-/* Trouve l'image d'un plan : émoji explicite > consigne visuelle (dessin IA) > ARASAAC > dessin IA */
+/* Trouve l'image d'un plan, avec replis successifs pour ne jamais échouer :
+   émoji explicite > ARASAAC (URL directe, sans conversion canvas — le WebView
+   Android bloque le canvas sur les images d'autres sites) > dessin IA >
+   ARASAAC quand même > émoji de secours proposé par l'IA. */
 async function resolveVisual(p, label) {
   if (p.emoji) return { emoji: p.emoji, photo: null, urls: [] };
   let urls = [];
-  if (!p.imageHint) {
-    try { urls = await searchArasaac(p.search || label); } catch {}
-    if (urls.length) return { emoji: null, photo: await toSquare256(urls[0]), urls };
+  try { urls = await searchArasaac(p.search || label); } catch {}
+  if (!p.imageHint && urls.length) return { emoji: null, photo: urls[0], urls };
+  try {
+    magicStatus.textContent = `Je dessine « ${label} »… (~10 s)`;
+    return { emoji: null, photo: await toSquare256(await genPicto(label, p.imageHint)), urls };
+  } catch (e) {
+    if (urls.length) return { emoji: null, photo: urls[0], urls };
+    if (p.emojiFallback) return { emoji: p.emojiFallback, photo: null, urls: [] };
+    throw e;
   }
-  magicStatus.textContent = `Je dessine « ${label} »… (~10 s)`;
-  return { emoji: null, photo: await toSquare256(await genPicto(label, p.imageHint)), urls };
 }
 
 document.getElementById("magicBtn").onclick = async () => {
@@ -978,7 +988,7 @@ document.getElementById("magicBtn").onclick = async () => {
     magicStatus.textContent = "Je réfléchis…";
     const plans = (await magicPlan(concept)).slice(0, 8);
     const created = [];
-    let updated = 0;
+    let updated = 0, lastErr = null;
     for (let k = 0; k < plans.length; k++) {
       const p = plans[k];
       if (!p) continue;
@@ -994,7 +1004,7 @@ document.getElementById("magicBtn").onclick = async () => {
           item.photo = vis.photo; item.emoji = vis.emoji;
           created.push({ item, urls: vis.urls, idx: 0 });
           updated++;
-        } catch {}
+        } catch (e) { lastErr = e; }
         continue;
       }
 
@@ -1007,9 +1017,9 @@ document.getElementById("magicBtn").onclick = async () => {
         const item = { id: "c_" + Date.now() + "_" + k, cat: p.cat, label: p.label, say: p.say || p.label, emoji: vis.emoji, photo: vis.photo };
         customItems.push(item);
         created.push({ item, urls: vis.urls, idx: 0 });
-      } catch { continue; }
+      } catch (e) { lastErr = e; continue; }
     }
-    if (!created.length) throw new Error("aucun picto n'a pu être créé ou modifié");
+    if (!created.length) throw new Error("aucun picto n'a pu être créé ou modifié" + (lastErr ? " (détail : " + lastErr.message + ")" : ""));
     magicItems = created;
     store.set("custom", customItems);
     currentCat = created[0].item.cat;

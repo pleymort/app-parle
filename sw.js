@@ -1,4 +1,4 @@
-const CACHE = "virgile-parle-v9";
+const CACHE = "virgile-parle-v10";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -30,6 +30,15 @@ self.addEventListener("fetch", (e) => {
     );
     return;
   }
-  // Le reste (manifest, icône) : cache d'abord.
-  e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
+  // Le reste : cache d'abord. Les pictogrammes ARASAAC sont mis en cache
+  // au premier chargement pour rester visibles hors ligne.
+  e.respondWith(
+    caches.match(e.request).then((hit) => hit || fetch(e.request).then((r) => {
+      if (e.request.url.includes("static.arasaac.org") && (r.ok || r.type === "opaque")) {
+        const copy = r.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+      }
+      return r;
+    }))
+  );
 });
