@@ -4,6 +4,7 @@ README.md
 # Capacitor / build natif
 node_modules/
 www/
-android/
 ios/
 .DS_Store
+# android/ est versionné (contient le plugin natif Kiosk) ; son propre .gitignore
+# exclut les artefacts de build (android/build, android/.gradle, etc.)

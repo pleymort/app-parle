@@ -151,6 +151,24 @@
   }
   #trashZone.dropTarget { background: #C0392B; color: white; }
   .tab.dropTarget { outline: 3px solid #35A853; }
+
+  /* ---- Code parent (mode kiosk) ---- */
+  #pinOverlay {
+    position: fixed; inset: 0; background: rgba(20,40,60,.55); z-index: 60;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #pinOverlay.open { display: flex; }
+  #pinCard {
+    background: #fff; border-radius: 20px; padding: 24px; width: 100%; max-width: 320px; text-align: center;
+  }
+  #pinTitle { font-size: 18px; font-weight: 800; color: #24425F; margin-bottom: 14px; }
+  #pinEntry {
+    width: 170px; text-align: center; letter-spacing: 12px; font-size: 30px; font-weight: 700;
+    padding: 10px 10px 10px 22px; border: 2px solid #D8E1EA; border-radius: 12px; color: #24425F;
+  }
+  #pinMsg { color: #C0392B; font-size: 13px; font-weight: 700; min-height: 16px; margin-top: 8px; }
+  .pinBtns { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .kioskState { font-size: 13px; font-weight: 700; margin-top: 6px; min-height: 18px; }
 </style>
 </head>
 <body>
@@ -196,6 +214,20 @@
       <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
       <button class="pbtn ghost" id="testVoice">🔊 Tester la voix</button>
     </div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">🔒 Mode kiosk</h2>
+    <p class="sub" style="margin-bottom:8px">Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app ni ouvrir autre chose. On revient aux réglages avec le code parent.</p>
+    <div class="prow">
+      <label>Code parent (4 chiffres) — pour ouvrir les réglages et quitter le kiosk</label>
+      <input type="tel" id="kioskPinInput" inputmode="numeric" maxlength="4" placeholder="ex : 1234" autocomplete="off">
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#55677A">
+      <input type="checkbox" id="kioskChk"> Activer le mode kiosk
+    </label>
+    <div class="kioskState" id="kioskState"></div>
+    <div class="hint">Sur la tablette, le verrouillage utilise l'épinglage d'écran d'Android (sortie possible en maintenant Retour + Aperçu). Pour un verrouillage total impossible à quitter, il faudra provisionner la tablette en « propriétaire d'appareil » (étape ultérieure).</div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
@@ -253,10 +285,22 @@
   </div>
 </div>
 
+<div id="pinOverlay">
+  <div id="pinCard">
+    <div id="pinTitle">Code parent</div>
+    <input type="tel" id="pinEntry" inputmode="numeric" maxlength="4" autocomplete="off">
+    <div id="pinMsg"></div>
+    <div class="pinBtns">
+      <button class="pbtn ghost" id="pinCancel">Annuler</button>
+      <button class="pbtn primary" id="pinOk">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 
-const APP_VERSION = "20"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "21"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -376,6 +420,8 @@ let overrides = store.get("over", {}); // modifications des pictos de base : {id
 let gridOrder = store.get("ord", {});  // ordre des pictos par catégorie : {cat: [ids]}
 let catOver = store.get("catover", {}); // renommages des catégories de base : {id: {label, emoji}}
 let customCats = store.get("cats", []); // catégories créées : [{id, label, emoji}]
+let kioskOn = store.get("kiosk", false); // mode kiosk actif ?
+let kioskPin = store.get("kioskpin", ""); // code parent (4 chiffres) pour ouvrir les réglages / quitter le kiosk
 
 function cats() {
   return DEFAULT_CATEGORIES.map(c => ({ ...c, ...(catOver[c.id] || {}) })).concat(customCats);
@@ -913,7 +959,7 @@ gear.addEventListener("pointerdown", () => {
   gearTimer = setTimeout(() => {
     gearRelease();
     if (navigator.vibrate) navigator.vibrate(80);
-    enterParentMode();
+    requestParentMode();
   }, 2000);
 });
 gear.addEventListener("pointerup", gearRelease);
@@ -946,6 +992,9 @@ function openPanel() {
   document.getElementById("rate").value = rate;
   document.getElementById("gkey").value = geminiKey;
   document.getElementById("reformChk").checked = reformOn;
+  document.getElementById("kioskChk").checked = kioskOn;
+  document.getElementById("kioskPinInput").value = kioskPin;
+  document.getElementById("kioskState").textContent = kioskOn ? "🔒 Kiosk actif" : "";
   const sel = document.getElementById("newCat");
   sel.innerHTML = cats().map(c => `<option value="${c.id}">${c.emoji} ${c.label}</option>`).join("");
   renderCatList();
@@ -958,6 +1007,71 @@ document.getElementById("exitParent").onclick = exitParentMode;
 document.getElementById("gear").onclick = () => { if (parentMode) openPanel(); };
 document.getElementById("rate").oninput = (e) => { rate = parseFloat(e.target.value); store.set("rate", rate); };
 document.getElementById("testVoice").onclick = () => speak("Bonjour ! Ceci est un test de la voix.");
+
+/* ---- Mode kiosk (verrouillage sur l'app) + code parent ---- */
+const Kiosk = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Kiosk) || null;
+
+// Pavé de saisie du code parent, renvoie le code tapé (string) ou null si annulé.
+function askPin(title) {
+  return new Promise((resolve) => {
+    const ov = document.getElementById("pinOverlay");
+    const entry = document.getElementById("pinEntry");
+    document.getElementById("pinTitle").textContent = title || "Code parent";
+    document.getElementById("pinMsg").textContent = "";
+    entry.value = "";
+    ov.classList.add("open");
+    setTimeout(() => entry.focus(), 60);
+    const finish = (val) => {
+      ov.classList.remove("open");
+      document.getElementById("pinOk").onclick = null;
+      document.getElementById("pinCancel").onclick = null;
+      entry.onkeydown = null;
+      resolve(val);
+    };
+    document.getElementById("pinOk").onclick = () => finish(entry.value.trim());
+    document.getElementById("pinCancel").onclick = () => finish(null);
+    entry.onkeydown = (e) => { if (e.key === "Enter") finish(entry.value.trim()); };
+  });
+}
+
+// Entrée en mode parent : si le kiosk est actif, on exige le bon code d'abord.
+async function requestParentMode() {
+  if (kioskOn && kioskPin) {
+    let pin = await askPin("Code parent");
+    while (pin !== null && pin !== kioskPin) {
+      pin = await askPin("Code incorrect — réessaie");
+    }
+    if (pin === null) return; // annulé
+  }
+  enterParentMode();
+}
+
+async function setKiosk(on) {
+  const k = Kiosk();
+  if (on) {
+    if (!kioskPin || kioskPin.length < 4) {
+      document.getElementById("kioskChk").checked = false;
+      document.getElementById("kioskState").textContent = "Choisis d'abord un code à 4 chiffres ci-dessus.";
+      return;
+    }
+    if (k) { try { await k.enable(); } catch (e) {} }
+    kioskOn = true; store.set("kiosk", true);
+    document.getElementById("kioskState").textContent = k
+      ? "🔒 Kiosk actif — la tablette est verrouillée sur Leova."
+      : "Kiosk activé (le verrouillage ne s'applique que dans l'app installée sur Android).";
+  } else {
+    if (k) { try { await k.disable(); } catch (e) {} }
+    kioskOn = false; store.set("kiosk", false);
+    document.getElementById("kioskState").textContent = "Kiosk désactivé.";
+  }
+}
+
+document.getElementById("kioskPinInput").oninput = (e) => {
+  kioskPin = (e.target.value || "").replace(/\D/g, "").slice(0, 4);
+  e.target.value = kioskPin;
+  store.set("kioskpin", kioskPin);
+};
+document.getElementById("kioskChk").onchange = (e) => setKiosk(e.target.checked);
 
 /* ---- Ajout d'un picto ---- */
 function setPendingPhoto(dataUrl) {
@@ -1350,6 +1464,9 @@ document.getElementById("verTag").textContent = "v" + APP_VERSION;
 renderTabs();
 renderGrid();
 renderStrip();
+
+// Si le kiosk était actif, on re-verrouille au démarrage (l'app a pu être relancée).
+if (kioskOn && Kiosk()) Kiosk().enable().catch(() => {});
 
 /* Garde l'écran allumé tant que l'app est affichée (Chrome Android).
    Fully Kiosk a aussi son propre réglage "Keep Screen On" qui prend le relais. */
