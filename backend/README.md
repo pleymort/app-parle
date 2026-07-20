@@ -77,8 +77,31 @@ npm install && node --env-file=.env src/index.js
   la clé Gemini du parent devient un simple secours, chaque fonction replie
   proprement (backend → Gemini → voix appareil / mots bruts).
 
-## Reste à faire (Phase 4)
+## Phase 4 — terminée ✓ (20 juillet 2026)
 
-- **Auth** : Firebase Auth (anonyme) + App Check, à la place du secret partagé.
-- **Metering** par utilisateur (Firestore) + quota gratuit / droits payants.
+- **Firebase Auth anonyme** : Firebase rattaché au projet, app web
+  `1:11414001422:web:980c432f47b655d2cd295f`, fournisseur anonyme activé.
+  L'app (v26) crée un compte anonyme via l'API REST Identity Toolkit (pas de
+  SDK) et envoie `Authorization: Bearer <idToken>` ; le jeton est rafraîchi
+  automatiquement. La clé `FB_API_KEY` dans index.html est publique par
+  conception.
+- **Deux voies d'accès** : `x-app-secret` (code parent, illimité, non compté)
+  ou jeton Firebase (quotas). Sans auth → 401 (testé).
+- **Metering Firestore** : un doc `usage/{uid}_{AAAA-MM}` par utilisateur et
+  par mois, incrément en transaction. Quota gratuit par défaut :
+  reformulate 1000, tts 1500, magic 100, image 50 (env `FREE_QUOTA`).
+  Dépassement → 429 `quota_epuise` (testé en réel). `users/{uid}.plan`
+  ("free"/autre) = futur emplacement des droits payants.
+- **Garde-fou global** : doc `usage/_global_{AAAA-MM}`, plafond tous
+  utilisateurs (env `GLOBAL_CAP`, image limité à 150/mois) → 429
+  `service_sature`. Protège la facture tant qu'App Check n'est pas en place
+  (des uid anonymes se créent gratuitement).
+- **`GET /v1/me`** : plan + usage du mois (pour l'app / futur paywall).
+- Panne du metering = on laisse passer (la disponibilité pour l'enfant prime).
+
+## Reste à faire (Phase 5)
+
+- **App Check** (Play Integrity + reCAPTCHA) pour attester que les appels
+  viennent bien de l'app — prérequis avant toute vraie distribution.
+- **Paiement** : entitlements dans `users/{uid}.plan` + intégration paiement.
 - Nettoyage : retirer à terme le code Gemini-direct de l'app.
