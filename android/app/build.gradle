@@ -40,6 +40,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Abonnement Leova Plus (Google Play Billing)
+    implementation "com.android.billingclient:billing:7.1.1"
 }
 
 apply from: 'capacitor.build.gradle'

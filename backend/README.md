@@ -118,12 +118,45 @@ npm install && node --env-file=.env src/index.js
   debug ajoutés, `android/app/google-services.json` posé mais inerte — plugin
   gradle non appliqué).
 
-## Reste à faire
+## Play Billing — rail technique prêt ✓ (20 juillet 2026)
 
-- **App Check (Play Integrity)** : nécessite la distribution via Play Store
-  (Play Console) — bloqué tant que l'app n'y est pas publiée. À l'activation :
-  plugin gradle google-services + SDK App Check côté app, vérification du
-  jeton `X-Firebase-AppCheck` côté serveur (mode observation d'abord).
-- **Paiement** : choisir le rail (Play Billing si distribution Play Store —
-  obligatoire pour du contenu numérique in-app — sinon Stripe sur le web),
-  puis webhook → `users/{uid}.plan = "plus"`.
+Décision : paiement via **Google Play Billing** (abonnement `leova_plus`).
+
+- **App (v29)** : plugin natif `BillingPlugin.java` (BillingClient 7.1.1) —
+  `buy({productId})` ouvre le dialogue Google Play et renvoie le
+  `purchaseToken` ; `restore()` liste les abonnements du compte Google
+  (réinstallation). Section « Leova Plus » du mode parent : plan + usage du
+  mois via `GET /v1/me`, boutons acheter/restaurer (visibles uniquement en
+  natif et hors plan plus).
+- **Backend** : `POST /v1/billing/verify` {purchaseToken, productId} —
+  vérifie chez Google (`purchases.subscriptionsv2`), acknowledge côté
+  serveur, mémorise `billing/{sha256(token)}` → uid, pose
+  `users/{uid}.plan = "plus"`. `POST /v1/billing/rtdn` = notifications temps
+  réel Play (Pub/Sub push, public mais chaque notification est RE-VÉRIFIÉE
+  auprès de l'API Google — impossible d'obtenir « plus » en la falsifiant).
+  APIs `androidpublisher` + `pubsub` activées.
+
+### Reste à faire — partie parent (Play Console)
+
+1. Créer un compte **Google Play Console** (25 $ une fois, vérification
+   d'identité) avec thibaut.gadiolet@gmail.com.
+2. Créer l'app **app.leova** ; dans *Configuration → API access*, **lier le
+   projet GCP `leova-app`** et donner au compte de service
+   `11414001422-compute@developer.gserviceaccount.com` les droits
+   « Afficher les informations financières » + « Gérer les commandes ».
+3. Créer l'abonnement **`leova_plus`** (Monétiser → Produits → Abonnements),
+   avec une formule de base mensuelle (prix à choisir, ex. 4,99 €/mois).
+4. *Monétiser → Configuration de la monétisation* : notifications temps réel →
+   topic Pub/Sub (à créer : `gcloud pubsub topics create play-rtdn`, puis
+   abonnement push `gcloud pubsub subscriptions create play-rtdn-push
+   --topic play-rtdn --push-endpoint
+   https://leova-backend-11414001422.europe-west1.run.app/v1/billing/rtdn`).
+5. Publier l'app en **test interne** (AAB signé) — ensuite seulement le
+   bouton 💜 fonctionnera (le Billing exige une installation via Play).
+
+### Reste à faire — ensuite
+
+- **App Check (Play Integrity)** : dès que l'app est sur Play Console.
+  Android app Firebase déjà enregistrée, google-services.json posé (inerte).
+- Comptes durables : lier l'uid anonyme à un compte Google (sinon une
+  réinstallation perd le plan — le bouton ↺ Restaurer couvre le cas Play).

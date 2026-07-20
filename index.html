@@ -248,6 +248,12 @@
       <div class="hint">L'IA (reformulation, belle voix, création de pictos) passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.</div>
     </div>
     <div class="prow">
+      <label>Leova Plus</label>
+      <div class="aiStatus" id="planStatus">…</div>
+      <button class="pbtn" id="plusBtn" style="display:none">💜 Passer à Leova Plus</button>
+      <button class="pbtn ghost" id="restorePlusBtn" style="display:none;margin-top:8px">↺ Restaurer un achat</button>
+    </div>
+    <div class="prow">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px">
         <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
       </label>
@@ -320,7 +326,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "28"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "29"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -984,6 +990,7 @@ const panel = document.getElementById("panel");
 function openPanel() {
   document.getElementById("rate").value = rate;
   document.getElementById("bsecret").value = backendSecret;
+  refreshPlan(); // plan + usage du mois (asynchrone, sans bloquer l'ouverture)
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
   document.getElementById("pinStatus").textContent = kioskPin ? "•••• (code défini)" : "aucun code";
@@ -1004,6 +1011,53 @@ document.getElementById("testVoice").onclick = () => speak("Bonjour ! Ceci est u
 /* ---- Mode kiosk (verrouillage sur l'app) + code parent ---- */
 const Kiosk = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Kiosk) || null;
 const AppSettings = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppSettings) || null;
+const Billing = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Billing) || null;
+
+/* ---- Leova Plus (abonnement Google Play ; validation côté serveur) ---- */
+const PLUS_PRODUCT = "leova_plus";
+
+async function refreshPlan() {
+  const el = document.getElementById("planStatus");
+  const buyBtn = document.getElementById("plusBtn");
+  const restoreBtn = document.getElementById("restorePlusBtn");
+  buyBtn.style.display = "none";
+  restoreBtn.style.display = "none";
+  if (!navigator.onLine) { el.textContent = "Hors ligne — usage indisponible."; return; }
+  try {
+    const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
+    if (me.plan === "parent") { el.textContent = "Accès parent : illimité ✓"; return; }
+    const u = me.usage;
+    const line = (v) => v.quota === null ? v.used : v.used + "/" + v.quota;
+    el.textContent = (me.plan === "plus" ? "Leova Plus actif ✓" : "Formule gratuite") +
+      ` — ce mois-ci : ${line(u.reformulate)} phrases, ${line(u.tts)} voix, ` +
+      `${line(u.magic)} ajouts magiques, ${line(u.image)} images.`;
+    if (me.plan !== "plus" && Billing()) {
+      buyBtn.style.display = "";
+      restoreBtn.style.display = "";
+    }
+  } catch { el.textContent = "Usage indisponible pour le moment."; }
+}
+
+document.getElementById("plusBtn").onclick = async () => {
+  try {
+    const p = await Billing().buy({ productId: PLUS_PRODUCT });
+    const r = await backendJson("/v1/billing/verify", { purchaseToken: p.purchaseToken, productId: p.productId || PLUS_PRODUCT });
+    alert(r.plan === "plus" ? "Leova Plus est actif — merci ! 💜" : "Achat enregistré (" + r.state + ").");
+    refreshPlan();
+  } catch (e) { alert("Achat impossible : " + e.message); }
+};
+
+document.getElementById("restorePlusBtn").onclick = async () => {
+  try {
+    const { purchases } = await Billing().restore();
+    if (!purchases.length) { alert("Aucun abonnement trouvé sur ce compte Google."); return; }
+    for (const p of purchases) {
+      await backendJson("/v1/billing/verify", { purchaseToken: p.purchaseToken, productId: p.productId || PLUS_PRODUCT });
+    }
+    alert("Abonnement restauré ✓");
+    refreshPlan();
+  } catch (e) { alert("Restauration impossible : " + e.message); }
+};
 
 // Pavé de saisie du code parent : clavier numérique INTÉGRÉ (aucun clavier
 // système n'apparaît — plus sûr en kiosk). Renvoie le code (string) ou null.

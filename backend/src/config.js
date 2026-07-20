@@ -33,6 +33,8 @@ export const config = {
   globalCap: JSON.parse(
     process.env.GLOBAL_CAP || '{"reformulate":20000,"tts":30000,"magic":1500,"image":150}'
   ),
+  // Play Billing : package de l'app Android (vérification des achats).
+  androidPackage: process.env.ANDROID_PACKAGE || "app.leova",
   allowedOrigins: (
     process.env.ALLOWED_ORIGINS ||
     "https://localhost,capacitor://localhost,http://localhost,https://pleymort.github.io"

@@ -5,6 +5,7 @@ import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, SafetyError }
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
 import { checkAndCount, getUsage } from "./meter.js";
+import { verifyAndApply, handleRtdn } from "./billing.js";
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -16,7 +17,9 @@ app.use(cors({ origin: config.allowedOrigins }));
 // Reste pour plus tard : App Check (Play Integrity) pour attester que
 // l'appel vient bien de l'app.
 app.use(async (req, res, next) => {
-  if (req.path === "/health") return next();
+  // /v1/billing/rtdn : poussé par Pub/Sub (pas nos en-têtes) — sans risque,
+  // chaque notification est re-vérifiée auprès de l'API Google Play.
+  if (req.path === "/health" || req.path === "/v1/billing/rtdn") return next();
   if (config.appSecret && req.get("x-app-secret") === config.appSecret) {
     req.auth = { parent: true };
     return next();
@@ -67,6 +70,27 @@ app.get("/v1/me", async (req, res) => {
     console.error("me:", e);
     res.status(500).json({ error: "me_error" });
   }
+});
+
+// Achat Leova Plus : l'app envoie le purchaseToken reçu de Google Play ;
+// on vérifie chez Google puis on pose users/{uid}.plan = "plus".
+app.post("/v1/billing/verify", async (req, res) => {
+  try {
+    if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
+    const { purchaseToken, productId } = req.body || {};
+    if (!purchaseToken || !productId) return res.status(400).json({ error: "token_requis" });
+    const r = await verifyAndApply(req.auth.uid, String(purchaseToken), String(productId));
+    res.json({ plan: r.active ? "plus" : "free", state: r.state });
+  } catch (e) {
+    console.error("billing/verify:", e);
+    res.status(500).json({ error: "billing_error" });
+  }
+});
+
+// Notifications temps réel Google Play (abonnement Pub/Sub → push ici).
+app.post("/v1/billing/rtdn", async (req, res) => {
+  try { await handleRtdn(req.body); } catch (e) { console.error("rtdn:", e); }
+  res.status(200).send("ok"); // toujours 200, sinon Pub/Sub ré-essaie en boucle
 });
 
 app.post("/v1/reformulate", meter("reformulate"), async (req, res) => {
