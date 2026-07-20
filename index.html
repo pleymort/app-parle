@@ -259,6 +259,30 @@
   .editRow2 { display: flex; gap: 8px; margin-top: 14px; }
   .editRow2 .pbtn { flex: 1; margin: 0; }
 
+  /* ---- Gestionnaire de voix ---- */
+  .voiceRow {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid #EDF2F7;
+    font-weight: 700; color: #55677A; font-size: 14px;
+  }
+  .voiceRow .vw { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .voiceRow .vst { font-size: 13px; width: 22px; text-align: center; }
+  .voiceRow button { border: none; background: #EDF2F7; border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer; }
+
+  /* ---- Assistant photos des proches ---- */
+  #photoWiz {
+    position: fixed; inset: 0; background: rgba(20,40,60,.5); z-index: 58;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #photoWiz.open { display: flex; }
+  #photoWizCard {
+    background: #fff; border-radius: 20px; padding: 24px; width: 100%; max-width: 380px; text-align: center;
+  }
+  #photoWizCard h1 { font-size: 26px; color: #24425F; margin: 6px 0 10px; }
+  #photoWizCard p { font-size: 14px; color: #7C8FA3; margin: 10px 0 14px; }
+  #pwVis { font-size: 64px; line-height: 1; min-height: 96px; display: flex; align-items: center; justify-content: center; }
+  #pwVis img { width: 96px; height: 96px; border-radius: 16px; object-fit: cover; }
+
   /* ---- Corbeille ---- */
   .trashRow {
     display: flex; justify-content: space-between; align-items: center;
@@ -365,6 +389,9 @@
         <button class="pbtn warn" id="magicUndo">✖ Annuler</button>
       </div>
     </div>
+
+    <button class="pbtn ghost" id="photoWizBtn" style="margin-top:8px">👨‍👩‍👦 Assistant photos des proches</button>
+    <div class="hint">Passe en revue les personnes sans photo : l'enfant reconnaît infiniment mieux une vraie photo qu'un dessin.</div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
@@ -488,6 +515,13 @@
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
+    <h2 style="font-size:17px">🎛️ Gestionnaire de voix</h2>
+    <p class="sub" style="margin-bottom:8px">Écoutez chaque mot ; 🔄 re-télécharge sa voix depuis le serveur (utile si un mot sonne différemment des autres).</p>
+    <div class="aiStatus" id="voiceGauge"></div>
+    <div id="voiceList"></div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
     <h2 style="font-size:17px">Intelligence artificielle</h2>
     <div class="prow">
       <label>Code d'accès Leova (facultatif — accès illimité)</label>
@@ -520,11 +554,40 @@
       </div>
       <div class="hint">Sauvegarde le vocabulaire en ligne (Europe) et le synchronise entre plusieurs tablettes : maison, école/AESH… Connectez le même compte sur chaque tablette.</div>
     </div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">📦 Exporter / importer / imprimer</h2>
+    <div class="prow">
+      <button class="pbtn ghost" id="exportBtn">⬇️ Exporter le vocabulaire (fichier)</button>
+      <label class="pbtn ghost" style="display:inline-block">⬆️ Importer un fichier<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
+      <button class="pbtn ghost" id="printBtn">🖨 Imprimer le tableau (classeur papier)</button>
+      <div class="aiStatus" id="exportStatus"></div>
+      <div class="hint">L'export permet de partager le tableau avec une autre famille ou de garder une copie sans compte. L'impression crée un classeur PECS papier de secours (à faire depuis la version web sur ordinateur : pleymort.github.io/app-parle).</div>
+    </div>
     </div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
     <button class="pbtn ghost" id="closePanel">Fermer</button>
     <button class="pbtn warn" id="exitParent">Quitter le mode parent</button>
+  </div>
+</div>
+
+<!-- Assistant photos des proches : une vraie photo par personne, guidé -->
+<div id="photoWiz">
+  <div id="photoWizCard">
+    <div class="obSteps" id="pwStep"></div>
+    <h1 id="pwName">…</h1>
+    <div id="pwVis"></div>
+    <p id="pwHint">Choisissez (ou prenez) une photo bien cadrée de son visage — c'est elle que l'enfant touchera pour l'appeler.</p>
+    <label class="pbtn primary" style="display:block;text-align:center">📷 Prendre / choisir une photo
+      <input type="file" id="pwFile" accept="image/*" style="display:none">
+    </label>
+    <div class="editRow2">
+      <button class="pbtn ghost" id="pwSkip">⏭ Passer</button>
+      <button class="pbtn ghost" id="pwStop">✖ Arrêter</button>
+    </div>
+    <div class="aiStatus" id="pwStatus"></div>
   </div>
 </div>
 
@@ -648,7 +711,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "33"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "34"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -2294,6 +2357,154 @@ function renderTrash() {
   }
 }
 
+/* ================= Gestionnaire de voix ================= */
+async function renderVoices() {
+  const box = document.getElementById("voiceList");
+  const items = allItems().filter((i) => !hidden.has(i.id));
+  const words = [...new Set(items.map((i) => i.say || i.label))].sort((a, b) => a.localeCompare(b, "fr"));
+  box.innerHTML = "";
+  let ready = 0;
+  for (const w of words) {
+    const has = !!(await idbGet(VOICE + "|" + w));
+    if (has) ready++;
+    const row = document.createElement("div");
+    row.className = "voiceRow";
+    row.innerHTML = `<span class="vst">${has ? "✓" : "·"}</span><span class="vw">${w}</span>` +
+      `<button title="Écouter">▶</button><button title="Re-télécharger la voix">🔄</button>`;
+    const [playB, regenB] = row.querySelectorAll("button");
+    playB.onclick = () => speak(w);
+    regenB.onclick = async () => {
+      const st = row.querySelector(".vst");
+      st.textContent = "…";
+      try {
+        await idbSet(VOICE + "|" + w, await voiceBlob(w));
+        st.textContent = "✓";
+        speak(w);
+      } catch { st.textContent = "✗"; }
+    };
+    box.appendChild(row);
+  }
+  document.getElementById("voiceGauge").textContent = `${ready}/${words.length} voix prêtes sur cette tablette`;
+}
+
+/* ================= Assistant photos des proches ================= */
+let pwQueue = [];
+let pwIndex = 0;
+
+function pwShow() {
+  const item = pwQueue[pwIndex];
+  if (!item) {
+    document.getElementById("photoWiz").classList.remove("open");
+    renderGrid();
+    toast("Assistant photos terminé ✓");
+    return;
+  }
+  document.getElementById("pwStep").textContent = `Photo ${pwIndex + 1} sur ${pwQueue.length}`;
+  document.getElementById("pwName").textContent = item.label;
+  document.getElementById("pwVis").innerHTML = pictoVisual(item);
+  document.getElementById("pwStatus").textContent = "";
+}
+
+document.getElementById("photoWizBtn").onclick = () => {
+  // Les personnes d'abord celles sans photo ; on ignore les cartes masquées
+  pwQueue = allItems().filter((i) => i.cat === "people" && !hidden.has(i.id) && !i.photo);
+  if (!pwQueue.length) { toast("Toutes les personnes visibles ont déjà une photo ✓"); return; }
+  pwIndex = 0;
+  document.getElementById("panel").classList.remove("open");
+  document.getElementById("photoWiz").classList.add("open");
+  pwShow();
+};
+
+document.getElementById("pwFile").onchange = async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  const st = document.getElementById("pwStatus");
+  st.textContent = "Je prépare la photo…";
+  const url = URL.createObjectURL(f);
+  try {
+    setItemVisual(pwQueue[pwIndex], { photo: await toSquare256(url), emoji: null });
+    pwIndex++;
+    pwShow();
+  } catch { st.textContent = "Impossible de lire cette image — réessayez."; }
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById("pwSkip").onclick = () => { pwIndex++; pwShow(); };
+document.getElementById("pwStop").onclick = () => {
+  document.getElementById("photoWiz").classList.remove("open");
+  renderGrid();
+};
+
+/* ================= Export / import / impression ================= */
+document.getElementById("exportBtn").onclick = async () => {
+  const st = document.getElementById("exportStatus");
+  const data = JSON.stringify({ leova: APP_VERSION, exportedAt: new Date().toISOString(), state: collectState() });
+  const file = new File([data], "leova-vocabulaire.json", { type: "application/json" });
+  // Sur tablette : partage natif (Drive, mail…) ; sur ordinateur : téléchargement
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: "Vocabulaire Leova" }); st.textContent = "Exporté ✓"; return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  try {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    a.download = "leova-vocabulaire.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    st.textContent = "Fichier téléchargé ✓";
+  } catch { st.textContent = "Export impossible ici — utilisez la version web."; }
+};
+
+document.getElementById("importFile").onchange = async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  const st = document.getElementById("exportStatus");
+  try {
+    const obj = JSON.parse(await f.text());
+    if (!obj || typeof obj.state !== "object") throw new Error("format inconnu");
+    if (!confirm("Remplacer le vocabulaire de cette tablette par celui du fichier ?\n(Le contenu actuel passera dans la sauvegarde en ligne si un compte est connecté, sinon il sera perdu.)")) return;
+    for (const k of SYNC_KEYS) {
+      if (obj.state[k] !== null && obj.state[k] !== undefined) {
+        localStorage.setItem("vp_" + k, JSON.stringify(obj.state[k]));
+      }
+    }
+    window.location.reload();
+  } catch (err) { st.textContent = "Fichier illisible : " + err.message; }
+};
+
+document.getElementById("printBtn").onclick = () => {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Impression impossible ici — ouvrez la version web sur un ordinateur (pleymort.github.io/app-parle)."); return; }
+  let html = `<html><head><title>Tableau Leova</title><style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    h1 { font-size: 20px; } h2 { font-size: 16px; margin: 18px 0 8px; page-break-after: avoid; }
+    .pg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .pc { border: 2px solid #333; border-radius: 10px; padding: 10px 4px; text-align: center; page-break-inside: avoid; }
+    .pc img { width: 64px; height: 64px; object-fit: contain; }
+    .pc .em { font-size: 46px; line-height: 64px; }
+    .pc .lb { font-size: 13px; font-weight: 700; margin-top: 4px; }
+    @media print { h2 { page-break-before: auto; } }
+  </style></head><body><h1>Tableau de communication Leova</h1>`;
+  for (const c of cats()) {
+    const items = allItems().filter((i) => i.cat === c.id && !hidden.has(i.id));
+    if (!items.length) continue;
+    html += `<h2>${c.emoji} ${c.label}</h2><div class="pg">`;
+    for (const i of items) {
+      html += `<div class="pc">` +
+        (i.photo ? `<img src="${i.photo}">` : `<div class="em">${i.emoji || ""}</div>`) +
+        `<div class="lb">${i.label}</div></div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</body></html>`;
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch {} }, 1500); // laisse charger les images
+};
+
 /* ================= Onglets du panneau parent + tableau de bord ================= */
 function showPsec(name) {
   document.querySelectorAll("#ptabs .ptab").forEach((b) => b.classList.toggle("on", b.dataset.psec === name));
@@ -2301,6 +2512,7 @@ function showPsec(name) {
   document.getElementById("panelCard").scrollTop = 0;
   if (name === "home") refreshDash();
   if (name === "vocab") renderTrash();
+  if (name === "voice") renderVoices();
 }
 document.querySelectorAll("#ptabs .ptab").forEach((b) => { b.onclick = () => showPsec(b.dataset.psec); });
 
