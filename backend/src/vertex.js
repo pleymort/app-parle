@@ -30,13 +30,20 @@ function checkBlocked(res) {
 
 // Reformule une suite de pictogrammes en une phrase naturelle (remplace l'appel
 // Gemini direct qui était fait depuis l'app avec la clé du parent).
-export async function reformulate(labels) {
+export async function reformulate(labels, people) {
   const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
   const prompt =
-    "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, " +
-    "sur son application de communication : " + labels.join(", ") +
-    ". Écris UNE seule phrase courte et naturelle en français, à la première " +
-    "personne, qui exprime ce qu'il veut dire. Réponds uniquement avec la phrase.";
+    "Un enfant qui ne parle pas a touché ces pictogrammes, dans l'ordre, " +
+    "sur son application de communication : " + labels.map((l) => `« ${l} »`).join(", ") + "." +
+    (people && people.length
+      ? ` ATTENTION : ${people.map((p) => `« ${p} »`).join(" et ")} ${people.length > 1 ? "sont des PERSONNES" : "est une PERSONNE"} de son entourage (surnom familial à reprendre TEL QUEL, sans le modifier ni l'interpréter comme un autre mot).`
+      : "") +
+    " Écris UNE seule phrase courte et NATURELLE en français, à la première personne, " +
+    "qui exprime ce qu'il veut dire avec ces mots-là. Chaque mot touché doit se retrouver " +
+    "dans la phrase (ou son sens exact) ; ajoute librement les petits mots nécessaires " +
+    "(articles, prépositions, verbes de liaison) pour que la phrase soit fluide, mais " +
+    "n'invente aucune idée absente et ne déforme aucun mot. " +
+    "Exemple : « Je veux », « Pizza » → « Je veux de la pizza. » Réponds uniquement avec la phrase.";
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });

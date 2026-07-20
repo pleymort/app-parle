@@ -873,7 +873,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "37"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "38"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1385,11 +1385,13 @@ async function magicPlan(concept) {
 
 /* ---- Reformulation de la bande-phrase (serveur Leova ; en cas d'échec,
    le bouton ▶ lit simplement les mots bruts) ---- */
-async function reformulateBackend(labels) {
+async function reformulateBackend(labels, people) {
   const r = await fetch(BACKEND_URL + "/v1/reformulate", {
     method: "POST",
     headers: Object.assign({ "content-type": "application/json" }, await backendHeaders()),
-    body: JSON.stringify({ labels }),
+    // people = les surnoms de PERSONNES présents dans la phrase, pour que le
+    // modèle ne les « corrige » jamais (ex : Pépé ≠ pipi)
+    body: JSON.stringify({ labels, people: people || [] }),
   });
   if (!r.ok) throw new Error("backend " + r.status);
   const phrase = (await r.json()).phrase;
@@ -1702,8 +1704,10 @@ document.getElementById("playBtn").onclick = async () => {
     // 6 s maximum pour la reformulation (démarrage à froid du serveur compris),
     // sinon on lit les mots bruts
     try {
+      // On envoie la forme PRONONCÉE (say) : la phrase est destinée à la voix
+      // (ex : la carte « JeaJea » s'écrit « Jaja » dans la phrase parlée)
       const phrase = await Promise.race([
-        reformulate(strip.map(i => i.label)),
+        reformulate(strip.map(i => i.say || i.label), strip.filter(i => i.cat === "people").map(i => i.say || i.label)),
         sleep(6000).then(() => { throw new Error("timeout"); }),
       ]);
       speak(phrase);

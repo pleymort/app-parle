@@ -99,7 +99,10 @@ app.post("/v1/reformulate", meter("reformulate"), async (req, res) => {
   try {
     const labels = Array.isArray(req.body?.labels) ? req.body.labels.slice(0, 8) : [];
     if (!labels.length) return res.status(400).json({ error: "labels_requis" });
-    const phrase = await reformulate(labels);
+    // Les libellés qui sont des PERSONNES (surnoms familiaux) : le modèle ne
+    // doit jamais les « corriger » (ex : Pépé ≠ pipi).
+    const people = Array.isArray(req.body?.people) ? req.body.people.slice(0, 8).map(String) : [];
+    const phrase = await reformulate(labels, people);
     res.json({ phrase });
   } catch (e) {
     handleAIError(res, "reformulate")(e);
