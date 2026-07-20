@@ -99,9 +99,31 @@ npm install && node --env-file=.env src/index.js
 - **`GET /v1/me`** : plan + usage du mois (pour l'app / futur paywall).
 - Panne du metering = on laisse passer (la disponibilité pour l'enfant prime).
 
-## Reste à faire (Phase 5)
+## Phase 5 — faite en partie ✓ (20 juillet 2026)
 
-- **App Check** (Play Integrity + reCAPTCHA) pour attester que les appels
-  viennent bien de l'app — prérequis avant toute vraie distribution.
-- **Paiement** : entitlements dans `users/{uid}.plan` + intégration paiement.
-- Nettoyage : retirer à terme le code Gemini-direct de l'app.
+- **Sécurité contenu (déterministe)** : `safetySettings` EXPLICITES au seuil le
+  plus strict (`BLOCK_LOW_AND_ABOVE`, 4 catégories) sur TOUS les appels Vertex
+  (texte, magic, image, transcription). Ce sont les classifieurs côté Google
+  qui bloquent — pas le prompt. Blocage → 422 `contenu_refuse`, message clair
+  dans l'app. Testé en réel : picto « ballon » ✓, demande de nu → 422 ✓.
+- **Plans** : `users/{uid}.plan` = `free` (défaut) / `plus` (quotas ×10, env
+  `PLUS_QUOTA`) / `unlimited`. Testé (plan plus → quota 10000 dans /v1/me).
+  Poser le plan à l'encaissement = il ne manque que l'intégration paiement.
+- **Nettoyage fait** : l'app v28 n'a PLUS AUCUN code Gemini-direct (clé API,
+  découverte de modèles, replis) — serveur uniquement, replis hors-ligne
+  conservés (voix appareil / mots bruts / ARASAAC / émoji). Le cache voix
+  garde ses clés `Kore|…` (rien à régénérer).
+- **App Check préparé** : app Android `app.leova` enregistrée dans Firebase
+  (`1:11414001422:android:f74f27bd33162f5dcd295f`, SHA-1/SHA-256 du keystore
+  debug ajoutés, `android/app/google-services.json` posé mais inerte — plugin
+  gradle non appliqué).
+
+## Reste à faire
+
+- **App Check (Play Integrity)** : nécessite la distribution via Play Store
+  (Play Console) — bloqué tant que l'app n'y est pas publiée. À l'activation :
+  plugin gradle google-services + SDK App Check côté app, vérification du
+  jeton `X-Firebase-AppCheck` côté serveur (mode observation d'abord).
+- **Paiement** : choisir le rail (Play Billing si distribution Play Store —
+  obligatoire pour du contenu numérique in-app — sinon Stripe sur le web),
+  puis webhook → `users/{uid}.plan = "plus"`.

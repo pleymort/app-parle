@@ -248,11 +248,6 @@
       <div class="hint">L'IA (reformulation, belle voix, création de pictos) passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.</div>
     </div>
     <div class="prow">
-      <label>Clé API Gemini — gratuite sur aistudio.google.com/apikey</label>
-      <input type="text" id="gkey" placeholder="Collez la clé ici (elle reste sur la tablette)">
-      <div class="hint">Facultative : simple secours si le serveur Leova est indisponible.</div>
-    </div>
-    <div class="prow">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px">
         <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
       </label>
@@ -325,7 +320,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "27"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "28"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -439,7 +434,6 @@ const store = {
 let customItems = store.get("custom", []);
 let hidden = new Set(store.get("hidden", []));
 let rate = store.get("rate", 0.9);
-let geminiKey = store.get("gkey", "");
 // Backend Leova (Cloud Run, UE) : l'URL est publique, le code d'accès reste
 // dans la tablette (localStorage) — jamais dans ce code, qui est public.
 const BACKEND_URL = "https://leova-backend-11414001422.europe-west1.run.app";
@@ -605,57 +599,10 @@ function deviceSpeak(text) {
   speechSynthesis.speak(u);
 }
 
-/* ================= IA (Gemini) =================
-   La clé API est saisie par le parent et reste dans le localStorage
-   de la tablette — jamais dans le code (qui est public sur GitHub). */
-const GEMINI = {
-  voice: "Kore", // NE PAS CHANGER : cette voix devient LA voix de l'enfant
-};
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
-
-/* Les noms de modèles Gemini changent avec le temps (dépréciations, nouvelles versions).
-   On découvre donc dynamiquement les modèles disponibles pour la clé du parent,
-   et on re-détecte automatiquement si l'un d'eux disparaît (erreur 404). */
-let models = store.get("models", null);
-
-async function ensureModels(force) {
-  if (models && models.text && !force) return models;
-  const r = await fetch(`${GEMINI_BASE}/models?pageSize=1000&key=${encodeURIComponent(geminiKey)}`);
-  if (!r.ok) throw new Error("clé API invalide ? (" + r.status + ")");
-  const j = await r.json();
-  const avail = (j.models || [])
-    .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
-    .map(m => m.name.replace("models/", ""));
-  const ver = (n) => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
-  // On préfère la version la plus récente, puis le nom le plus court (= le plus stable)
-  const latest = (list) => list.slice().sort((a, b) => ver(b) - ver(a) || a.length - b.length)[0] || null;
-  const plain = (n) => !/(image|tts|embed|audio|live|thinking|robotics|computer|exp|preview)/.test(n);
-  models = {
-    text:  latest(avail.filter(n => /flash-lite/.test(n) && plain(n))) || latest(avail.filter(n => /flash/.test(n) && plain(n))) || latest(avail.filter(plain)),
-    audio: latest(avail.filter(n => /flash/.test(n) && !/flash-lite/.test(n) && plain(n))) || latest(avail.filter(plain)),
-    image: latest(avail.filter(n => /image/.test(n))),
-    tts:   latest(avail.filter(n => /tts/.test(n))),
-  };
-  store.set("models", models);
-  return models;
-}
-
-async function gemini(kind, body) {
-  const call = async (model) => fetch(
-    `${GEMINI_BASE}/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-  );
-  let m = (await ensureModels())[kind];
-  if (!m) throw new Error("aucun modèle « " + kind + " » disponible pour cette clé");
-  let r = await call(m);
-  if (r.status === 404) {
-    // Le modèle a été retiré par Google : on re-détecte puis on réessaie une fois
-    const m2 = (await ensureModels(true))[kind];
-    if (m2 && m2 !== m) r = await call(m2);
-  }
-  if (!r.ok) throw new Error("Erreur Gemini (" + r.status + ")");
-  return r.json();
-}
+/* ================= IA (serveur Leova) =================
+   Toute l'IA passe par le serveur (Cloud Run + Vertex, UE) : aucune clé
+   dans l'app. VOICE = préfixe historique des clés du cache voix. */
+const VOICE = "Kore"; // NE PAS CHANGER : cette voix est LA voix de l'enfant
 
 /* ---- Voix naturelle : générée une fois, puis cache IndexedDB ---- */
 function idbOpen() {
@@ -688,33 +635,6 @@ async function idbSet(key, val) {
   } catch {}
 }
 
-// Gemini TTS renvoie du PCM brut 16 bits 24 kHz : on l'emballe en WAV
-function pcmToWav(b64, sampleRate) {
-  const bin = atob(b64);
-  const n = bin.length;
-  const buf = new ArrayBuffer(44 + n);
-  const v = new DataView(buf);
-  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0, "RIFF"); v.setUint32(4, 36 + n, true); ws(8, "WAVE"); ws(12, "fmt ");
-  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-  v.setUint32(24, sampleRate, true); v.setUint32(28, sampleRate * 2, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-  ws(36, "data"); v.setUint32(40, n, true);
-  for (let i = 0; i < n; i++) v.setUint8(44 + i, bin.charCodeAt(i));
-  return new Blob([buf], { type: "audio/wav" });
-}
-
-async function ttsGemini(text) {
-  const j = await gemini("tts", {
-    contents: [{ parts: [{ text }] }],
-    generationConfig: {
-      responseModalities: ["AUDIO"],
-      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: GEMINI.voice } } },
-    },
-  });
-  return pcmToWav(j.candidates[0].content.parts[0].inlineData.data, 24000);
-}
-
 // Voix via le serveur Leova (cache mutualisé côté serveur, WAV direct)
 async function ttsBackend(text) {
   const r = await fetch(BACKEND_URL + "/v1/tts", {
@@ -726,11 +646,8 @@ async function ttsBackend(text) {
   return r.blob();
 }
 
-// Choisit la source de la belle voix : serveur Leova d'abord, sinon clé Gemini
-async function voiceBlob(text) {
-  try { return await ttsBackend(text); } catch (e) { if (!geminiKey) throw e; }
-  return ttsGemini(text);
-}
+// La belle voix vient du serveur Leova (repli : voix de l'appareil, géré par speak)
+const voiceBlob = ttsBackend;
 
 /* Règle d'or CAA : le son part TOUJOURS immédiatement.
    Belle voix si déjà en cache, sinon voix de l'appareil tout de suite
@@ -742,17 +659,17 @@ const genQueue = new Set();
 
 async function ensureVoice(text) {
   // En ligne, le serveur est toujours joignable (compte anonyme si besoin).
-  if (!(backendSecret || geminiKey || navigator.onLine) || genQueue.has(text)) return;
+  if (!navigator.onLine || genQueue.has(text)) return;
   genQueue.add(text);
   try {
-    const key = GEMINI.voice + "|" + text;
+    const key = VOICE + "|" + text;
     if (!(await idbGet(key))) await idbSet(key, await voiceBlob(text));
   } catch {} finally { genQueue.delete(text); }
 }
 
 async function speak(text) {
   const seq = ++speakSeq;
-  const cached = await idbGet(GEMINI.voice + "|" + text);
+  const cached = await idbGet(VOICE + "|" + text);
   if (cached) {
     if (seq !== speakSeq) return;
     try {
@@ -799,77 +716,33 @@ function toSquare256(srcUrl) {
   });
 }
 
-function extractImage(j) {
-  const part = j.candidates[0].content.parts.find(p => p.inlineData);
-  if (!part) throw new Error("Pas d'image dans la réponse");
-  return "data:" + part.inlineData.mimeType + ";base64," + part.inlineData.data;
-}
-
+// Génération d'un picto (le style « dessin plat pour enfant » est appliqué côté serveur)
 async function genPicto(word, hint) {
-  try {
-    const out = await backendJson("/v1/image", { word, hint: hint || null });
-    return "data:" + out.mimeType + ";base64," + out.data;
-  } catch (e) { if (!geminiKey) throw e; }
-  const j = await gemini("image", { contents: [{ parts: [{ text:
-    "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
-    ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." +
-    (hint ? " Consigne importante du parent sur l'apparence (l'enfant reconnaît mieux certaines formes) : " + hint + "." : "") }] }] });
-  return extractImage(j);
+  const out = await backendJson("/v1/image", { word, hint: hint || null });
+  return "data:" + out.mimeType + ";base64," + out.data;
 }
 
+// Détourage d'une photo (fond blanc, lisible comme un picto) — côté serveur aussi
 async function cleanPhoto(dataUrl) {
   const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
   const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
-  try {
-    const out = await backendJson("/v1/image", { imageBase64: b64, mimeType: mime });
-    return "data:" + out.mimeType + ";base64," + out.data;
-  } catch (e) { if (!geminiKey) throw e; }
-  const j = await gemini("image", { contents: [{ parts: [
-    { inlineData: { mimeType: mime, data: b64 } },
-    { text: "Détoure le sujet principal de cette photo et place-le sur un fond blanc uni. Rends-le net et lisible comme un pictogramme de communication pour enfant. Aucun texte." },
-  ] }] });
-  return extractImage(j);
+  const out = await backendJson("/v1/image", { imageBase64: b64, mimeType: mime });
+  return "data:" + out.mimeType + ";base64," + out.data;
 }
 
 /* ---- Ajout magique : le parent donne un concept, l'IA décide de tout ---- */
 async function magicPlan(concept) {
-  try {
-    const j = await backendJson("/v1/magic", {
-      concept,
-      cats: cats().map(c => ({ id: c.id, label: c.label })),
-      existing: allItems().map(i => i.label),
-    });
-    if (Array.isArray(j.plans)) return j.plans;
-    throw new Error("plan vide");
-  } catch (e) { if (!geminiKey) throw e; }
-  const catList = cats().map(c => `"${c.id}" (${c.label})`).join(", ");
-  const existing = allItems().map(i => `"${i.label}"`).join(", ");
-  const j = await gemini("text", {
-    contents: [{ parts: [{ text:
-      `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
-Pictogrammes déjà présents dans l'app : ${existing}.
-La demande peut être : UN concept à créer ("le trampoline"), une LISTE ("fraise, banane, yaourt"), un THÈME à développer ("le petit-déjeuner" → les aliments typiques), la MODIFICATION DE L'IMAGE d'un pictogramme déjà présent ("change l'image de Gâteau, mets un cupcake"), ou la MODIFICATION DE LA PHRASE PRONONCÉE ("quand il touche JeaJea, dis Jaja" ; pour corriger une prononciation, orthographie la phrase phonétiquement).
-Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
-"action" : "create" (nouveau pictogramme), "image" (changer seulement l'image d'un pictogramme existant) ou "say" (changer seulement la phrase prononcée d'un pictogramme existant) ;
-"target" : si action "image" ou "say", le label EXACT du pictogramme existant concerné, sinon null ;
-"label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
-"say" : le MOT court (ou groupe de 1-2 mots) que la tablette prononce quand l'enfant touche la carte — le plus souvent identique au "label". Surtout PAS une phrase : les cartes s'enchaînent pour former la phrase, lue ensuite par le bouton ▶. Ne diffère du label que pour corriger une prononciation (ex label "JeaJea" → say "Jaja") ;
-"cat" : la catégorie la plus logique parmi : ${catList} ;
-"search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
-"imageHint" : si le parent donne une consigne sur l'apparence de l'image (forme, couleur, objet précis que l'enfant reconnaît), cette consigne en une phrase, sinon null ;
-"emoji" : si le parent demande explicitement un émoji, l'émoji lui-même (le caractère), sinon null ;
-"emojiFallback" : TOUJOURS fourni — un émoji simple qui représente bien le concept (image de secours).
-Si AUCUNE catégorie existante ne convient vraiment, mets "cat" à null et fournis "catNew" : {"label": "...", "emoji": "..."} pour créer une nouvelle catégorie.
-Ne développe un thème que si le parent l'a clairement demandé ; pour un concept unique, réponds un tableau d'un seul objet.` }] }],
-    generationConfig: { responseMimeType: "application/json" },
+  const j = await backendJson("/v1/magic", {
+    concept,
+    cats: cats().map(c => ({ id: c.id, label: c.label })),
+    existing: allItems().map(i => i.label),
   });
-  const parsed = JSON.parse(j.candidates[0].content.parts[0].text);
-  return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
+  if (!Array.isArray(j.plans)) throw new Error("plan vide");
+  return j.plans;
 }
 
-/* ---- Reformulation de la bande-phrase ----
-   Voie 1 : serveur Leova (Cloud Run + Vertex, UE) — code parent ou compte anonyme.
-   Voie 2 (repli) : appel Gemini direct avec la clé du parent. */
+/* ---- Reformulation de la bande-phrase (serveur Leova ; en cas d'échec,
+   le bouton ▶ lit simplement les mots bruts) ---- */
 async function reformulateBackend(labels) {
   const r = await fetch(BACKEND_URL + "/v1/reformulate", {
     method: "POST",
@@ -882,15 +755,7 @@ async function reformulateBackend(labels) {
   return phrase;
 }
 
-async function reformulate(labels) {
-  try { return await reformulateBackend(labels); }
-  catch (e) { if (!geminiKey) throw e; }
-  const j = await gemini("text", { contents: [{ parts: [{ text:
-    "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, sur son application de communication : " +
-    labels.join(", ") +
-    ". Écris UNE seule phrase courte et naturelle en français, à la première personne, qui exprime ce qu'il veut dire. Réponds uniquement avec la phrase." }] }] });
-  return j.candidates[0].content.parts[0].text.trim();
-}
+const reformulate = reformulateBackend;
 
 /* ================= Rendu ================= */
 const tabsEl = document.getElementById("tabs");
@@ -1118,7 +983,6 @@ function toggleHidden(id) {
 const panel = document.getElementById("panel");
 function openPanel() {
   document.getElementById("rate").value = rate;
-  document.getElementById("gkey").value = geminiKey;
   document.getElementById("bsecret").value = backendSecret;
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
@@ -1237,7 +1101,7 @@ document.getElementById("newPhoto").onchange = async (e) => {
 const status2 = document.getElementById("aiStatus2");
 function needKey() {
   // En ligne, le serveur Leova est accessible à tous (compte anonyme + quotas).
-  if (backendSecret || geminiKey || navigator.onLine) return false;
+  if (navigator.onLine) return false;
   alert("Connectez la tablette à Internet pour utiliser l'IA.");
   return true;
 }
@@ -1250,6 +1114,7 @@ async function backendJson(path, body) {
     body: JSON.stringify(body),
   });
   if (r.status === 429) throw new Error("Quota mensuel gratuit atteint — réessayez le mois prochain.");
+  if (r.status === 422) throw new Error("Demande refusée : contenu inadapté à une app pour enfants.");
   if (!r.ok) throw new Error("backend " + r.status);
   return r.json();
 }
@@ -1503,18 +1368,11 @@ micBtn.onclick = async () => {
   }
 };
 
-// Transcription : serveur Leova d'abord, clé Gemini en secours.
+// Transcription de la dictée (serveur Leova)
 async function transcribeAudio(mimeType, b64) {
-  try {
-    const j = await backendJson("/v1/transcribe", { audioBase64: b64, mimeType });
-    if (j.text) return j.text;
-    throw new Error("transcription vide");
-  } catch (e) { if (!geminiKey) throw e; }
-  const j = await gemini("audio", { contents: [{ parts: [
-    { inlineData: { mimeType, data: b64 } },
-    { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
-  ] }] });
-  return j.candidates[0].content.parts[0].text.trim();
+  const j = await backendJson("/v1/transcribe", { audioBase64: b64, mimeType });
+  if (!j.text) throw new Error("transcription vide");
+  return j.text;
 }
 
 /* ---- Éditeur de catégories ---- */
@@ -1575,12 +1433,6 @@ document.getElementById("testBackendBtn").onclick = async () => {
       : "Échec : " + e.message + " (internet ?)";
   }
 };
-document.getElementById("gkey").onchange = (e) => {
-  geminiKey = e.target.value.trim();
-  store.set("gkey", geminiKey);
-  models = null; // nouvelle clé → on redétectera les modèles disponibles
-  store.set("models", null);
-};
 document.getElementById("reformChk").onchange = (e) => {
   reformOn = e.target.checked;
   store.set("reform", reformOn);
@@ -1595,24 +1447,15 @@ document.getElementById("genVoicesBtn").onclick = async () => {
   let done = 0;
   for (const item of items) {
     const text = item.say || item.label;
-    const key = GEMINI.voice + "|" + text;
+    const key = VOICE + "|" + text;
     if (await idbGet(key)) { done++; status.textContent = `Voix générées : ${done}/${items.length}`; continue; }
-    // Le niveau gratuit de Gemini limite le TTS à ~3 appels/minute :
-    // en cas d'erreur 429 on attend 30 s puis on réessaie le même mot.
-    let ok = false;
-    for (let tries = 0; tries < 5 && !ok; tries++) {
-      try { await idbSet(key, await voiceBlob(text)); ok = true; }
-      catch (e) {
-        if (String(e.message).includes("429")) {
-          status.textContent = `Limite de vitesse Gemini — pause 30 s… (${done}/${items.length}, laissez ce panneau ouvert)`;
-          await sleep(30000);
-        } else {
-          status.textContent = `Arrêt à ${done}/${items.length} : ${e.message}. Relancez plus tard, ça reprendra ici.`;
-          return;
-        }
-      }
+    // Le serveur n'a pas de limite de vitesse ; un 429 = quota mensuel épuisé,
+    // inutile d'insister — la génération reprendra là où elle s'est arrêtée.
+    try { await idbSet(key, await voiceBlob(text)); }
+    catch (e) {
+      status.textContent = `Arrêt à ${done}/${items.length} : ${e.message}. Relancez plus tard, ça reprendra ici.`;
+      return;
     }
-    if (!ok) { status.textContent = `Quota atteint à ${done}/${items.length}. Relancez plus tard : la génération reprendra où elle s'est arrêtée.`; return; }
     done++;
     status.textContent = `Voix générées : ${done}/${items.length}`;
   }
@@ -1659,8 +1502,6 @@ document.getElementById("addBtn").onclick = () => {
 
 /* ================= Démarrage ================= */
 document.getElementById("verTag").textContent = "v" + APP_VERSION;
-// Réveille le serveur Leova dès l'ouverture (démarrage à froid absorbé avant
-// le premier ▶ de l'enfant)
 // Réveil du serveur + création du compte anonyme dès l'ouverture (pour que
 // le premier appel IA soit rapide). Sans effet hors-ligne.
 if (navigator.onLine) {

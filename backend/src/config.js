@@ -23,6 +23,11 @@ export const config = {
   freeQuota: JSON.parse(
     process.env.FREE_QUOTA || '{"reformulate":1000,"tts":1500,"magic":100,"image":50}'
   ),
+  // Quota du plan payant « plus » (users/{uid}.plan = "plus", posé à
+  // l'encaissement — intégration paiement à venir). "unlimited" = aucun quota.
+  plusQuota: JSON.parse(
+    process.env.PLUS_QUOTA || '{"reformulate":10000,"tts":15000,"magic":1000,"image":400}'
+  ),
   // Plafond global mensuel (tous utilisateurs) : garde-fou facture tant
   // qu'App Check n'est pas en place. Le code parent n'y est pas soumis.
   globalCap: JSON.parse(

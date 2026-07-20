@@ -1,4 +1,4 @@
-import { VertexAI } from "@google-cloud/vertexai";
+import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
 import { config } from "./config.js";
 
 // Sur Cloud Run, l'authentification se fait automatiquement via le compte de
@@ -6,10 +6,32 @@ import { config } from "./config.js";
 // `gcloud auth application-default login`.
 const vertex = new VertexAI({ project: config.project, location: config.location });
 
+/* Sécurité contenu : app pour ENFANTS → seuils les plus stricts, déclarés
+   EXPLICITEMENT (les défauts de Google varient selon les modèles). Ce sont
+   les classifieurs côté Google qui décident, pas le prompt : une demande
+   indécente est bloquée même si elle contourne nos consignes. */
+const SAFETY = [
+  HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+  HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+  HarmCategory.HARM_CATEGORY_HARASSMENT,
+  HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+].map((category) => ({ category, threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE }));
+
+// Génération bloquée par les filtres ? → erreur dédiée (l'API répond 422).
+export class SafetyError extends Error {}
+function checkBlocked(res) {
+  const r = res?.response;
+  const reason = r?.promptFeedback?.blockReason || r?.candidates?.[0]?.finishReason;
+  if (reason === "SAFETY" || reason === "PROHIBITED_CONTENT" || reason === "BLOCKLIST" ||
+      r?.promptFeedback?.blockReason) {
+    throw new SafetyError("contenu bloqué (" + reason + ")");
+  }
+}
+
 // Reformule une suite de pictogrammes en une phrase naturelle (remplace l'appel
 // Gemini direct qui était fait depuis l'app avec la clé du parent).
 export async function reformulate(labels) {
-  const model = vertex.getGenerativeModel({ model: config.textModel });
+  const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
   const prompt =
     "Un enfant de 6 ans qui ne parle pas a touché ces pictogrammes, dans l'ordre, " +
     "sur son application de communication : " + labels.join(", ") +
@@ -18,6 +40,7 @@ export async function reformulate(labels) {
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
+  checkBlocked(res);
   const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   return text.trim();
 }
@@ -28,6 +51,7 @@ export async function magicPlan({ concept, cats, existing }) {
   const model = vertex.getGenerativeModel({
     model: config.textModel,
     generationConfig: { responseMimeType: "application/json" },
+    safetySettings: SAFETY,
   });
   const catList = (cats || []).map((c) => `"${c.id}" (${c.label})`).join(", ");
   const existingList = (existing || []).map((l) => `"${l}"`).join(", ");
@@ -50,6 +74,7 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
+  checkBlocked(res);
   const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
   const parsed = JSON.parse(text);
   return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
@@ -57,13 +82,14 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
 
 // Transcrit la dictée du parent (bouton 🎤 de l'ajout magique).
 export async function transcribe(mimeType, dataB64) {
-  const model = vertex.getGenerativeModel({ model: config.textModel });
+  const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [
       { inlineData: { mimeType, data: dataB64 } },
       { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
     ] }],
   });
+  checkBlocked(res);
   const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   return text.trim();
 }
@@ -72,6 +98,7 @@ export async function transcribe(mimeType, dataB64) {
 const vertexImage = new VertexAI({ project: config.project, location: config.imageLocation });
 
 function extractImage(res) {
+  checkBlocked(res);
   const parts = res?.response?.candidates?.[0]?.content?.parts || [];
   const img = parts.find((p) => p.inlineData);
   if (!img) throw new Error("pas d'image dans la réponse du modèle");
@@ -79,7 +106,7 @@ function extractImage(res) {
 }
 
 export async function genImage(word, hint) {
-  const model = vertexImage.getGenerativeModel({ model: config.imageModel });
+  const model = vertexImage.getGenerativeModel({ model: config.imageModel, safetySettings: SAFETY });
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [{ text:
       "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
@@ -90,7 +117,7 @@ export async function genImage(word, hint) {
 }
 
 export async function cleanPhoto(mimeType, dataB64) {
-  const model = vertexImage.getGenerativeModel({ model: config.imageModel });
+  const model = vertexImage.getGenerativeModel({ model: config.imageModel, safetySettings: SAFETY });
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [
       { inlineData: { mimeType, data: dataB64 } },

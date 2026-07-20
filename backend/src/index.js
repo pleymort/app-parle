@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { reformulate, magicPlan, genImage, cleanPhoto, transcribe } from "./vertex.js";
+import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, SafetyError } from "./vertex.js";
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
 import { checkAndCount, getUsage } from "./meter.js";
@@ -45,6 +45,17 @@ const meter = (feature) => async (req, res, next) => {
   next();
 };
 
+// Demande bloquée par les filtres de sécurité Google → 422 explicite
+// (l'app affiche un message clair au lieu d'un échec générique).
+const handleAIError = (res, tag) => (e) => {
+  if (e instanceof SafetyError) {
+    console.warn(tag + " (sécurité):", e.message);
+    return res.status(422).json({ error: "contenu_refuse" });
+  }
+  console.error(tag + ":", e);
+  res.status(500).json({ error: tag + "_error" });
+};
+
 app.get("/health", (_req, res) => res.json({ ok: true, service: "leova-backend" }));
 
 // État du compte : plan + usage du mois (pour l'app / futur paywall).
@@ -65,8 +76,7 @@ app.post("/v1/reformulate", meter("reformulate"), async (req, res) => {
     const phrase = await reformulate(labels);
     res.json({ phrase });
   } catch (e) {
-    console.error("reformulate:", e);
-    res.status(500).json({ error: "vertex_error" });
+    handleAIError(res, "reformulate")(e);
   }
 });
 
@@ -91,8 +101,7 @@ app.post("/v1/transcribe", meter("magic"), async (req, res) => {
     const text = await transcribe(String(req.body?.mimeType || "audio/webm"), b64);
     res.json({ text });
   } catch (e) {
-    console.error("transcribe:", e);
-    res.status(500).json({ error: "transcribe_error" });
+    handleAIError(res, "transcribe")(e);
   }
 });
 
@@ -108,8 +117,7 @@ app.post("/v1/magic", meter("magic"), async (req, res) => {
     });
     res.json({ plans });
   } catch (e) {
-    console.error("magic:", e);
-    res.status(500).json({ error: "magic_error" });
+    handleAIError(res, "magic")(e);
   }
 });
 
@@ -126,8 +134,7 @@ app.post("/v1/image", meter("image"), async (req, res) => {
     }
     res.json(out); // {mimeType, data}
   } catch (e) {
-    console.error("image:", e);
-    res.status(500).json({ error: "image_error" });
+    handleAIError(res, "image")(e);
   }
 });
 

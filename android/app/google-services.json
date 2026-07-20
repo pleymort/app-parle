@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "11414001422",
+    "project_id": "leova-app",
+    "storage_bucket": "leova-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11414001422:android:f74f27bd33162f5dcd295f",
+        "android_client_info": {
+          "package_name": "app.leova"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEI_phj65QsjDUNauoY6vA85v76k0fyQs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

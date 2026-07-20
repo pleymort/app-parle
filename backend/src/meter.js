@@ -8,6 +8,12 @@ import { config } from "./config.js";
 
 const month = () => new Date().toISOString().slice(0, 7); // "2026-07"
 
+// Quota mensuel selon le plan (null = illimité).
+function quotaFor(plan, feature) {
+  if (plan === "unlimited") return null;
+  return (plan === "plus" ? config.plusQuota : config.freeQuota)[feature];
+}
+
 // Vérifie le quota puis incrémente, en transaction. feature :
 // "reformulate" | "tts" | "magic" | "image".
 export async function checkAndCount(uid, feature) {
@@ -21,8 +27,8 @@ export async function checkAndCount(uid, feature) {
     const gUsed = (g.exists && g.data()[feature]) || 0;
     const plan = (p.exists && p.data().plan) || "free";
     if (gUsed >= config.globalCap[feature]) return { ok: false, reason: "global_cap" };
-    const quota = config.freeQuota[feature];
-    if (plan === "free" && used >= quota) return { ok: false, reason: "quota", used, quota };
+    const quota = quotaFor(plan, feature);
+    if (quota !== null && used >= quota) return { ok: false, reason: "quota", used, quota };
     const inc = { [feature]: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() };
     t.set(userRef, inc, { merge: true });
     t.set(globalRef, inc, { merge: true });
@@ -37,9 +43,10 @@ export async function getUsage(uid) {
     db.collection("users").doc(uid).get(),
   ]);
   const d = u.exists ? u.data() : {};
+  const plan = (p.exists && p.data().plan) || "free";
   const usage = {};
   for (const f of Object.keys(config.freeQuota)) {
-    usage[f] = { used: d[f] || 0, quota: config.freeQuota[f] };
+    usage[f] = { used: d[f] || 0, quota: quotaFor(plan, f) };
   }
-  return { plan: (p.exists && p.data().plan) || "free", month: month(), usage };
+  return { plan, month: month(), usage };
 }
