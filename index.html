@@ -49,23 +49,65 @@
   .tab .tem { font-size: 22px; }
   .tab.active { background: #4A90D9; color: white; }
 
-  /* ---- Grille de pictos ---- */
+  /* ---- Grille de pictos ----
+     Tailles pilotées par variables : réglables dans « Affichage & confort »
+     (accessibilité motrice : grandes cibles, espacement anti-erreur). */
+  :root {
+    --cell-min: 140px; --grid-gap: 12px; --cell-minh: 150px;
+    --em-size: 62px; --img-size: 76px; --lb-size: 19px;
+  }
   #grid {
     flex: 1; overflow-y: auto; padding: 10px;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
-    align-content: start;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--cell-min), 1fr));
+    gap: var(--grid-gap); align-content: start;
   }
   .picto {
     background: white; border: none; border-radius: 20px; padding: 14px 8px 12px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     box-shadow: 0 2px 6px rgba(30,60,90,.10); cursor: pointer;
-    min-height: 150px; transition: transform .08s;
+    min-height: var(--cell-minh); transition: transform .08s;
   }
   .picto:active, .picto.flash { transform: scale(.93); background: #DDEBFA; }
-  .picto .em { font-size: 62px; line-height: 1.1; }
-  .picto img { width: 76px; height: 76px; object-fit: cover; border-radius: 14px; }
-  .picto .lb { font-size: 19px; font-weight: 800; color: #24425F; text-align: center; }
+  .picto .em { font-size: var(--em-size); line-height: 1.1; }
+  .picto img { width: var(--img-size); height: var(--img-size); object-fit: cover; border-radius: 14px; }
+  .picto .lb { font-size: var(--lb-size); font-weight: 800; color: #24425F; text-align: center; }
   .picto.hiddenItem { opacity: .35; outline: 3px dashed #E08A8A; }
+
+  /* Micro-rebond au toucher (retour sensoriel) */
+  @keyframes tapPop { 0% { transform: scale(1); } 40% { transform: scale(.88); } 75% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  .picto.pop { animation: tapPop .3s ease; }
+  /* Carte fantôme qui « vole » vers la bande-phrase */
+  .flyGhost {
+    position: fixed; z-index: 80; pointer-events: none; margin: 0;
+    transition: transform .45s cubic-bezier(.2,.7,.3,1), opacity .45s ease;
+  }
+
+  /* Contraste élevé : contours nets, texte noir (malvoyance / CVI) */
+  body.hc { background: #FFFFFF; }
+  body.hc .picto { border: 3px solid #1B2A3A; box-shadow: none; }
+  body.hc .picto .lb { color: #000; }
+  body.hc .tab { border: 2px solid #1B2A3A; color: #1B2A3A; box-shadow: none; }
+  body.hc .tab.active { background: #1B2A3A; color: #fff; }
+  body.hc #strip { border-bottom-color: #1B2A3A; }
+  body.hc .stripCell { border-color: #1B2A3A; }
+
+  /* Thème sombre (usage du soir, sensibilité à la lumière) */
+  body.dark { background: #131A22; }
+  body.dark #strip { background: #1B242F; border-bottom-color: #2C3947; }
+  body.dark .stripCell { background: #24303D; border-color: #3A4B5E; }
+  body.dark .stripCell .lb { color: #BCD3EA; }
+  body.dark #stripHint { color: #5B7185; }
+  body.dark #clearBtn { background: #24303D; color: #7C8FA3; }
+  body.dark .tab { background: #1B242F; color: #9FB2C5; box-shadow: none; }
+  body.dark .tab.active { background: #4A90D9; color: #fff; }
+  body.dark .picto { background: #1E2833; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+  body.dark .picto:active, body.dark .picto.flash { background: #2A3947; }
+  body.dark .picto .lb { color: #D7E6F5; }
+  body.dark #gear { background: rgba(120,140,160,.25); }
+  body.dark.hc { background: #000; }
+  body.dark.hc .picto { border-color: #E6EEF6; }
+  body.dark.hc .picto .lb { color: #FFF; }
+  body.dark.hc .tab { border-color: #E6EEF6; color: #E6EEF6; }
 
   /* ---- Bouton parent ---- */
   #gear {
@@ -252,6 +294,52 @@
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
+    <h2 style="font-size:17px">🖐️ Affichage &amp; confort</h2>
+    <div class="prow">
+      <label>Taille des cartes</label>
+      <select id="accSize">
+        <option value="S">Petites (plus de cartes à l'écran)</option>
+        <option value="M">Moyennes (par défaut)</option>
+        <option value="L">Grandes</option>
+        <option value="XL">Très grandes (motricité difficile)</option>
+      </select>
+    </div>
+    <div class="prow">
+      <label>Espacement entre les cartes</label>
+      <select id="accGap">
+        <option value="S">Serré</option>
+        <option value="M">Normal (par défaut)</option>
+        <option value="L">Large (évite les touchers accidentels)</option>
+      </select>
+    </div>
+    <div class="prow">
+      <label>Toucher</label>
+      <select id="accDbl">
+        <option value="0">Appuis répétés : tous acceptés (par défaut)</option>
+        <option value="400">Ignorer les doubles appuis (0,4 s)</option>
+        <option value="800">Ignorer les doubles appuis (0,8 s)</option>
+      </select>
+      <select id="accHold" style="margin-top:8px">
+        <option value="0">Activation immédiate (par défaut)</option>
+        <option value="300">Maintenir 0,3 s pour activer</option>
+        <option value="600">Maintenir 0,6 s pour activer</option>
+      </select>
+      <div class="hint">« Maintenir pour activer » évite les activations en effleurant ou en balayant la main.</div>
+    </div>
+    <div class="prow">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+        <input type="checkbox" id="accContrast"> Contraste élevé (contours nets, texte noir)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
+        <input type="checkbox" id="accDark"> Thème sombre (soir, sensibilité à la lumière)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
+        <input type="checkbox" id="accAnim" checked> Animations et vibration au toucher
+      </label>
+    </div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
     <h2 style="font-size:17px">🔒 Mode kiosk</h2>
     <p class="sub" style="margin-bottom:8px">Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app ni ouvrir autre chose. On revient aux réglages avec le code parent.</p>
     <div class="prow">
@@ -428,7 +516,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "30"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "31"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -533,7 +621,7 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc"];
 
 const store = {
   get(key, fallback) {
@@ -608,6 +696,9 @@ let overrides = store.get("over", {}); // modifications des pictos de base : {id
 let gridOrder = store.get("ord", {});  // ordre des pictos par catégorie : {cat: [ids]}
 let catOver = store.get("catover", {}); // renommages des catégories de base : {id: {label, emoji}}
 let customCats = store.get("cats", []); // catégories créées : [{id, label, emoji}]
+// Affichage & confort : taille/espacement des cartes (motricité), toucher
+// (anti-double-appui, maintenir pour activer), contraste, thème, animations.
+let acc = store.get("acc", { size: "M", gap: "M", dbl: 0, hold: 0, contrast: false, dark: false, anim: true });
 let kioskOn = store.get("kiosk", false); // mode kiosk actif ?
 let kioskPin = store.get("kioskpin", ""); // code parent (4 chiffres) pour ouvrir les réglages / quitter le kiosk
 
@@ -894,6 +985,54 @@ function pictoVisual(item, big) {
   return `<span class="em">${item.emoji || "🔹"}</span>`;
 }
 
+/* Tailles de cartes (accessibilité motrice) : appliquées via variables CSS */
+const ACC_SIZES = {
+  S:  { min: 110, minh: 118, em: 46,  img: 58,  lb: 15 },
+  M:  { min: 140, minh: 150, em: 62,  img: 76,  lb: 19 },
+  L:  { min: 180, minh: 190, em: 78,  img: 98,  lb: 22 },
+  XL: { min: 230, minh: 240, em: 100, img: 126, lb: 26 },
+};
+const ACC_GAPS = { S: 6, M: 12, L: 22 };
+
+function applyAcc() {
+  const s = ACC_SIZES[acc.size] || ACC_SIZES.M;
+  const r = document.documentElement.style;
+  r.setProperty("--cell-min", s.min + "px");
+  r.setProperty("--cell-minh", s.minh + "px");
+  r.setProperty("--em-size", s.em + "px");
+  r.setProperty("--img-size", s.img + "px");
+  r.setProperty("--lb-size", s.lb + "px");
+  r.setProperty("--grid-gap", (ACC_GAPS[acc.gap] !== undefined ? ACC_GAPS[acc.gap] : 12) + "px");
+  document.body.classList.toggle("hc", !!acc.contrast);
+  document.body.classList.toggle("dark", !!acc.dark);
+}
+
+/* La carte touchée « vole » vers la bande-phrase (lien visuel geste → phrase) */
+function flyToStrip(b, item) {
+  try {
+    const from = b.getBoundingClientRect();
+    const stripBox = document.getElementById("stripItems");
+    const to = stripBox.getBoundingClientRect();
+    const g = document.createElement("div");
+    g.className = "stripCell flyGhost";
+    g.innerHTML = pictoVisual(item);
+    g.style.left = (from.left + from.width / 2 - 36) + "px";
+    g.style.top = from.top + "px";
+    document.body.appendChild(g);
+    const last = stripBox.lastElementChild;
+    const destX = last && last.id !== "stripHint"
+      ? Math.min(last.getBoundingClientRect().right + 6, to.right - 78)
+      : to.left + 6;
+    requestAnimationFrame(() => {
+      g.style.transform = `translate(${destX - (from.left + from.width / 2 - 36)}px, ${to.top + 10 - from.top}px) scale(.92)`;
+      g.style.opacity = "0.2";
+    });
+    setTimeout(() => g.remove(), 500);
+  } catch {}
+}
+
+const lastTapAt = {}; // anti-double-appui : dernier toucher accepté par carte
+
 function renderGrid() {
   gridEl.innerHTML = "";
   const ord = gridOrder[currentCat] || [];
@@ -912,10 +1051,24 @@ function renderGrid() {
     b.className = "picto" + (isHidden ? " hiddenItem" : "");
     b.dataset.id = item.id;
     b.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
+    b.addEventListener("pointerdown", () => { b._downAt = Date.now(); });
     b.onclick = () => {
       if (parentMode) { if (!dragDone) toggleHidden(item.id); return; }
-      b.classList.add("flash");
-      setTimeout(() => b.classList.remove("flash"), 180);
+      const now = Date.now();
+      // Appui trop court (réglage « maintenir pour activer ») : ignoré
+      if (acc.hold && (!b._downAt || now - b._downAt < acc.hold)) return;
+      // Double appui involontaire (tremblements, persévération) : ignoré
+      if (acc.dbl && now - (lastTapAt[item.id] || 0) < acc.dbl) return;
+      lastTapAt[item.id] = now;
+      if (acc.anim !== false) {
+        b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop");
+        setTimeout(() => b.classList.remove("pop"), 320);
+        if (navigator.vibrate) navigator.vibrate(12);
+        flyToStrip(b, item);
+      } else {
+        b.classList.add("flash");
+        setTimeout(() => b.classList.remove("flash"), 180);
+      }
       speak(item.say || item.label);
       addToStrip(item);
     };
@@ -1102,6 +1255,13 @@ function openPanel() {
   document.getElementById("bsecret").value = backendSecret;
   refreshPlan(); // plan + usage du mois (asynchrone, sans bloquer l'ouverture)
   refreshAcct(); // état du compte de synchronisation
+  document.getElementById("accSize").value = acc.size || "M";
+  document.getElementById("accGap").value = acc.gap || "M";
+  document.getElementById("accDbl").value = String(acc.dbl || 0);
+  document.getElementById("accHold").value = String(acc.hold || 0);
+  document.getElementById("accContrast").checked = !!acc.contrast;
+  document.getElementById("accDark").checked = !!acc.dark;
+  document.getElementById("accAnim").checked = acc.anim !== false;
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
   document.getElementById("pinStatus").textContent = kioskPin ? "•••• (code défini)" : "aucun code";
@@ -1599,6 +1759,16 @@ document.getElementById("testBackendBtn").onclick = async () => {
       : "Échec : " + e.message + " (internet ?)";
   }
 };
+/* ---- Affichage & confort ---- */
+function saveAcc() { store.set("acc", acc); applyAcc(); }
+document.getElementById("accSize").onchange = (e) => { acc.size = e.target.value; saveAcc(); };
+document.getElementById("accGap").onchange = (e) => { acc.gap = e.target.value; saveAcc(); };
+document.getElementById("accDbl").onchange = (e) => { acc.dbl = parseInt(e.target.value, 10) || 0; saveAcc(); };
+document.getElementById("accHold").onchange = (e) => { acc.hold = parseInt(e.target.value, 10) || 0; saveAcc(); };
+document.getElementById("accContrast").onchange = (e) => { acc.contrast = e.target.checked; saveAcc(); };
+document.getElementById("accDark").onchange = (e) => { acc.dark = e.target.checked; saveAcc(); };
+document.getElementById("accAnim").onchange = (e) => { acc.anim = e.target.checked; saveAcc(); };
+
 document.getElementById("reformChk").onchange = (e) => {
   reformOn = e.target.checked;
   store.set("reform", reformOn);
@@ -1911,6 +2081,7 @@ if (navigator.onLine) {
   fetch(BACKEND_URL + "/health").catch(() => {});
   if (!backendSecret) fbToken();
 }
+applyAcc(); // tailles, contraste et thème avant le premier rendu
 renderTabs();
 renderGrid();
 renderStrip();

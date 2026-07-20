@@ -42,4 +42,6 @@
          puisse afficher la popup d'autorisation quand la page demande le micro. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Léger retour haptique quand l'enfant touche une carte -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>
