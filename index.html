@@ -35,6 +35,21 @@
   #playBtn { background: #35A853; color: white; }
   #clearBtn { background: #F1F5F9; color: #8899AA; font-size: 26px; }
 
+  /* ---- Prédiction (suggestions de carte suivante) ---- */
+  #suggest { display: none; align-items: center; gap: 8px; padding: 8px 10px 0; flex-wrap: wrap; }
+  .sgHint { font-size: 12px; font-weight: 800; color: #9DB2C7; }
+  .sg {
+    border: none; border-radius: 12px; background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(30,60,90,.10); padding: 7px 12px;
+    display: flex; align-items: center; gap: 7px;
+    font-size: 15px; font-weight: 800; color: #24425F; cursor: pointer;
+  }
+  .sg img { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; }
+  .sg .em { font-size: 22px; }
+  body.dark .sg { background: #1E2833; color: #D7E6F5; }
+  body.dark .sgHint { color: #5B7185; }
+  body.hc .sg { border: 2px solid #1B2A3A; box-shadow: none; }
+
   /* ---- Onglets catégories ----
      Retour à la ligne (wrap) plutôt que défilement horizontal : toutes les
      catégories restent visibles d'un coup d'œil, même quand on en ajoute. */
@@ -402,6 +417,9 @@
   <button id="clearBtn" class="stripBtn" aria-label="Effacer">✕</button>
   <button id="playBtn" class="stripBtn" aria-label="Lire la phrase">▶</button>
 </div>
+
+<!-- Prédiction : les suites probables du dernier picto touché (apprises de l'enfant) -->
+<div id="suggest"></div>
 
 <div id="editNote">Mode parent : touchez un picto pour le modifier (nom, image, voix, masquer…) · maintenez puis glissez pour réorganiser, déposer sur un onglet (changer de catégorie) ou sur 🗑 (supprimer) · ⚙️ pour les réglages.</div>
 <div id="tabs"></div>
@@ -855,7 +873,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "36"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "37"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1608,7 +1626,55 @@ function attachParentDrag(b, item) {
   });
 }
 
+/* ---- Prédiction : apprend les enchaînements de CET enfant (localement) ---- */
+let bigrams = store.get("bigrams", {});
+let bgSaveTimer = null;
+
+function bumpBigram(prev, next) {
+  if (prev === next) return;
+  const k = prev + "→" + next;
+  bigrams[k] = (bigrams[k] || 0) + 1;
+  const keys = Object.keys(bigrams);
+  if (keys.length > 600) {
+    // élague les paires les plus rares pour rester léger
+    keys.sort((a, b) => bigrams[a] - bigrams[b]).slice(0, 100).forEach((k2) => delete bigrams[k2]);
+  }
+  clearTimeout(bgSaveTimer);
+  bgSaveTimer = setTimeout(() => store.set("bigrams", bigrams), 3000);
+}
+
+// « Et ensuite ? » : les 3 suites les plus probables du dernier picto touché
+// (vues au moins 2 fois — pas de suggestion tant que l'habitude n'existe pas).
+function renderSuggest() {
+  const box = document.getElementById("suggest");
+  if (parentMode || !strip.length) { box.style.display = "none"; return; }
+  const last = strip[strip.length - 1].label;
+  const cands = Object.entries(bigrams)
+    .filter(([k, n]) => k.startsWith(last + "→") && n >= 2)
+    .map(([k, n]) => ({ label: k.slice(last.length + 1), n }))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 3)
+    .map((c) => allItems().find((i) => i.label === c.label && !hidden.has(i.id)))
+    .filter(Boolean);
+  if (!cands.length) { box.style.display = "none"; return; }
+  box.style.display = "flex";
+  box.innerHTML = `<span class="sgHint">Et ensuite ?</span>`;
+  for (const item of cands) {
+    const b = document.createElement("button");
+    b.className = "sg";
+    b.innerHTML = pictoVisual(item) + `<span>${item.label}</span>`;
+    b.onclick = () => {
+      if (navigator.vibrate && acc.anim !== false) navigator.vibrate(12);
+      speakItem(item);
+      addToStrip(item);
+      logJ({ t: Date.now(), k: "w", w: item.label });
+    };
+    box.appendChild(b);
+  }
+}
+
 function addToStrip(item) {
+  if (strip.length) bumpBigram(strip[strip.length - 1].label, item.label);
   if (strip.length >= 4) strip.shift();
   strip.push(item);
   renderStrip();
@@ -1618,6 +1684,7 @@ function renderStrip() {
   stripItemsEl.innerHTML = "";
   if (strip.length === 0) {
     stripItemsEl.innerHTML = `<span id="stripHint">Touche les images pour parler…</span>`;
+    renderSuggest();
     return;
   }
   for (const item of strip) {
@@ -1626,6 +1693,7 @@ function renderStrip() {
     d.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
     stripItemsEl.appendChild(d);
   }
+  renderSuggest();
 }
 
 document.getElementById("playBtn").onclick = async () => {
