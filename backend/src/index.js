@@ -1,14 +1,16 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, SafetyError } from "./vertex.js";
+import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, onboardPlan, SafetyError } from "./vertex.js";
+import { getSync, putSync } from "./sync.js";
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
 import { checkAndCount, getUsage } from "./meter.js";
 import { verifyAndApply, handleRtdn } from "./billing.js";
 
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+// 20 Mo : la sauvegarde du vocabulaire embarque les photos des cartes (data URLs).
+app.use(express.json({ limit: "20mb" }));
 app.use(cors({ origin: config.allowedOrigins }));
 
 // --- Garde d'accès ---
@@ -126,6 +128,53 @@ app.post("/v1/transcribe", meter("magic"), async (req, res) => {
     res.json({ text });
   } catch (e) {
     handleAIError(res, "transcribe")(e);
+  }
+});
+
+// Onboarding : tableau de démarrage personnalisé depuis l'interview du parent.
+app.post("/v1/onboard", meter("magic"), async (req, res) => {
+  try {
+    const s = (v, n) => String(v || "").trim().slice(0, n);
+    const plans = await onboardPlan({
+      childName: s(req.body?.childName, 60),
+      people: s(req.body?.people, 600),
+      likes: s(req.body?.likes, 600),
+      places: s(req.body?.places, 600),
+      cats: Array.isArray(req.body?.cats) ? req.body.cats.slice(0, 30) : [],
+      existing: Array.isArray(req.body?.existing) ? req.body.existing.slice(0, 200) : [],
+    });
+    res.json({ plans });
+  } catch (e) {
+    handleAIError(res, "onboard")(e);
+  }
+});
+
+// Sauvegarde / restauration du vocabulaire (nécessite un compte — pas le
+// code parent seul : il faut un uid stable pour retrouver sa sauvegarde).
+app.get("/v1/sync", async (req, res) => {
+  try {
+    if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
+    const data = await getSync(req.auth.uid);
+    if (!data) return res.status(404).json({ error: "aucune_sauvegarde" });
+    res.json(data);
+  } catch (e) {
+    console.error("sync/get:", e);
+    res.status(500).json({ error: "sync_error" });
+  }
+});
+
+app.post("/v1/sync", async (req, res) => {
+  try {
+    if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
+    const { state, rev } = req.body || {};
+    if (!state || typeof state !== "object" || !Number.isFinite(rev)) {
+      return res.status(400).json({ error: "state_requis" });
+    }
+    await putSync(req.auth.uid, state, rev);
+    res.json({ ok: true, rev });
+  } catch (e) {
+    console.error("sync/put:", e);
+    res.status(500).json({ error: "sync_error" });
   }
 });
 

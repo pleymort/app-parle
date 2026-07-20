@@ -80,6 +80,40 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
   return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
 }
 
+/* Onboarding : à partir des réponses du parent (proches avec surnoms exacts,
+   passions, lieux), génère le tableau de démarrage personnalisé de l'enfant.
+   Même contrat de carte que l'ajout magique (label/say/cat/search/emoji…). */
+export async function onboardPlan({ childName, people, likes, places, cats, existing }) {
+  const model = vertex.getGenerativeModel({
+    model: config.textModel,
+    generationConfig: { responseMimeType: "application/json" },
+    safetySettings: SAFETY,
+  });
+  const catList = (cats || []).map((c) => `"${c.id}" (${c.label})`).join(", ");
+  const prompt =
+    `Tu prépares le tableau de démarrage d'une application de communication (CAA) pour un enfant non verbal` +
+    (childName ? ` prénommé « ${childName} »` : "") + `. Réponses du parent :
+- Personnes importantes (avec leurs surnoms EXACTS) : « ${people || "—"} »
+- Ce que l'enfant adore (aliments, activités, personnages…) : « ${likes || "—"} »
+- Lieux ou moments importants du quotidien : « ${places || "—"} »
+Pictogrammes déjà présents dans l'app (ne PAS les dupliquer) : ${(existing || []).map((l) => `"${l}"`).join(", ")}.
+Génère un tableau JSON de 6 à 24 objets : une carte par personne citée, une par passion, une par lieu/moment utile. Chaque objet a ces clés :
+"label" : le mot court affiché sous le pictogramme (surnom EXACT pour une personne, majuscule initiale) ;
+"say" : le mot prononcé par la tablette — identique au label, SAUF orthographe phonétique si le surnom risque d'être mal lu par une synthèse vocale française (ex label "JeaJea" → say "Jaja") ;
+"cat" : la catégorie la plus logique parmi : ${catList} ;
+"search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (pour une personne : "grand-mère", "frère", "maîtresse"…) ;
+"emoji" : un émoji si un émoji évident représente très bien le concept, sinon null. Pour les PERSONNES, toujours null (un pictogramme, puis une vraie photo, les représentera mieux qu'un émoji) ;
+"emojiFallback" : TOUJOURS fourni — un émoji simple de secours.
+N'invente rien qui n'a pas été cité par le parent. Réponds UNIQUEMENT le tableau JSON.`;
+  const res = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+  });
+  checkBlocked(res);
+  const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+  const parsed = JSON.parse(text);
+  return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
+}
+
 // Transcrit la dictée du parent (bouton 🎤 de l'ajout magique).
 export async function transcribe(mimeType, dataB64) {
   const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });

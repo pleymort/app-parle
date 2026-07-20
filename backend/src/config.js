@@ -16,6 +16,8 @@ export const config = {
   ttsVoice: process.env.TTS_VOICE || "fr-FR-Chirp3-HD-Kore",
   // Cache audio mutualisé : un mot généré une fois sert à toutes les familles.
   ttsBucket: process.env.TTS_BUCKET || "",
+  // Sauvegarde/synchro du vocabulaire (un JSON par utilisateur, bucket privé UE).
+  syncBucket: process.env.SYNC_BUCKET || "leova-app-sync",
   // Code d'accès "parent" : accès illimité, non compté (la tablette de la
   // famille). Les autres utilisateurs passent par Firebase Auth + quotas.
   appSecret: process.env.APP_SECRET || "",
