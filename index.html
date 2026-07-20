@@ -227,6 +227,15 @@
   .psec { display: none; }
   .psec.on { display: block; }
 
+  /* ---- Journal ---- */
+  #jChart { display: flex; align-items: flex-end; gap: 6px; height: 90px; padding-top: 6px; }
+  .jcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .jbar { width: 100%; background: #4A90D9; border-radius: 6px 6px 0 0; min-height: 2px; }
+  .jday { font-size: 11px; font-weight: 700; color: #8FA3B8; }
+  .jn { font-size: 11px; font-weight: 800; color: #4A90D9; }
+  .jphrase { padding: 6px 0; border-bottom: 1px solid #EDF2F7; font-size: 14px; color: #24425F; }
+  .jphrase .jt { color: #9DB2C7; font-size: 12px; font-weight: 700; margin-right: 8px; }
+
   /* ---- Toast (confirmation + Annuler) ---- */
   #toast {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(90px);
@@ -409,6 +418,7 @@
       <button class="ptab" data-psec="vocab">📚 Vocabulaire</button>
       <button class="ptab" data-psec="display">🖐️ Affichage</button>
       <button class="ptab" data-psec="voice">🗣️ Voix &amp; IA</button>
+      <button class="ptab" data-psec="journal">📊 Journal</button>
       <button class="ptab" data-psec="account">☁️ Compte</button>
       <button class="ptab" data-psec="lock">🔒 Sécurité</button>
     </div>
@@ -593,6 +603,29 @@
       <div class="aiStatus" id="backendStatus"></div>
       <div class="hint">L'IA (reformulation, belle voix, création de pictos) passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.</div>
     </div>
+    </div>
+
+    <div class="psec" data-psec="journal">
+    <h2 style="font-size:17px">📊 Ce qu'il a dit</h2>
+    <div class="aiStatus" id="jToday"></div>
+    <div class="prow">
+      <label>Les 7 derniers jours (mots touchés)</label>
+      <div id="jChart"></div>
+    </div>
+    <div class="prow">
+      <label>Mots préférés (30 jours)</label>
+      <div id="jTop" class="hint" style="font-size:14px;color:#55677A"></div>
+    </div>
+    <div class="prow">
+      <label>Nouveaux mots (7 jours)</label>
+      <div id="jNew" class="hint" style="font-size:14px;color:#55677A"></div>
+    </div>
+    <div class="prow">
+      <label>Dernières phrases</label>
+      <div id="jPhrases"></div>
+    </div>
+    <button class="pbtn primary" id="reportBtn">🖨 Rapport pour l'orthophoniste (30 jours)</button>
+    <div class="hint">Le journal reste sur cette tablette (non synchronisé, non envoyé au serveur). Le rapport s'imprime depuis la version web sur un ordinateur.</div>
     </div>
 
     <div class="psec" data-psec="account">
@@ -822,7 +855,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "35"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "36"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -927,7 +960,7 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines", "childname"];
 
 const store = {
   get(key, fallback) {
@@ -1476,6 +1509,7 @@ function renderGrid() {
       }
       speakItem(item);
       addToStrip(item);
+      logJ({ t: now, k: "w", w: item.label }); // journal (local)
     };
     attachParentDrag(b, item);
     gridEl.appendChild(b);
@@ -1605,10 +1639,13 @@ document.getElementById("playBtn").onclick = async () => {
         sleep(6000).then(() => { throw new Error("timeout"); }),
       ]);
       speak(phrase);
+      logJ({ t: Date.now(), k: "p", p: phrase, n: strip.length });
       return;
     } catch {}
   }
-  speak(strip.map(i => i.say || i.label).join(" "));
+  const raw = strip.map(i => i.say || i.label).join(" ");
+  speak(raw);
+  logJ({ t: Date.now(), k: "p", p: raw, n: strip.length });
 };
 document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip(); };
 
@@ -2511,6 +2548,119 @@ function renderTrash() {
   }
 }
 
+/* ================= Journal (local à la tablette) =================
+   Chaque mot touché et chaque phrase lue sont notés ici — pour la vue
+   « 📊 Journal » et le rapport orthophoniste. Jamais envoyé au serveur. */
+let journal = store.get("journal", []);
+let jSaveTimer = null;
+
+function logJ(e) {
+  journal.push(e);
+  if (journal.length > 4000) journal = journal.slice(-4000);
+  // Écriture débouncée : pas de gros JSON à chaque toucher de l'enfant
+  clearTimeout(jSaveTimer);
+  jSaveTimer = setTimeout(() => store.set("journal", journal), 3000);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") store.set("journal", journal);
+});
+
+const J_DAY = 86400000;
+function jSince(days, kind) {
+  const since = Date.now() - days * J_DAY;
+  return journal.filter((e) => e.k === kind && e.t >= since);
+}
+
+function renderJournal() {
+  const today = new Date().toDateString();
+  const wToday = journal.filter((e) => e.k === "w" && new Date(e.t).toDateString() === today).length;
+  const pToday = journal.filter((e) => e.k === "p" && new Date(e.t).toDateString() === today).length;
+  document.getElementById("jToday").textContent =
+    `Aujourd'hui : ${wToday} mot${wToday > 1 ? "s" : ""} touché${wToday > 1 ? "s" : ""} · ${pToday} phrase${pToday > 1 ? "s" : ""} lue${pToday > 1 ? "s" : ""}`;
+
+  // 7 jours : barres par jour
+  const chart = document.getElementById("jChart");
+  chart.innerHTML = "";
+  const counts = [];
+  for (let d = 6; d >= 0; d--) {
+    const day = new Date(Date.now() - d * J_DAY);
+    const key = day.toDateString();
+    counts.push({
+      label: day.toLocaleDateString("fr-FR", { weekday: "short" }),
+      n: journal.filter((e) => e.k === "w" && new Date(e.t).toDateString() === key).length,
+    });
+  }
+  const max = Math.max(1, ...counts.map((c) => c.n));
+  for (const c of counts) {
+    const col = document.createElement("div");
+    col.className = "jcol";
+    col.innerHTML = `<span class="jn">${c.n || ""}</span><div class="jbar" style="height:${Math.round((c.n / max) * 58)}px"></div><span class="jday">${c.label}</span>`;
+    chart.appendChild(col);
+  }
+
+  // Mots préférés (30 jours)
+  const freq = {};
+  for (const e of jSince(30, "w")) freq[e.w] = (freq[e.w] || 0) + 1;
+  const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  document.getElementById("jTop").textContent =
+    top.length ? top.map(([w, n]) => `${w} (${n})`).join(" · ") : "Encore rien — ça viendra !";
+
+  // Nouveaux mots : première apparition dans les 7 derniers jours
+  const first = {};
+  for (const e of journal) if (e.k === "w" && !(e.w in first)) first[e.w] = e.t;
+  const news = Object.entries(first).filter(([, t]) => t >= Date.now() - 7 * J_DAY).map(([w]) => w);
+  document.getElementById("jNew").textContent = news.length ? news.join(" · ") : "—";
+
+  // Dernières phrases
+  const box = document.getElementById("jPhrases");
+  const phrases = journal.filter((e) => e.k === "p").slice(-8).reverse();
+  box.innerHTML = phrases.length ? "" : '<div class="hint">Aucune phrase lue pour l\'instant (bouton ▶).</div>';
+  for (const p of phrases) {
+    const d = document.createElement("div");
+    d.className = "jphrase";
+    const when = new Date(p.t);
+    d.innerHTML = `<span class="jt">${when.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} ${when.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>${p.p}`;
+    box.appendChild(d);
+  }
+}
+
+document.getElementById("reportBtn").onclick = () => {
+  const w = window.open("", "_blank");
+  if (!w) { alert("Impression impossible ici — ouvrez la version web sur un ordinateur (pleymort.github.io/app-parle)."); return; }
+  const name = store.get("childname", "") || "l'enfant";
+  const words30 = jSince(30, "w");
+  const phrases30 = jSince(30, "p");
+  const freq = {};
+  for (const e of words30) freq[e.w] = (freq[e.w] || 0) + 1;
+  const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 15);
+  const first = {};
+  for (const e of journal) if (e.k === "w" && !(e.w in first)) first[e.w] = e.t;
+  const news30 = Object.entries(first).filter(([, t]) => t >= Date.now() - 30 * J_DAY)
+    .sort((a, b) => a[1] - b[1]);
+  const days = new Set(words30.map((e) => new Date(e.t).toDateString())).size || 1;
+  let html = `<html><head><title>Rapport Leova</title><style>
+    body { font-family: system-ui, sans-serif; margin: 28px; color: #222; }
+    h1 { font-size: 20px; } h2 { font-size: 15px; margin: 18px 0 6px; }
+    table { border-collapse: collapse; } td, th { border: 1px solid #bbb; padding: 4px 10px; font-size: 13px; text-align: left; }
+    p { font-size: 13px; } .sub { color: #666; }
+  </style></head><body>
+  <h1>Leova — rapport d'utilisation</h1>
+  <p class="sub">${name} · 30 derniers jours · généré le ${new Date().toLocaleDateString("fr-FR")} (données de cette tablette)</p>
+  <h2>En bref</h2>
+  <p>${words30.length} mots touchés · ${phrases30.length} phrases lues (▶) · ${Object.keys(freq).length} mots différents · ${days} jour${days > 1 ? "s" : ""} d'utilisation · ${Math.round(words30.length / days)} mots/jour actif.</p>
+  <h2>Mots les plus utilisés</h2>
+  <table><tr><th>Mot</th><th>Fois</th></tr>${top.map(([m, n]) => `<tr><td>${m}</td><td>${n}</td></tr>`).join("")}</table>
+  <h2>Nouveaux mots du mois (première utilisation)</h2>
+  <p>${news30.length ? news30.map(([m, t]) => `${m} (${new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })})`).join(" · ") : "—"}</p>
+  <h2>Dernières phrases</h2>
+  ${journal.filter((e) => e.k === "p").slice(-40).reverse().map((p) =>
+    `<p>· ${p.p} <span class="sub">(${new Date(p.t).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })})</span></p>`).join("")}
+  </body></html>`;
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { try { w.print(); } catch {} }, 600);
+};
+
 /* ================= Vraie voix enregistrée sur une carte ================= */
 let recRec = null; // MediaRecorder en cours
 let recTimer = null;
@@ -2842,6 +2992,7 @@ function showPsec(name) {
   if (name === "home") refreshDash();
   if (name === "vocab") { renderTrash(); renderRoutines(); }
   if (name === "voice") renderVoices();
+  if (name === "journal") renderJournal();
 }
 document.querySelectorAll("#ptabs .ptab").forEach((b) => { b.onclick = () => showPsec(b.dataset.psec); });
 
@@ -2939,6 +3090,7 @@ obEl("obGo").onclick = async () => {
       existing: allItems().map((i) => i.label),
     })).plans || [];
     hidePersonalDefaults();
+    if (childName) store.set("childname", childName); // pour le rapport orthophoniste
     const prevNote = visualNote;
     visualNote = () => {};
     let n = 0;
