@@ -216,6 +216,24 @@
   #pinPad button:active { background: #C9E0F8; }
   #pinPad button.pinAux { background: #F1F5F9; color: #8899AA; font-size: 16px; }
   .kioskState { font-size: 13px; font-weight: 700; margin-top: 6px; min-height: 18px; }
+
+  /* ---- Onglets du panneau parent ---- */
+  #ptabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 16px; }
+  .ptab {
+    border: none; border-radius: 999px; padding: 8px 13px; font-size: 13.5px; font-weight: 700;
+    background: #EDF2F7; color: #55677A; cursor: pointer;
+  }
+  .ptab.on { background: #4A90D9; color: #fff; }
+  .psec { display: none; }
+  .psec.on { display: block; }
+
+  /* ---- Tableau de bord (accueil parent) ---- */
+  #dashTiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .dtile { background: #F4F8FC; border-radius: 14px; padding: 12px 14px; }
+  .dtile .dv { font-size: 20px; font-weight: 800; color: #24425F; min-height: 26px; }
+  .dtile .dl { font-size: 12px; font-weight: 700; color: #8FA3B8; margin-top: 2px; }
+  .dact { display: flex; flex-direction: column; gap: 8px; }
+  .dact .pbtn { margin: 0; text-align: left; }
 /* ---- Onboarding (premier lancement) ---- */
 #onboard {
   position: fixed; inset: 0; z-index: 60; display: none;
@@ -265,8 +283,32 @@
 <div id="panel">
   <div id="panelCard">
     <h2>Réglages (parents) <span id="verTag" style="float:right;font-size:12px;color:#B9C7D6;font-weight:600"></span></h2>
-    <p class="sub">Ajoutez des images, réglez la voix. L'enfant ne voit pas cet écran.</p>
 
+    <div id="ptabs">
+      <button class="ptab on" data-psec="home">🏠 Accueil</button>
+      <button class="ptab" data-psec="vocab">📚 Vocabulaire</button>
+      <button class="ptab" data-psec="display">🖐️ Affichage</button>
+      <button class="ptab" data-psec="voice">🗣️ Voix &amp; IA</button>
+      <button class="ptab" data-psec="account">☁️ Compte</button>
+      <button class="ptab" data-psec="lock">🔒 Sécurité</button>
+    </div>
+
+    <div class="psec on" data-psec="home">
+      <div id="dashTiles">
+        <div class="dtile"><div class="dv" id="dashWords">…</div><div class="dl">mots actifs</div></div>
+        <div class="dtile"><div class="dv" id="dashVoices">…</div><div class="dl">voix prêtes</div></div>
+        <div class="dtile"><div class="dv" id="dashSync">…</div><div class="dl">sauvegarde</div></div>
+        <div class="dtile"><div class="dv" id="dashPlan">…</div><div class="dl">formule</div></div>
+      </div>
+      <div class="dact">
+        <button class="pbtn primary" id="qaMagic">✨ Ajout magique — dites-le, l'IA fait le reste</button>
+        <button class="pbtn ghost" id="qaPhoto">📷 Ajouter une image ou une photo</button>
+        <button class="pbtn ghost" id="qaSync">🔄 Sauvegarder / synchroniser</button>
+      </div>
+      <p class="sub" style="margin-top:14px">L'enfant ne voit pas cet écran. Sur la grille : touchez un picto pour le masquer, maintenez-glissez pour réorganiser.</p>
+    </div>
+
+    <div class="psec" data-psec="vocab">
     <h2 style="font-size:17px">✨ Ajout magique</h2>
     <div class="prow">
       <label>Dites ou écrivez ce que l'enfant doit pouvoir demander — un mot, une liste, ou un thème</label>
@@ -286,14 +328,40 @@
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <div class="prow">
-      <label>Vitesse de la voix</label>
-      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
-      <button class="pbtn ghost" id="testVoice">🔊 Tester la voix</button>
-    </div>
+    <h2 style="font-size:17px">Catégories</h2>
+    <p class="sub" style="margin-bottom:8px">Changez l'émoji ou le nom, ou créez-en une nouvelle.</p>
+    <div id="catList"></div>
+    <button class="pbtn ghost" id="addCatBtn">➕ Nouvelle catégorie</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
+    <h2 style="font-size:17px">Ajouter une image</h2>
+    <div class="prow">
+      <label>Mot à prononcer</label>
+      <input type="text" id="newLabel" placeholder="ex : doudou, piscine, mamie…">
+    </div>
+    <div class="prow">
+      <label>Catégorie</label>
+      <select id="newCat"></select>
+    </div>
+    <div class="prow">
+      <label>Image : une photo (recommandé) ou un émoji</label>
+      <input type="file" id="newPhoto" accept="image/*">
+      <div class="aiBtns">
+        <button class="pbtn ghost" id="arasaacBtn">🔍 Chercher un picto</button>
+        <button class="pbtn ghost" id="genImgBtn">✨ Générer (IA)</button>
+        <button class="pbtn ghost" id="cleanBtn">🪄 Photo → picto (IA)</button>
+      </div>
+      <div id="pickResults"></div>
+      <div class="aiStatus" id="aiStatus2"></div>
+      <div id="photoPreview"></div>
+      <input type="text" id="newEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
+      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).</div>
+    </div>
+    <button class="pbtn primary" id="addBtn">Ajouter</button>
+    </div>
+
+    <div class="psec" data-psec="display">
     <h2 style="font-size:17px">🖐️ Affichage &amp; confort</h2>
     <div class="prow">
       <label>Taille des cartes</label>
@@ -338,8 +406,9 @@
       </label>
     </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+    </div>
 
+    <div class="psec" data-psec="lock">
     <h2 style="font-size:17px">🔒 Mode kiosk</h2>
     <p class="sub" style="margin-bottom:8px">Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app ni ouvrir autre chose. On revient aux réglages avec le code parent.</p>
     <div class="prow">
@@ -355,6 +424,22 @@
     <div class="kioskState" id="kioskState"></div>
     <div class="hint">Sur la tablette, le verrouillage utilise l'épinglage d'écran d'Android (sortie possible en maintenant Retour + Aperçu). Pour un verrouillage total impossible à quitter, il faudra provisionner la tablette en « propriétaire d'appareil » (étape ultérieure).</div>
 
+    </div>
+
+    <div class="psec" data-psec="voice">
+    <div class="prow">
+      <label>Vitesse de la voix</label>
+      <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
+      <button class="pbtn ghost" id="testVoice">🔊 Tester la voix</button>
+    </div>
+    <div class="prow">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+        <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
+      </label>
+    </div>
+    <button class="pbtn ghost" id="genVoicesBtn">🎙️ Générer toutes les voix (une seule fois)</button>
+    <div class="aiStatus" id="aiStatus"></div>
+
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
     <h2 style="font-size:17px">Intelligence artificielle</h2>
@@ -365,6 +450,9 @@
       <div class="aiStatus" id="backendStatus"></div>
       <div class="hint">L'IA (reformulation, belle voix, création de pictos) passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.</div>
     </div>
+    </div>
+
+    <div class="psec" data-psec="account">
     <div class="prow">
       <label>Leova Plus</label>
       <div class="aiStatus" id="planStatus">…</div>
@@ -386,47 +474,7 @@
       </div>
       <div class="hint">Sauvegarde le vocabulaire en ligne (Europe) et le synchronise entre plusieurs tablettes : maison, école/AESH… Connectez le même compte sur chaque tablette.</div>
     </div>
-    <div class="prow">
-      <label style="display:flex;align-items:center;gap:8px;font-size:14px">
-        <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
-      </label>
     </div>
-    <button class="pbtn ghost" id="genVoicesBtn">🎙️ Générer toutes les voix (une seule fois)</button>
-    <div class="aiStatus" id="aiStatus"></div>
-
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px">Catégories</h2>
-    <p class="sub" style="margin-bottom:8px">Changez l'émoji ou le nom, ou créez-en une nouvelle.</p>
-    <div id="catList"></div>
-    <button class="pbtn ghost" id="addCatBtn">➕ Nouvelle catégorie</button>
-
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px">Ajouter une image</h2>
-    <div class="prow">
-      <label>Mot à prononcer</label>
-      <input type="text" id="newLabel" placeholder="ex : doudou, piscine, mamie…">
-    </div>
-    <div class="prow">
-      <label>Catégorie</label>
-      <select id="newCat"></select>
-    </div>
-    <div class="prow">
-      <label>Image : une photo (recommandé) ou un émoji</label>
-      <input type="file" id="newPhoto" accept="image/*">
-      <div class="aiBtns">
-        <button class="pbtn ghost" id="arasaacBtn">🔍 Chercher un picto</button>
-        <button class="pbtn ghost" id="genImgBtn">✨ Générer (IA)</button>
-        <button class="pbtn ghost" id="cleanBtn">🪄 Photo → picto (IA)</button>
-      </div>
-      <div id="pickResults"></div>
-      <div class="aiStatus" id="aiStatus2"></div>
-      <div id="photoPreview"></div>
-      <input type="text" id="newEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
-      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).</div>
-    </div>
-    <button class="pbtn primary" id="addBtn">Ajouter</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
     <button class="pbtn ghost" id="closePanel">Fermer</button>
@@ -516,7 +564,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "31"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "32"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1262,6 +1310,7 @@ function openPanel() {
   document.getElementById("accContrast").checked = !!acc.contrast;
   document.getElementById("accDark").checked = !!acc.dark;
   document.getElementById("accAnim").checked = acc.anim !== false;
+  showPsec("home"); // toujours ouvrir sur le tableau de bord
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
   document.getElementById("pinStatus").textContent = kioskPin ? "•••• (code défini)" : "aucun code";
@@ -1980,6 +2029,57 @@ document.getElementById("acctOut").onclick = () => {
   store.set("fbauth", null);
   localStorage.setItem("vp_syncrev", "0");
   refreshAcct();
+};
+
+/* ================= Onglets du panneau parent + tableau de bord ================= */
+function showPsec(name) {
+  document.querySelectorAll("#ptabs .ptab").forEach((b) => b.classList.toggle("on", b.dataset.psec === name));
+  document.querySelectorAll("#panelCard .psec").forEach((s) => s.classList.toggle("on", s.dataset.psec === name));
+  document.getElementById("panelCard").scrollTop = 0;
+  if (name === "home") refreshDash();
+}
+document.querySelectorAll("#ptabs .ptab").forEach((b) => { b.onclick = () => showPsec(b.dataset.psec); });
+
+// Accueil : l'état de l'app en un coup d'œil (sans ouvrir chaque section)
+async function refreshDash() {
+  const items = allItems().filter((i) => !hidden.has(i.id));
+  document.getElementById("dashWords").textContent = items.length;
+  const rev = store.get("syncrev", 0);
+  document.getElementById("dashSync").textContent = hasAccount()
+    ? (rev
+      ? new Date(rev).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " +
+        new Date(rev).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+      : "connecté ✓")
+    : "aucune";
+  const planEl = document.getElementById("dashPlan");
+  if (backendSecret) planEl.textContent = "Illimitée";
+  else if (navigator.onLine) {
+    planEl.textContent = "…";
+    fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() })
+      .then((r) => r.json())
+      .then((me) => { planEl.textContent = me.plan === "plus" ? "Plus 💜" : "Gratuite"; })
+      .catch(() => { planEl.textContent = "—"; });
+  } else planEl.textContent = "—";
+  let ready = 0;
+  for (const it of items) if (await idbGet(VOICE + "|" + (it.say || it.label))) ready++;
+  document.getElementById("dashVoices").textContent = ready + "/" + items.length;
+}
+
+document.getElementById("qaMagic").onclick = () => {
+  showPsec("vocab");
+  setTimeout(() => document.getElementById("magicInput").focus(), 60);
+};
+document.getElementById("qaPhoto").onclick = () => {
+  showPsec("vocab");
+  setTimeout(() => {
+    const el = document.getElementById("newLabel");
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus();
+  }, 60);
+};
+document.getElementById("qaSync").onclick = () => {
+  showPsec("account");
+  if (hasAccount()) document.getElementById("syncNowBtn").onclick();
 };
 
 /* ================= Onboarding (premier lancement) =================
