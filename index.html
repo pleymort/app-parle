@@ -269,6 +269,62 @@
   .voiceRow .vst { font-size: 13px; width: 22px; text-align: center; }
   .voiceRow button { border: none; background: #EDF2F7; border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer; }
 
+  /* ---- Routines : éditeur (parent) ---- */
+  #routineEdit {
+    position: fixed; inset: 0; background: rgba(20,40,60,.5); z-index: 58;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #routineEdit.open { display: flex; }
+  #routineEditCard {
+    background: #fff; border-radius: 20px; padding: 22px; width: 100%; max-width: 420px;
+    max-height: 92vh; overflow-y: auto;
+  }
+  #rtSteps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .rtStep {
+    display: flex; align-items: center; gap: 10px; background: #F4F8FC;
+    border-radius: 10px; padding: 8px 10px; font-weight: 700; color: #24425F; font-size: 15px;
+  }
+  .rtStep img { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; }
+  .rtStep .rem { font-size: 22px; }
+  .rtStep .num { color: #8FA3B8; font-size: 13px; width: 18px; }
+  .rtStep .del { margin-left: auto; border: none; background: #FDECEC; color: #C0392B; border-radius: 8px; padding: 5px 9px; cursor: pointer; }
+  #rtPicker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; max-height: 240px; overflow-y: auto; }
+  #rtPicker .pk {
+    border: 2px solid #D8E1EA; border-radius: 10px; padding: 6px 2px; text-align: center;
+    cursor: pointer; font-size: 12px; font-weight: 700; color: #24425F; background: #fff;
+  }
+  #rtPicker .pk img { width: 34px; height: 34px; object-fit: cover; border-radius: 6px; }
+  #rtPicker .pk .em { font-size: 28px; }
+  .routineRow {
+    display: flex; align-items: center; gap: 10px; padding: 7px 0;
+    border-bottom: 1px solid #EDF2F7; font-weight: 700; color: #55677A; font-size: 15px;
+  }
+  .routineRow .re { font-size: 22px; }
+  .routineRow button { margin-left: auto; border: none; background: #EDF2F7; border-radius: 8px; padding: 7px 12px; cursor: pointer; font-weight: 700; }
+
+  /* ---- Routines : lecteur plein écran (enfant) ---- */
+  #routinePlayer {
+    position: fixed; inset: 0; background: linear-gradient(160deg,#F4F8FF,#EAF3FF); z-index: 45;
+    display: none; align-items: center; justify-content: center;
+  }
+  body.dark #routinePlayer { background: linear-gradient(160deg,#131A22,#1B242F); }
+  #routinePlayer.open { display: flex; }
+  #rpCard { text-align: center; padding: 24px; width: 100%; max-width: 480px; position: relative; }
+  #rpClose {
+    position: fixed; top: 12px; right: 12px; width: 42px; height: 42px; border-radius: 50%;
+    border: none; background: rgba(150,165,180,.25); color: #7C8FA3; font-size: 18px; cursor: pointer;
+  }
+  #rpProgress { margin-bottom: 6px; }
+  #rpPrefix { font-size: 22px; font-weight: 800; color: #4A90D9; margin-bottom: 10px; }
+  #rpVis { font-size: 120px; line-height: 1.1; min-height: 150px; display: flex; align-items: center; justify-content: center; }
+  #rpVis img { width: 180px; height: 180px; border-radius: 24px; object-fit: cover; }
+  #rpLabel { font-size: 34px; font-weight: 800; color: #24425F; margin: 12px 0 22px; }
+  body.dark #rpLabel { color: #D7E6F5; }
+  #rpDone {
+    border: none; border-radius: 20px; background: #35A853; color: #fff;
+    font-size: 28px; font-weight: 800; padding: 20px 46px; cursor: pointer;
+  }
+
   /* ---- Assistant photos des proches ---- */
   #photoWiz {
     position: fixed; inset: 0; background: rgba(20,40,60,.5); z-index: 58;
@@ -392,6 +448,13 @@
 
     <button class="pbtn ghost" id="photoWizBtn" style="margin-top:8px">👨‍👩‍👦 Assistant photos des proches</button>
     <div class="hint">Passe en revue les personnes sans photo : l'enfant reconnaît infiniment mieux une vraie photo qu'un dessin.</div>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">📋 Routines « D'abord / Ensuite »</h2>
+    <p class="sub" style="margin-bottom:8px">Une suite d'étapes visuelles que l'enfant déroule lui-même (ex : brossage de dents). Elles apparaissent dans un onglet 📋 sur sa grille.</p>
+    <div id="routineList"></div>
+    <button class="pbtn ghost" id="addRoutineBtn">➕ Nouvelle routine</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
@@ -573,6 +636,44 @@
   </div>
 </div>
 
+<!-- Éditeur de routine (mode parent) -->
+<div id="routineEdit">
+  <div id="routineEditCard">
+    <h2 style="color:#24425F;font-size:19px;margin-bottom:12px">📋 Routine</h2>
+    <div class="prow">
+      <label>Nom de la routine</label>
+      <input type="text" id="rtName" placeholder="ex : Brossage de dents">
+    </div>
+    <div class="prow">
+      <label>Émoji</label>
+      <input type="text" id="rtEmoji" placeholder="🪥" style="width:90px">
+    </div>
+    <div class="prow">
+      <label>Étapes, dans l'ordre</label>
+      <div id="rtSteps"></div>
+      <button class="pbtn ghost" id="rtAddStep">➕ Ajouter une étape</button>
+      <div id="rtPicker" style="display:none"></div>
+    </div>
+    <div class="editRow2">
+      <button class="pbtn warn" id="rtDelete">🗑 Supprimer</button>
+      <button class="pbtn ghost" id="rtCancel">Annuler</button>
+      <button class="pbtn primary" id="rtSave">✔ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lecteur de routine (enfant) : une étape à la fois, en grand -->
+<div id="routinePlayer">
+  <div id="rpCard">
+    <button id="rpClose" aria-label="Fermer">✕</button>
+    <div class="obSteps" id="rpProgress"></div>
+    <div id="rpPrefix">D'abord</div>
+    <div id="rpVis"></div>
+    <div id="rpLabel"></div>
+    <button id="rpDone">✓ Fini</button>
+  </div>
+</div>
+
 <!-- Assistant photos des proches : une vraie photo par personne, guidé -->
 <div id="photoWiz">
   <div id="photoWizCard">
@@ -617,6 +718,16 @@
       <div id="editPicks"></div>
       <input type="text" id="editEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px">
       <div class="aiStatus" id="editStatus"></div>
+    </div>
+    <div class="prow">
+      <label>Vraie voix (facultatif — ex : « Mémé » dit par Mémé)</label>
+      <div class="aiBtns">
+        <button class="pbtn ghost" id="recBtn">🎙 Enregistrer</button>
+        <button class="pbtn ghost" id="recPlay" style="display:none">▶ Écouter l'enregistrement</button>
+        <button class="pbtn warn" id="recDel" style="display:none">🗑</button>
+      </div>
+      <div class="aiStatus" id="recStatus"></div>
+      <div class="hint">Quand cette carte a une vraie voix enregistrée, elle est utilisée à la place de la voix de synthèse (sur cette tablette).</div>
     </div>
     <div class="editRow2">
       <button class="pbtn ghost" id="editHide">🙈 Masquer</button>
@@ -711,7 +822,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "34"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "35"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -816,7 +927,7 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines"];
 
 const store = {
   get(key, fallback) {
@@ -894,6 +1005,7 @@ let customCats = store.get("cats", []); // catégories créées : [{id, label, e
 // Affichage & confort : taille/espacement des cartes (motricité), toucher
 // (anti-double-appui, maintenir pour activer), contraste, thème, animations.
 let acc = store.get("acc", { size: "M", gap: "M", dbl: 0, hold: 0, contrast: false, dark: false, anim: true });
+let routines = store.get("routines", []); // routines « D'abord / Ensuite »
 let kioskOn = store.get("kiosk", false); // mode kiosk actif ?
 let kioskPin = store.get("kioskpin", ""); // code parent (4 chiffres) pour ouvrir les réglages / quitter le kiosk
 
@@ -1126,6 +1238,26 @@ async function ensureVoice(text) {
   } catch {} finally { genQueue.delete(text); }
 }
 
+/* Une carte peut avoir une VRAIE voix enregistrée (un proche) : elle est
+   prioritaire sur la synthèse. Clé IndexedDB : "rec|" + id de la carte. */
+async function speakItem(item) {
+  const seq = ++speakSeq;
+  try {
+    const rec = await idbGet("rec|" + item.id);
+    if (rec) {
+      if (seq !== speakSeq) return;
+      if (playerUrl) URL.revokeObjectURL(playerUrl);
+      playerUrl = URL.createObjectURL(rec);
+      player.src = playerUrl;
+      player.playbackRate = 1; // une vraie voix ne se déforme pas
+      await player.play();
+      return;
+    }
+  } catch {}
+  if (seq !== speakSeq) return;
+  speak(item.say || item.label);
+}
+
 async function speak(text) {
   const seq = ++speakSeq;
   const cached = await idbGet(VOICE + "|" + text);
@@ -1230,6 +1362,16 @@ function renderTabs() {
     b.onclick = () => { currentCat = c.id; renderTabs(); renderGrid(); };
     tabsEl.appendChild(b);
   }
+  // Onglet Routines : visible dès qu'au moins une routine existe
+  if (routines.length) {
+    const b = document.createElement("button");
+    b.className = "tab" + (currentCat === "__rt" ? " active" : "");
+    b.innerHTML = `<span class="tem">📋</span>Routines`;
+    b.onclick = () => { currentCat = "__rt"; renderTabs(); renderGrid(); };
+    tabsEl.appendChild(b);
+  } else if (currentCat === "__rt") {
+    currentCat = "core";
+  }
 }
 
 function pictoVisual(item, big) {
@@ -1287,6 +1429,17 @@ const lastTapAt = {}; // anti-double-appui : dernier toucher accepté par carte
 
 function renderGrid() {
   gridEl.innerHTML = "";
+  // Onglet Routines : les cartes lancent le lecteur (ou l'éditeur en mode parent)
+  if (currentCat === "__rt") {
+    for (const r of routines) {
+      const b = document.createElement("button");
+      b.className = "picto";
+      b.innerHTML = `<span class="em">${r.emoji || "📋"}</span><span class="lb">${r.label}</span>`;
+      b.onclick = () => { if (parentMode) openRoutineEdit(r); else startRoutine(r); };
+      gridEl.appendChild(b);
+    }
+    return;
+  }
   const ord = gridOrder[currentCat] || [];
   const items = allItems()
     .map((item, i) => ({ item, i }))
@@ -1321,7 +1474,7 @@ function renderGrid() {
         b.classList.add("flash");
         setTimeout(() => b.classList.remove("flash"), 180);
       }
-      speak(item.say || item.label);
+      speakItem(item);
       addToStrip(item);
     };
     attachParentDrag(b, item);
@@ -2254,6 +2407,7 @@ function openEdit(item) {
   document.getElementById("editStatus").textContent = "";
   document.getElementById("editHide").textContent = hidden.has(item.id) ? "👁 Réafficher" : "🙈 Masquer";
   editPreview();
+  refreshRecUI(); // état de la vraie voix enregistrée (asynchrone)
   document.getElementById("editSheet").classList.add("open");
 }
 function closeEdit() { document.getElementById("editSheet").classList.remove("open"); }
@@ -2356,6 +2510,181 @@ function renderTrash() {
     box.appendChild(row);
   }
 }
+
+/* ================= Vraie voix enregistrée sur une carte ================= */
+let recRec = null; // MediaRecorder en cours
+let recTimer = null;
+
+async function refreshRecUI() {
+  const has = !!(await idbGet("rec|" + editTarget.id));
+  document.getElementById("recPlay").style.display = has ? "" : "none";
+  document.getElementById("recDel").style.display = has ? "" : "none";
+  document.getElementById("recStatus").textContent = has ? "Vraie voix enregistrée ✓" : "";
+}
+
+document.getElementById("recBtn").onclick = async () => {
+  const st = document.getElementById("recStatus");
+  const btn = document.getElementById("recBtn");
+  if (recRec && recRec.state === "recording") { recRec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { st.textContent = "Micro non disponible sur cet appareil."; return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = [];
+    recRec = new MediaRecorder(stream);
+    recRec.ondataavailable = (e) => chunks.push(e.data);
+    recRec.onstop = async () => {
+      clearTimeout(recTimer);
+      stream.getTracks().forEach((t) => t.stop());
+      btn.textContent = "🎙 Enregistrer";
+      await idbSet("rec|" + editTarget.id, new Blob(chunks, { type: recRec.mimeType || "audio/webm" }));
+      refreshRecUI();
+      st.textContent = "Enregistré ✓ — touchez ▶ pour vérifier.";
+    };
+    recRec.start();
+    btn.textContent = "⏹ Arrêter";
+    st.textContent = "Parlez… (10 s maximum)";
+    recTimer = setTimeout(() => { if (recRec.state === "recording") recRec.stop(); }, 10000);
+  } catch {
+    const settings = AppSettings();
+    st.textContent = "Accès micro refusé.";
+    if (settings && confirm("Le micro est bloqué pour Leova.\nOuvrir les réglages Android pour l'autoriser ?")) settings.open();
+  }
+};
+
+document.getElementById("recPlay").onclick = () => speakItem(editTarget);
+document.getElementById("recDel").onclick = async () => {
+  await idbSet("rec|" + editTarget.id, null);
+  // idbSet(null) écrit null : on considère « pas d'enregistrement »
+  refreshRecUI();
+  toast("Enregistrement supprimé — retour à la voix de synthèse.");
+};
+
+/* ================= Routines « D'abord / Ensuite » ================= */
+let rtEditing = null; // routine en cours d'édition (copie de travail)
+
+function renderRoutines() {
+  const box = document.getElementById("routineList");
+  if (!routines.length) { box.innerHTML = '<div class="hint">Aucune routine pour l\'instant.</div>'; return; }
+  box.innerHTML = "";
+  for (const r of routines) {
+    const row = document.createElement("div");
+    row.className = "routineRow";
+    row.innerHTML = `<span class="re">${r.emoji || "📋"}</span><span>${r.label}</span>` +
+      `<span class="hint" style="margin:0">${r.steps.length} étape${r.steps.length > 1 ? "s" : ""}</span><button>✏️ Modifier</button>`;
+    row.querySelector("button").onclick = () => openRoutineEdit(r);
+    box.appendChild(row);
+  }
+}
+
+function openRoutineEdit(r) {
+  rtEditing = r ? JSON.parse(JSON.stringify(r)) : { id: "rt_" + Date.now(), label: "", emoji: "", steps: [] };
+  document.getElementById("rtName").value = rtEditing.label;
+  document.getElementById("rtEmoji").value = rtEditing.emoji || "";
+  document.getElementById("rtDelete").style.display = r ? "" : "none";
+  document.getElementById("rtPicker").style.display = "none";
+  renderRtSteps();
+  document.getElementById("routineEdit").classList.add("open");
+}
+
+function renderRtSteps() {
+  const box = document.getElementById("rtSteps");
+  box.innerHTML = "";
+  rtEditing.steps.forEach((id, i) => {
+    const item = allItems().find(x => x.id === id);
+    if (!item) return;
+    const d = document.createElement("div");
+    d.className = "rtStep";
+    d.innerHTML = `<span class="num">${i + 1}.</span>` +
+      (item.photo ? `<img src="${item.photo}">` : `<span class="rem">${item.emoji || "🔹"}</span>`) +
+      `<span>${item.label}</span><button class="del">✕</button>`;
+    d.querySelector(".del").onclick = () => { rtEditing.steps.splice(i, 1); renderRtSteps(); };
+    box.appendChild(d);
+  });
+}
+
+document.getElementById("rtAddStep").onclick = () => {
+  const pk = document.getElementById("rtPicker");
+  if (pk.style.display !== "none") { pk.style.display = "none"; return; }
+  pk.innerHTML = "";
+  for (const item of allItems().filter(i => !hidden.has(i.id))) {
+    const c = document.createElement("div");
+    c.className = "pk";
+    c.innerHTML = (item.photo ? `<img src="${item.photo}">` : `<div class="em">${item.emoji || "🔹"}</div>`) + item.label;
+    c.onclick = () => { rtEditing.steps.push(item.id); renderRtSteps(); };
+    pk.appendChild(c);
+  }
+  pk.style.display = "grid";
+};
+
+document.getElementById("rtCancel").onclick = () => document.getElementById("routineEdit").classList.remove("open");
+document.getElementById("rtDelete").onclick = () => {
+  routines = routines.filter(r => r.id !== rtEditing.id);
+  store.set("routines", routines);
+  document.getElementById("routineEdit").classList.remove("open");
+  renderRoutines(); renderTabs(); renderGrid();
+  toast("Routine supprimée");
+};
+document.getElementById("rtSave").onclick = () => {
+  rtEditing.label = document.getElementById("rtName").value.trim();
+  rtEditing.emoji = document.getElementById("rtEmoji").value.trim();
+  if (!rtEditing.label) { alert("Donnez un nom à la routine."); return; }
+  if (rtEditing.steps.length < 2) { alert("Ajoutez au moins 2 étapes (d'abord… ensuite…)."); return; }
+  const i = routines.findIndex(r => r.id === rtEditing.id);
+  if (i === -1) routines.push(rtEditing); else routines[i] = rtEditing;
+  store.set("routines", routines);
+  document.getElementById("routineEdit").classList.remove("open");
+  renderRoutines(); renderTabs(); renderGrid();
+  toast("Routine enregistrée ✓");
+  // prépare les voix des étapes en arrière-plan
+  rtEditing.steps.forEach((id) => {
+    const item = allItems().find(x => x.id === id);
+    if (item) ensureVoice(item.say || item.label);
+  });
+};
+document.getElementById("addRoutineBtn").onclick = () => openRoutineEdit(null);
+
+/* ---- Lecteur (enfant) : une étape à la fois, en très grand ---- */
+let rtRun = null;
+
+function startRoutine(r) {
+  const steps = r.steps.map(id => allItems().find(i => i.id === id)).filter(Boolean);
+  if (!steps.length) return;
+  rtRun = { label: r.label, steps, idx: 0 };
+  document.getElementById("routinePlayer").classList.add("open");
+  rpShow();
+}
+
+function rpShow() {
+  const { label, steps, idx } = rtRun;
+  if (idx >= steps.length) {
+    document.getElementById("rpProgress").textContent = label;
+    document.getElementById("rpPrefix").textContent = "Bravo !";
+    document.getElementById("rpVis").innerHTML = `<span class="em">🎉</span>`;
+    document.getElementById("rpLabel").textContent = "C'est terminé !";
+    document.getElementById("rpDone").textContent = "✓";
+    speak("Bravo, c'est terminé !");
+    setTimeout(() => document.getElementById("routinePlayer").classList.remove("open"), 2600);
+    return;
+  }
+  const item = steps[idx];
+  document.getElementById("rpProgress").textContent = `${label} — étape ${idx + 1} sur ${steps.length}`;
+  document.getElementById("rpPrefix").textContent = idx === 0 ? "D'abord" : "Ensuite";
+  document.getElementById("rpVis").innerHTML = pictoVisual(item);
+  document.getElementById("rpLabel").textContent = item.label;
+  document.getElementById("rpDone").textContent = "✓ Fini";
+  speak((idx === 0 ? "D'abord, " : "Ensuite, ") + (item.say || item.label));
+}
+
+document.getElementById("rpDone").onclick = () => {
+  if (!rtRun) return;
+  if (navigator.vibrate) navigator.vibrate(20);
+  rtRun.idx++;
+  rpShow();
+};
+document.getElementById("rpClose").onclick = () => {
+  speakSeq++; // coupe la voix en cours
+  document.getElementById("routinePlayer").classList.remove("open");
+};
 
 /* ================= Gestionnaire de voix ================= */
 async function renderVoices() {
@@ -2511,7 +2840,7 @@ function showPsec(name) {
   document.querySelectorAll("#panelCard .psec").forEach((s) => s.classList.toggle("on", s.dataset.psec === name));
   document.getElementById("panelCard").scrollTop = 0;
   if (name === "home") refreshDash();
-  if (name === "vocab") renderTrash();
+  if (name === "vocab") { renderTrash(); renderRoutines(); }
   if (name === "voice") renderVoices();
 }
 document.querySelectorAll("#ptabs .ptab").forEach((b) => { b.onclick = () => showPsec(b.dataset.psec); });
