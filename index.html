@@ -227,6 +227,46 @@
   .psec { display: none; }
   .psec.on { display: block; }
 
+  /* ---- Toast (confirmation + Annuler) ---- */
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(90px);
+    background: #243447; color: #fff; border-radius: 14px; padding: 12px 18px;
+    display: flex; gap: 16px; align-items: center; z-index: 95;
+    opacity: 0; transition: transform .25s ease, opacity .25s ease;
+    font-weight: 700; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.35);
+    max-width: 90vw;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast button { border: none; background: none; color: #7FC4FF; font-weight: 800; font-size: 14px; cursor: pointer; }
+
+  /* ---- Fiche d'édition directe d'un picto (mode parent) ---- */
+  #editSheet {
+    position: fixed; inset: 0; background: rgba(20,40,60,.45); z-index: 55;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  #editSheet.open { display: flex; }
+  #editCard {
+    background: #fff; border-radius: 20px; padding: 20px; width: 100%; max-width: 420px;
+    max-height: 92vh; overflow-y: auto;
+  }
+  #editHead { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  #editVis { font-size: 52px; line-height: 1; }
+  #editVis img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; }
+  #editHead h2 { color: #24425F; font-size: 19px; }
+  #editPicks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  #editPicks img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; border: 2px solid #D8E1EA; border-radius: 10px; cursor: pointer; }
+  #editPicks img.sel { border-color: #35A853; border-width: 3px; }
+  .editRow2 { display: flex; gap: 8px; margin-top: 14px; }
+  .editRow2 .pbtn { flex: 1; margin: 0; }
+
+  /* ---- Corbeille ---- */
+  .trashRow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid #EDF2F7;
+    font-weight: 700; color: #55677A; font-size: 14px;
+  }
+  .trashRow .pbtn { margin: 0; padding: 7px 12px; font-size: 13px; }
+
   /* ---- Tableau de bord (accueil parent) ---- */
   #dashTiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .dtile { background: #F4F8FC; border-radius: 14px; padding: 12px 14px; }
@@ -274,7 +314,7 @@
   <button id="playBtn" class="stripBtn" aria-label="Lire la phrase">▶</button>
 </div>
 
-<div id="editNote">Mode parent : touchez un picto pour le masquer/réafficher · maintenez puis glissez pour réorganiser, déposer sur un onglet (changer de catégorie) ou sur 🗑 (supprimer) · ⚙️ pour les réglages.</div>
+<div id="editNote">Mode parent : touchez un picto pour le modifier (nom, image, voix, masquer…) · maintenez puis glissez pour réorganiser, déposer sur un onglet (changer de catégorie) ou sur 🗑 (supprimer) · ⚙️ pour les réglages.</div>
 <div id="tabs"></div>
 <div id="grid"></div>
 
@@ -359,6 +399,12 @@
       <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).</div>
     </div>
     <button class="pbtn primary" id="addBtn">Ajouter</button>
+
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
+
+    <h2 style="font-size:17px">🗑 Corbeille</h2>
+    <p class="sub" style="margin-bottom:8px">Les pictos supprimés restent récupérables 30 jours.</p>
+    <div id="trashList"></div>
     </div>
 
     <div class="psec" data-psec="display">
@@ -482,6 +528,44 @@
   </div>
 </div>
 
+<!-- Fiche d'édition directe : s'ouvre en touchant un picto en mode parent -->
+<div id="editSheet">
+  <div id="editCard">
+    <div id="editHead">
+      <span id="editVis"></span>
+      <h2>Modifier ce picto</h2>
+    </div>
+    <div class="prow">
+      <label>Mot affiché</label>
+      <input type="text" id="editLabel">
+    </div>
+    <div class="prow">
+      <label>Ce que dit la tablette</label>
+      <input type="text" id="editSay" placeholder="ex : Jaja (pour corriger une prononciation)">
+      <button class="pbtn ghost" id="editPlay" style="margin-top:8px">▶ Écouter</button>
+    </div>
+    <div class="prow">
+      <label>Changer l'image</label>
+      <div class="aiBtns">
+        <button class="pbtn ghost" id="editPick">🔍 Pictos</button>
+        <button class="pbtn ghost" id="editGen">✨ Dessiner (IA)</button>
+        <label class="pbtn ghost" style="display:inline-block">📷 Photo<input type="file" id="editPhoto" accept="image/*" style="display:none"></label>
+      </div>
+      <div id="editPicks"></div>
+      <input type="text" id="editEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px">
+      <div class="aiStatus" id="editStatus"></div>
+    </div>
+    <div class="editRow2">
+      <button class="pbtn ghost" id="editHide">🙈 Masquer</button>
+      <button class="pbtn warn" id="editDelete">🗑 Supprimer</button>
+    </div>
+    <div class="editRow2">
+      <button class="pbtn ghost" id="editClose">Fermer</button>
+      <button class="pbtn primary" id="editSave">✔ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div id="pinOverlay">
   <div id="pinCard">
     <div id="pinTitle">Code parent</div>
@@ -564,7 +648,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "32"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "33"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -669,7 +753,7 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash"];
 
 const store = {
   get(key, fallback) {
@@ -763,6 +847,7 @@ function allItems() {
     const o = overrides[i.id];
     if (!o) return i;
     const m = { ...i, cat: o.cat || i.cat };
+    if (o.label) m.label = o.label;
     if (o.emoji) { m.emoji = o.emoji; m.photo = null; }
     else if (o.photo) { m.photo = o.photo; }
     if (o.say) m.say = o.say;
@@ -770,11 +855,15 @@ function allItems() {
   }).concat(customItems);
 }
 
+// Un picto est « personnalisé » s'il vit dans customItems (ids c_… du
+// formulaire/magique, ob_… de l'onboarding) — jamais par préfixe seul.
+const customOf = (id) => customItems.find(x => x.id === id);
+
 /* Change l'image (photo OU émoji) d'un picto, de base ou personnalisé */
 function setItemVisual(item, vis) {
-  if (item.id.startsWith("c_")) {
-    const it = customItems.find(x => x.id === item.id);
-    if (it) { it.photo = vis.photo || null; it.emoji = vis.emoji || null; }
+  const it = customOf(item.id);
+  if (it) {
+    it.photo = vis.photo || null; it.emoji = vis.emoji || null;
     store.set("custom", customItems);
   } else {
     overrides[item.id] = { ...(overrides[item.id] || {}), photo: vis.photo || null, emoji: vis.emoji || null };
@@ -784,9 +873,9 @@ function setItemVisual(item, vis) {
 
 /* Change la phrase prononcée (utile pour corriger une prononciation, ex "JeaJea" → "Jaja") */
 function setItemSay(item, say) {
-  if (item.id.startsWith("c_")) {
-    const it = customItems.find(x => x.id === item.id);
-    if (it) it.say = say;
+  const it = customOf(item.id);
+  if (it) {
+    it.say = say;
     store.set("custom", customItems);
   } else {
     overrides[item.id] = { ...(overrides[item.id] || {}), say };
@@ -795,9 +884,9 @@ function setItemSay(item, say) {
 }
 
 function setItemCat(item, cat) {
-  if (item.id.startsWith("c_")) {
-    const it = customItems.find(x => x.id === item.id);
-    if (it) it.cat = cat;
+  const it = customOf(item.id);
+  if (it) {
+    it.cat = cat;
     store.set("custom", customItems);
   } else {
     overrides[item.id] = { ...(overrides[item.id] || {}), cat };
@@ -805,17 +894,69 @@ function setItemCat(item, cat) {
   }
 }
 
+function setItemLabel(item, label) {
+  const it = customOf(item.id);
+  if (it) {
+    it.label = label;
+    store.set("custom", customItems);
+  } else {
+    overrides[item.id] = { ...(overrides[item.id] || {}), label };
+    store.set("over", overrides);
+  }
+}
+
+/* ---- Corbeille : les suppressions sont récupérables 30 jours ---- */
+let trash = store.get("trash", []).filter((t) => Date.now() - t.deletedAt < 30 * 24 * 3600 * 1000);
+
 function deleteItem(item) {
-  if (item.id.startsWith("c_")) {
-    if (!confirm(`Supprimer « ${item.label} » définitivement ?`)) return;
+  const it = customOf(item.id);
+  if (it) {
+    trash.unshift({ kind: "custom", item: { ...it }, deletedAt: Date.now() });
     customItems = customItems.filter(i => i.id !== item.id);
     store.set("custom", customItems);
   } else {
     // Les pictos de base sont masqués (récupérables), pas supprimés
+    trash.unshift({ kind: "default", id: item.id, label: item.label, deletedAt: Date.now() });
     hidden.add(item.id);
     store.set("hidden", [...hidden]);
   }
+  trash = trash.slice(0, 100);
+  store.set("trash", trash);
   renderGrid();
+  const entry = trash[0];
+  toast(`« ${item.label} » supprimé`, "Annuler", () => restoreEntry(entry));
+}
+
+function restoreEntry(entry) {
+  const i = trash.indexOf(entry);
+  if (i === -1) return;
+  trash.splice(i, 1);
+  store.set("trash", trash);
+  if (entry.kind === "custom") {
+    customItems.push(entry.item);
+    store.set("custom", customItems);
+  } else {
+    hidden.delete(entry.id);
+    store.set("hidden", [...hidden]);
+  }
+  renderGrid();
+  toast(`« ${entry.kind === "custom" ? entry.item.label : entry.label} » restauré ✓`);
+}
+
+/* ---- Toast : confirmation discrète + bouton Annuler ---- */
+let toastTimer = null;
+function toast(msg, actionLabel, action) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<span>${msg}</span>` + (actionLabel ? `<button>${actionLabel}</button>` : "");
+  if (actionLabel) el.querySelector("button").onclick = () => { el.classList.remove("show"); action(); };
+  requestAnimationFrame(() => el.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 6000);
 }
 
 /* ================= Voix ================= */
@@ -1101,7 +1242,7 @@ function renderGrid() {
     b.innerHTML = `${pictoVisual(item)}<span class="lb">${item.label}</span>`;
     b.addEventListener("pointerdown", () => { b._downAt = Date.now(); });
     b.onclick = () => {
-      if (parentMode) { if (!dragDone) toggleHidden(item.id); return; }
+      if (parentMode) { if (!dragDone) openEdit(item); return; }
       const now = Date.now();
       // Appui trop court (réglage « maintenir pour activer ») : ignoré
       if (acc.hold && (!b._downAt || now - b._downAt < acc.hold)) return;
@@ -2031,12 +2172,135 @@ document.getElementById("acctOut").onclick = () => {
   refreshAcct();
 };
 
+/* ================= Fiche d'édition directe d'un picto ================= */
+let editTarget = null;
+let editVisSel = null; // nouvelle image choisie, en attente d'Enregistrer
+
+function editPreview() {
+  document.getElementById("editVis").innerHTML =
+    pictoVisual({ ...editTarget, ...(editVisSel || {}) });
+}
+
+function openEdit(item) {
+  editTarget = item;
+  editVisSel = null;
+  document.getElementById("editLabel").value = item.label;
+  document.getElementById("editSay").value = item.say || item.label;
+  document.getElementById("editEmoji").value = "";
+  document.getElementById("editPicks").innerHTML = "";
+  document.getElementById("editStatus").textContent = "";
+  document.getElementById("editHide").textContent = hidden.has(item.id) ? "👁 Réafficher" : "🙈 Masquer";
+  editPreview();
+  document.getElementById("editSheet").classList.add("open");
+}
+function closeEdit() { document.getElementById("editSheet").classList.remove("open"); }
+document.getElementById("editClose").onclick = closeEdit;
+document.getElementById("editSheet").onclick = (e) => { if (e.target.id === "editSheet") closeEdit(); };
+
+document.getElementById("editPlay").onclick = () => {
+  const t = document.getElementById("editSay").value.trim() || editTarget.label;
+  speak(t);
+};
+
+document.getElementById("editPick").onclick = async () => {
+  const st = document.getElementById("editStatus");
+  const box = document.getElementById("editPicks");
+  st.textContent = "Recherche de pictogrammes…";
+  box.innerHTML = "";
+  try {
+    const urls = await searchArasaac(document.getElementById("editLabel").value.trim() || editTarget.label);
+    if (!urls.length) { st.textContent = "Aucun picto trouvé — essayez ✨ Dessiner."; return; }
+    st.textContent = "Touchez l'image que l'enfant reconnaîtra le mieux :";
+    for (const u of urls.slice(0, 8)) {
+      const im = document.createElement("img");
+      im.src = u;
+      im.onclick = () => {
+        box.querySelectorAll("img").forEach((x) => x.classList.remove("sel"));
+        im.classList.add("sel");
+        editVisSel = { photo: u, emoji: null };
+        editPreview();
+      };
+      box.appendChild(im);
+    }
+  } catch (e) { st.textContent = "Échec : " + e.message; }
+};
+
+document.getElementById("editGen").onclick = async () => {
+  const st = document.getElementById("editStatus");
+  st.textContent = "Je dessine… (~10 s)";
+  try {
+    const url = await toSquare256(await genPicto(document.getElementById("editLabel").value.trim() || editTarget.label, null));
+    editVisSel = { photo: url, emoji: null };
+    editPreview();
+    st.textContent = "Nouvelle image prête — Enregistrer pour l'appliquer.";
+  } catch (e) { st.textContent = "Échec : " + e.message; }
+};
+
+document.getElementById("editPhoto").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const url = URL.createObjectURL(f);
+  try {
+    editVisSel = { photo: await toSquare256(url), emoji: null };
+    editPreview();
+    document.getElementById("editStatus").textContent = "Photo prête — Enregistrer pour l'appliquer.";
+  } catch { document.getElementById("editStatus").textContent = "Impossible de lire cette image."; }
+  URL.revokeObjectURL(url);
+  e.target.value = "";
+};
+
+document.getElementById("editEmoji").oninput = (e) => {
+  const v = e.target.value.trim();
+  if (v) { editVisSel = { emoji: v, photo: null }; editPreview(); }
+};
+
+document.getElementById("editHide").onclick = () => {
+  toggleHidden(editTarget.id);
+  closeEdit();
+  toast(hidden.has(editTarget.id) ? `« ${editTarget.label} » masqué` : `« ${editTarget.label} » réaffiché ✓`);
+};
+
+document.getElementById("editDelete").onclick = () => {
+  closeEdit();
+  deleteItem(editTarget); // va dans la corbeille, avec toast « Annuler »
+};
+
+document.getElementById("editSave").onclick = () => {
+  const label = document.getElementById("editLabel").value.trim();
+  const say = document.getElementById("editSay").value.trim();
+  if (label && label !== editTarget.label) setItemLabel(editTarget, label);
+  if (say && say !== (editTarget.say || editTarget.label)) {
+    setItemSay(editTarget, say);
+    ensureVoice(say); // belle voix préparée en arrière-plan
+  }
+  if (editVisSel) setItemVisual(editTarget, editVisSel);
+  renderGrid();
+  closeEdit();
+  toast("Modifications enregistrées ✓");
+};
+
+/* ---- Corbeille (liste dans l'onglet Vocabulaire) ---- */
+function renderTrash() {
+  const box = document.getElementById("trashList");
+  if (!trash.length) { box.innerHTML = '<div class="hint">La corbeille est vide.</div>'; return; }
+  box.innerHTML = "";
+  for (const t of trash) {
+    const row = document.createElement("div");
+    row.className = "trashRow";
+    const label = t.kind === "custom" ? t.item.label : t.label;
+    row.innerHTML = `<span>${label}</span><button class="pbtn ghost">↺ Restaurer</button>`;
+    row.querySelector("button").onclick = () => { restoreEntry(t); renderTrash(); };
+    box.appendChild(row);
+  }
+}
+
 /* ================= Onglets du panneau parent + tableau de bord ================= */
 function showPsec(name) {
   document.querySelectorAll("#ptabs .ptab").forEach((b) => b.classList.toggle("on", b.dataset.psec === name));
   document.querySelectorAll("#panelCard .psec").forEach((s) => s.classList.toggle("on", s.dataset.psec === name));
   document.getElementById("panelCard").scrollTop = 0;
   if (name === "home") refreshDash();
+  if (name === "vocab") renderTrash();
 }
 document.querySelectorAll("#ptabs .ptab").forEach((b) => { b.onclick = () => showPsec(b.dataset.psec); });
 
