@@ -16,9 +16,18 @@ export const config = {
   ttsVoice: process.env.TTS_VOICE || "fr-FR-Chirp3-HD-Kore",
   // Cache audio mutualisé : un mot généré une fois sert à toutes les familles.
   ttsBucket: process.env.TTS_BUCKET || "",
-  // Secret partagé TEMPORAIRE (dev). À remplacer en Phase 4 par la vérification
-  // d'un ID token Firebase + App Check, puis metering/paywall par utilisateur.
+  // Code d'accès "parent" : accès illimité, non compté (la tablette de la
+  // famille). Les autres utilisateurs passent par Firebase Auth + quotas.
   appSecret: process.env.APP_SECRET || "",
+  // Quota gratuit mensuel PAR utilisateur (uid anonyme Firebase).
+  freeQuota: JSON.parse(
+    process.env.FREE_QUOTA || '{"reformulate":1000,"tts":1500,"magic":100,"image":50}'
+  ),
+  // Plafond global mensuel (tous utilisateurs) : garde-fou facture tant
+  // qu'App Check n'est pas en place. Le code parent n'y est pas soumis.
+  globalCap: JSON.parse(
+    process.env.GLOBAL_CAP || '{"reformulate":20000,"tts":30000,"magic":1500,"image":150}'
+  ),
   allowedOrigins: (
     process.env.ALLOWED_ORIGINS ||
     "https://localhost,capacitor://localhost,http://localhost,https://pleymort.github.io"
