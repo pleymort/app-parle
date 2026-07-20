@@ -55,6 +55,19 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
   return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
 }
 
+// Transcrit la dictée du parent (bouton 🎤 de l'ajout magique).
+export async function transcribe(mimeType, dataB64) {
+  const model = vertex.getGenerativeModel({ model: config.textModel });
+  const res = await model.generateContent({
+    contents: [{ role: "user", parts: [
+      { inlineData: { mimeType, data: dataB64 } },
+      { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
+    ] }],
+  });
+  const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  return text.trim();
+}
+
 /* ---- Images (génération de picto + détourage de photo) ---- */
 const vertexImage = new VertexAI({ project: config.project, location: config.imageLocation });
 

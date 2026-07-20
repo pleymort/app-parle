@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { reformulate, magicPlan, genImage, cleanPhoto } from "./vertex.js";
+import { reformulate, magicPlan, genImage, cleanPhoto, transcribe } from "./vertex.js";
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
 import { checkAndCount, getUsage } from "./meter.js";
@@ -80,6 +80,19 @@ app.post("/v1/tts", meter("tts"), async (req, res) => {
   } catch (e) {
     console.error("tts:", e);
     res.status(500).json({ error: "tts_error" });
+  }
+});
+
+// Dictée du parent → texte (compté avec l'ajout magique, dont elle fait partie).
+app.post("/v1/transcribe", meter("magic"), async (req, res) => {
+  try {
+    const b64 = String(req.body?.audioBase64 || "");
+    if (!b64) return res.status(400).json({ error: "audio_requis" });
+    const text = await transcribe(String(req.body?.mimeType || "audio/webm"), b64);
+    res.json({ text });
+  } catch (e) {
+    console.error("transcribe:", e);
+    res.status(500).json({ error: "transcribe_error" });
   }
 });
 

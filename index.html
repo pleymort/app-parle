@@ -325,7 +325,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "26"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "27"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1139,6 +1139,7 @@ document.getElementById("testVoice").onclick = () => speak("Bonjour ! Ceci est u
 
 /* ---- Mode kiosk (verrouillage sur l'app) + code parent ---- */
 const Kiosk = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Kiosk) || null;
+const AppSettings = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppSettings) || null;
 
 // Pavé de saisie du code parent : clavier numérique INTÉGRÉ (aucun clavier
 // système n'apparaît — plus sûr en kiosk). Renvoie le code (string) ou null.
@@ -1455,8 +1456,8 @@ document.getElementById("magicUndo").onclick = () => {
   magicStatus.textContent = "Propositions abandonnées — rien n'a été ajouté.";
 };
 
-/* Dictée : on enregistre le micro puis Gemini transcrit
-   (la reconnaissance vocale du navigateur n'existe pas dans le WebView de Fully) */
+/* Dictée : on enregistre le micro puis l'IA transcrit (serveur Leova,
+   repli Gemini) — les WebView Android n'ont pas de reconnaissance vocale. */
 let rec = null;
 const micBtn = document.getElementById("magicMic");
 micBtn.onclick = async () => {
@@ -1482,19 +1483,39 @@ micBtn.onclick = async () => {
           r.onload = () => res(r.result.split(",")[1]);
           r.readAsDataURL(blob);
         });
-        const j = await gemini("audio", { contents: [{ parts: [
-          { inlineData: { mimeType: blob.type.split(";")[0], data: b64 } },
-          { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
-        ] }] });
-        document.getElementById("magicInput").value = j.candidates[0].content.parts[0].text.trim();
+        document.getElementById("magicInput").value = await transcribeAudio(blob.type.split(";")[0], b64);
         magicStatus.textContent = "Transcrit ✓ — touchez ✨ Créer le picto";
       } catch (e) { magicStatus.textContent = "Transcription impossible : " + e.message; }
     };
     rec.start();
     micBtn.textContent = "⏹️";
     magicStatus.textContent = "Parlez… puis retouchez le bouton pour arrêter.";
-  } catch { magicStatus.textContent = "Accès micro refusé (autorisation à donner dans Fully / Android)."; }
+  } catch {
+    // Permission refusée (ou bloquée « ne plus demander ») : dans l'app
+    // native on propose d'ouvrir directement la fiche Android de l'app.
+    const settings = AppSettings();
+    if (settings && confirm("Le micro est bloqué pour Leova.\nOuvrir les réglages Android pour l'autoriser ?\n(Autorisations → Micro → Autoriser)")) {
+      settings.open();
+      magicStatus.textContent = "Autorisez le micro puis revenez dans Leova.";
+    } else {
+      magicStatus.textContent = "Accès micro refusé — autorisez le micro pour Leova dans les réglages Android.";
+    }
+  }
 };
+
+// Transcription : serveur Leova d'abord, clé Gemini en secours.
+async function transcribeAudio(mimeType, b64) {
+  try {
+    const j = await backendJson("/v1/transcribe", { audioBase64: b64, mimeType });
+    if (j.text) return j.text;
+    throw new Error("transcription vide");
+  } catch (e) { if (!geminiKey) throw e; }
+  const j = await gemini("audio", { contents: [{ parts: [
+    { inlineData: { mimeType, data: b64 } },
+    { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
+  ] }] });
+  return j.candidates[0].content.parts[0].text.trim();
+}
 
 /* ---- Éditeur de catégories ---- */
 function saveCat(id, patch) {
