@@ -147,10 +147,9 @@ Décision : paiement via **Google Play Billing** (abonnement `leova_plus`).
 3. Créer l'abonnement **`leova_plus`** (Monétiser → Produits → Abonnements),
    avec une formule de base mensuelle (prix à choisir, ex. 4,99 €/mois).
 4. *Monétiser → Configuration de la monétisation* : notifications temps réel →
-   topic Pub/Sub (à créer : `gcloud pubsub topics create play-rtdn`, puis
-   abonnement push `gcloud pubsub subscriptions create play-rtdn-push
-   --topic play-rtdn --push-endpoint
-   https://leova-backend-11414001422.europe-west1.run.app/v1/billing/rtdn`).
+   choisir le topic **`projects/leova-app/topics/play-rtdn`** (déjà créé,
+   avec le droit publisher pour Google Play et l'abonnement push vers
+   `/v1/billing/rtdn` déjà en place).
 5. Publier l'app en **test interne** (AAB signé) — ensuite seulement le
    bouton 💜 fonctionnera (le Billing exige une installation via Play).
 
