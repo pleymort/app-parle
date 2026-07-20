@@ -245,7 +245,7 @@
       <input type="text" id="bsecret" placeholder="Collez le code d'accès (il reste sur la tablette)">
       <button class="pbtn ghost" id="testBackendBtn" style="margin-top:8px">🔌 Tester le serveur</button>
       <div class="aiStatus" id="backendStatus"></div>
-      <div class="hint">Active la reformulation via le serveur Leova (Europe, RGPD) — aucune clé Gemini nécessaire pour cette fonction.</div>
+      <div class="hint">Active TOUT via le serveur Leova (Europe, RGPD) : reformulation, belle voix, création de pictos. La clé Gemini ci-dessous devient optionnelle (simple secours).</div>
     </div>
     <div class="prow">
       <label>Clé API Gemini — gratuite sur aistudio.google.com/apikey</label>
@@ -325,7 +325,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "24"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "25"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -666,6 +666,25 @@ async function ttsGemini(text) {
   return pcmToWav(j.candidates[0].content.parts[0].inlineData.data, 24000);
 }
 
+// Voix via le serveur Leova (cache mutualisé côté serveur, WAV direct)
+async function ttsBackend(text) {
+  const r = await fetch(BACKEND_URL + "/v1/tts", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-app-secret": backendSecret },
+    body: JSON.stringify({ text }),
+  });
+  if (!r.ok) throw new Error("backend " + r.status);
+  return r.blob();
+}
+
+// Choisit la source de la belle voix : serveur Leova d'abord, sinon clé Gemini
+async function voiceBlob(text) {
+  if (backendSecret) {
+    try { return await ttsBackend(text); } catch (e) { if (!geminiKey) throw e; }
+  }
+  return ttsGemini(text);
+}
+
 /* Règle d'or CAA : le son part TOUJOURS immédiatement.
    Belle voix si déjà en cache, sinon voix de l'appareil tout de suite
    et génération Gemini en arrière-plan pour la prochaine fois. */
@@ -675,17 +694,17 @@ let speakSeq = 0; // évite qu'un vieil audio parte en retard après d'autres ta
 const genQueue = new Set();
 
 async function ensureVoice(text) {
-  if (!geminiKey || genQueue.has(text)) return;
+  if (!(backendSecret || geminiKey) || genQueue.has(text)) return;
   genQueue.add(text);
   try {
     const key = GEMINI.voice + "|" + text;
-    if (!(await idbGet(key))) await idbSet(key, await ttsGemini(text));
+    if (!(await idbGet(key))) await idbSet(key, await voiceBlob(text));
   } catch {} finally { genQueue.delete(text); }
 }
 
 async function speak(text) {
   const seq = ++speakSeq;
-  if (geminiKey) {
+  if (backendSecret || geminiKey) {
     const cached = await idbGet(GEMINI.voice + "|" + text);
     if (cached) {
       if (seq !== speakSeq) return;
@@ -741,6 +760,12 @@ function extractImage(j) {
 }
 
 async function genPicto(word, hint) {
+  if (backendSecret) {
+    try {
+      const out = await backendJson("/v1/image", { word, hint: hint || null });
+      return "data:" + out.mimeType + ";base64," + out.data;
+    } catch (e) { if (!geminiKey) throw e; }
+  }
   const j = await gemini("image", { contents: [{ parts: [{ text:
     "Pictogramme de communication pour un enfant de 6 ans, représentant : " + word +
     ". Style : dessin plat très simple, contours noirs épais, couleurs vives, fond blanc uni, un seul sujet centré, aucun texte." +
@@ -751,6 +776,12 @@ async function genPicto(word, hint) {
 async function cleanPhoto(dataUrl) {
   const b64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
   const mime = dataUrl.slice(5, dataUrl.indexOf(";"));
+  if (backendSecret) {
+    try {
+      const out = await backendJson("/v1/image", { imageBase64: b64, mimeType: mime });
+      return "data:" + out.mimeType + ";base64," + out.data;
+    } catch (e) { if (!geminiKey) throw e; }
+  }
   const j = await gemini("image", { contents: [{ parts: [
     { inlineData: { mimeType: mime, data: b64 } },
     { text: "Détoure le sujet principal de cette photo et place-le sur un fond blanc uni. Rends-le net et lisible comme un pictogramme de communication pour enfant. Aucun texte." },
@@ -760,6 +791,16 @@ async function cleanPhoto(dataUrl) {
 
 /* ---- Ajout magique : le parent donne un concept, l'IA décide de tout ---- */
 async function magicPlan(concept) {
+  if (backendSecret) {
+    try {
+      const j = await backendJson("/v1/magic", {
+        concept,
+        cats: cats().map(c => ({ id: c.id, label: c.label })),
+        existing: allItems().map(i => i.label),
+      });
+      if (Array.isArray(j.plans)) return j.plans;
+    } catch (e) { if (!geminiKey) throw e; }
+  }
   const catList = cats().map(c => `"${c.id}" (${c.label})`).join(", ");
   const existing = allItems().map(i => `"${i.label}"`).join(", ");
   const j = await gemini("text", {
@@ -1154,9 +1195,20 @@ document.getElementById("newPhoto").onchange = async (e) => {
 /* ---- Boutons IA du formulaire d'ajout ---- */
 const status2 = document.getElementById("aiStatus2");
 function needKey() {
-  if (geminiKey) return false;
-  alert("Collez d'abord votre clé API Gemini (section Intelligence artificielle ci-dessus).");
+  if (backendSecret || geminiKey) return false;
+  alert("Collez d'abord le code d'accès Leova (ou une clé API Gemini) dans la section Intelligence artificielle.");
   return true;
+}
+
+// Appel JSON générique au serveur Leova
+async function backendJson(path, body) {
+  const r = await fetch(BACKEND_URL + path, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-app-secret": backendSecret },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error("backend " + r.status);
+  return r.json();
 }
 
 document.getElementById("arasaacBtn").onclick = async () => {
@@ -1487,7 +1539,7 @@ document.getElementById("genVoicesBtn").onclick = async () => {
     // en cas d'erreur 429 on attend 30 s puis on réessaie le même mot.
     let ok = false;
     for (let tries = 0; tries < 5 && !ok; tries++) {
-      try { await idbSet(key, await ttsGemini(text)); ok = true; }
+      try { await idbSet(key, await voiceBlob(text)); ok = true; }
       catch (e) {
         if (String(e.message).includes("429")) {
           status.textContent = `Limite de vitesse Gemini — pause 30 s… (${done}/${items.length}, laissez ce panneau ouvert)`;

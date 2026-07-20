@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { reformulate } from "./vertex.js";
+import { reformulate, magicPlan, genImage, cleanPhoto } from "./vertex.js";
+import { tts } from "./tts.js";
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
@@ -36,10 +37,53 @@ app.post("/v1/reformulate", async (req, res) => {
   }
 });
 
-// TODO Phase 3 (suite) :
-//   app.post("/v1/tts", ...)   -> voix "Kore" (Vertex Gemini TTS) + cache Cloud Storage
-//   app.post("/v1/magic", ...) -> plan d'ajout magique (JSON)
-//   app.post("/v1/image", ...) -> génération de picto (Imagen) + détourage photo
+// Voix de l'app (WAV binaire). Cache mutualisé Cloud Storage côté serveur.
+app.post("/v1/tts", async (req, res) => {
+  try {
+    const text = String(req.body?.text || "").trim().slice(0, 300);
+    if (!text) return res.status(400).json({ error: "text_requis" });
+    const { buf, cached } = await tts(text);
+    res.set("content-type", "audio/wav").set("x-cache", cached ? "hit" : "miss").send(buf);
+  } catch (e) {
+    console.error("tts:", e);
+    res.status(500).json({ error: "tts_error" });
+  }
+});
+
+// Plan d'ajout magique (l'app envoie ses catégories et labels existants).
+app.post("/v1/magic", async (req, res) => {
+  try {
+    const concept = String(req.body?.concept || "").trim().slice(0, 500);
+    if (!concept) return res.status(400).json({ error: "concept_requis" });
+    const plans = await magicPlan({
+      concept,
+      cats: Array.isArray(req.body?.cats) ? req.body.cats.slice(0, 30) : [],
+      existing: Array.isArray(req.body?.existing) ? req.body.existing.slice(0, 200) : [],
+    });
+    res.json({ plans });
+  } catch (e) {
+    console.error("magic:", e);
+    res.status(500).json({ error: "magic_error" });
+  }
+});
+
+// Image : génération de picto ({word, hint?}) OU détourage photo ({imageBase64, mimeType}).
+app.post("/v1/image", async (req, res) => {
+  try {
+    let out;
+    if (req.body?.imageBase64) {
+      out = await cleanPhoto(String(req.body.mimeType || "image/jpeg"), String(req.body.imageBase64));
+    } else {
+      const word = String(req.body?.word || "").trim().slice(0, 100);
+      if (!word) return res.status(400).json({ error: "word_requis" });
+      out = await genImage(word, req.body?.hint ? String(req.body.hint).slice(0, 300) : null);
+    }
+    res.json(out); // {mimeType, data}
+  } catch (e) {
+    console.error("image:", e);
+    res.status(500).json({ error: "image_error" });
+  }
+});
 
 app.listen(config.port, () =>
   console.log(`leova-backend :${config.port} (project=${config.project || "?"}, ${config.location})`)

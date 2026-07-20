@@ -63,10 +63,22 @@ cp .env.example .env                    # renseigner GOOGLE_CLOUD_PROJECT
 npm install && node --env-file=.env src/index.js
 ```
 
-## Reste à faire (suite Phase 3 → 4)
+## Phase 3 — terminée ✓ (20 juillet 2026)
 
-- `/v1/tts` : voix **Kore** (Vertex Gemini TTS) → WAV, **cache Cloud Storage mutualisé**.
-- `/v1/magic` (plan d'ajout magique) et `/v1/image` (Imagen + détourage).
+- `/v1/reformulate` ✓ — phrase naturelle depuis les pictos touchés.
+- `/v1/tts` ✓ — voix `fr-FR-Chirp3-HD-Kore` (API Cloud Text-to-Speech, stable),
+  WAV 24 kHz, **cache Cloud Storage mutualisé** (bucket `leova-app-tts`,
+  europe-west1) : x-cache miss/hit vérifié.
+- `/v1/magic` ✓ — plan d'ajout magique (l'app envoie ses catégories/labels).
+- `/v1/image` ✓ — picto généré par `gemini-2.5-flash-image` (dispo en
+  europe-west1, vérifié) + détourage photo. `VERTEX_IMAGE_LOCATION=global` en
+  repli si la région UE perdait le modèle.
+- App basculée (v25) : avec le code d'accès, TOUT passe par le serveur ;
+  la clé Gemini du parent devient un simple secours, chaque fonction replie
+  proprement (backend → Gemini → voix appareil / mots bruts).
+
+## Reste à faire (Phase 4)
+
 - **Auth** : Firebase Auth (anonyme) + App Check, à la place du secret partagé.
 - **Metering** par utilisateur (Firestore) + quota gratuit / droits payants.
-- Basculer l'app (`index.html`) pour appeler ce backend au lieu de la clé Gemini locale.
+- Nettoyage : retirer à terme le code Gemini-direct de l'app.
