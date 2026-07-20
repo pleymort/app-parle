@@ -153,6 +153,23 @@ Décision : paiement via **Google Play Billing** (abonnement `leova_plus`).
 5. Publier l'app en **test interne** (AAB signé) — ensuite seulement le
    bouton 💜 fonctionnera (le Billing exige une installation via Play).
 
+## Onboarding + Compte & synchro ✓ (20 juillet 2026, v30)
+
+- **`POST /v1/onboard`** (compté avec magic) : interview du parent (prénom,
+  proches avec surnoms exacts, passions, lieux) → plan de tableau
+  personnalisé (même contrat de carte que /v1/magic). L'app filtre les
+  doublons et pré-génère les voix en arrière-plan. Montré UNIQUEMENT aux
+  installations vierges (jamais aux tablettes déjà utilisées).
+- **Comptes e-mail** : fournisseur email/password activé. La création LIE le
+  compte anonyme via `accounts:signUp` + idToken (⚠️ pas `accounts:update`,
+  bloqué par la protection d'énumération) → même uid, plan/usage conservés.
+- **`GET|POST /v1/sync`** : vocabulaire complet (custom/hidden/over/ord/
+  catover/cats/rate/reform) dans `gs://leova-app-sync/{uid}.json` (privé,
+  UE). Dernier écrivain gagne (rev = horodatage). Push auto débouncé 4 s à
+  chaque modification, pull au démarrage, boutons dans le mode parent.
+  Testé bout en bout : création compte → wipe → reconnexion → tableau
+  restauré ; modification → push auto vérifié côté serveur.
+
 ### Reste à faire — ensuite
 
 - **App Check (Play Integrity)** : dès que l'app est sur Play Console.
