@@ -140,6 +140,7 @@ app.post("/v1/onboard", meter("magic"), async (req, res) => {
     const s = (v, n) => String(v || "").trim().slice(0, n);
     const plans = await onboardPlan({
       childName: s(req.body?.childName, 60),
+      level: s(req.body?.level, 20),
       people: s(req.body?.people, 600),
       likes: s(req.body?.likes, 600),
       places: s(req.body?.places, 600),

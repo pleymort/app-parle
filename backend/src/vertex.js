@@ -90,7 +90,13 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
 /* Onboarding : à partir des réponses du parent (proches avec surnoms exacts,
    passions, lieux), génère le tableau de démarrage personnalisé de l'enfant.
    Même contrat de carte que l'ajout magique (label/say/cat/search/emoji…). */
-export async function onboardPlan({ childName, people, likes, places, cats, existing }) {
+export async function onboardPlan({ childName, level, people, likes, places, cats, existing }) {
+  const levelHint = {
+    debut: "L'enfant DÉBUTE (peu ou pas de mots) : reste très simple, 6 à 10 cartes maximum, uniquement les plus motivantes et les proches essentiels.",
+    signes: "L'enfant fait quelques signes : environ 10 à 14 cartes, concrètes et très motivantes.",
+    pecs: "L'enfant utilise déjà des images/PECS : 14 à 20 cartes possibles.",
+    phrases: "L'enfant combine des mots : jusqu'à 24 cartes, tu peux inclure quelques mots plus variés.",
+  }[level] || "";
   const model = vertex.getGenerativeModel({
     model: config.textModel,
     generationConfig: { responseMimeType: "application/json" },
@@ -99,7 +105,8 @@ export async function onboardPlan({ childName, people, likes, places, cats, exis
   const catList = (cats || []).map((c) => `"${c.id}" (${c.label})`).join(", ");
   const prompt =
     `Tu prépares le tableau de démarrage d'une application de communication (CAA) pour un enfant non verbal` +
-    (childName ? ` prénommé « ${childName} »` : "") + `. Réponses du parent :
+    (childName ? ` prénommé « ${childName} »` : "") + `. ${levelHint}
+Réponses du parent :
 - Personnes importantes (avec leurs surnoms EXACTS) : « ${people || "—"} »
 - Ce que l'enfant adore (aliments, activités, personnages…) : « ${likes || "—"} »
 - Lieux ou moments importants du quotidien : « ${places || "—"} »

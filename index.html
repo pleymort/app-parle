@@ -408,6 +408,50 @@
 }
 #obGenGrid .obPic img { width: 48px; height: 48px; object-fit: contain; }
 #obGenGrid .obPic span { font-size: 10px; color: #4A5B6E; margin-top: 4px; max-width: 66px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+/* Question de segmentation (puces à choisir) */
+.obChips { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.obChip {
+  text-align: left; border: 2px solid #D7E3F2; background: #fff; border-radius: 12px;
+  padding: 12px 14px; font-size: 15px; font-weight: 700; color: #24425F; cursor: pointer;
+}
+.obChip.on { border-color: #4A90D9; background: #EAF3FF; }
+#obHaveAccount { display: block; width: 100%; margin-top: 10px; background: none; border: none; color: #4A90D9; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+/* ---- Coach mark « première victoire » ---- */
+#coach {
+  position: fixed; left: 12px; right: 12px; bottom: 16px; z-index: 44;
+  background: #243447; color: #fff; border-radius: 16px; padding: 14px 18px;
+  display: none; align-items: center; gap: 12px; box-shadow: 0 10px 34px rgba(0,0,0,.32);
+  font-weight: 700; font-size: 15px;
+}
+#coach.show { display: flex; animation: coachPulse 1.6s ease-in-out infinite; }
+@keyframes coachPulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+#coach .cx { margin-left: auto; background: rgba(255,255,255,.15); border: none; color: #fff; border-radius: 8px; padding: 6px 10px; font-weight: 800; cursor: pointer; }
+
+/* ---- Soft-paywall « Leova Plus » ---- */
+#paywall {
+  position: fixed; inset: 0; z-index: 62; display: none;
+  background: rgba(18,26,40,.55); align-items: center; justify-content: center; padding: 16px;
+}
+#paywall.open { display: flex; }
+#pwallCard {
+  background: #fff; border-radius: 24px; max-width: 460px; width: 100%;
+  max-height: 94vh; overflow-y: auto; padding: 26px 22px;
+}
+#pwallCard .pwHero { text-align: center; }
+#pwallCard .pwBadge { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #7C5CFF; }
+#pwallCard h1 { font-size: 24px; color: #1C2B3A; margin: 6px 0 8px; }
+#pwallCard .pwSub { font-size: 15px; color: #4A5B6E; line-height: 1.5; margin-bottom: 18px; }
+.pwBenefits { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.pwBenefits li { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; color: #24303C; font-weight: 600; }
+.pwBenefits .pwck { color: #35A853; font-weight: 900; font-size: 18px; line-height: 1.2; }
+.pwAnchor { background: #F4F6FB; border-radius: 14px; padding: 14px 16px; font-size: 14px; color: #4A5B6E; margin-bottom: 18px; text-align: center; }
+.pwAnchor b { color: #1C2B3A; }
+.pwAnchor .pwOld { text-decoration: line-through; color: #A6B4C4; }
+#pwallBuy { width: 100%; border: none; border-radius: 16px; background: #7C5CFF; color: #fff; font-size: 18px; font-weight: 800; padding: 18px; cursor: pointer; }
+#pwallSkip { width: 100%; border: none; background: none; color: #55677A; font-size: 15px; font-weight: 700; padding: 14px; margin-top: 6px; cursor: pointer; }
+.pwFine { font-size: 12px; color: #9DB2C7; text-align: center; margin-top: 8px; line-height: 1.5; }
+#pwallStatus { font-size: 14px; color: #7C5CFF; font-weight: 700; text-align: center; min-height: 18px; }
 </style>
 </head>
 <body>
@@ -818,18 +862,26 @@
   <div class="obCard">
     <div class="obSteps" id="obStepTag">Bienvenue</div>
     <div id="obStep0">
-      <h1>Bienvenue dans Leova 💙</h1>
-      <p>Leova transforme la tablette en voix pour votre enfant : il touche des images, la tablette parle pour lui.</p>
-      <p><b>En 3 minutes</b>, je prépare un tableau personnalisé : ses proches (avec leurs vrais surnoms), ce qu'il adore, ses lieux du quotidien — avec les images et la voix déjà prêtes.</p>
+      <h1>Donnez une voix à votre enfant 💙</h1>
+      <p>Avec Leova, votre enfant touche des images et la tablette parle pour lui — avec les mots de sa vie et les vrais surnoms de sa famille.</p>
+      <p><b>En 3 minutes</b>, je prépare son tableau personnalisé : images et voix déjà prêtes.</p>
       <div class="obNav">
         <button class="pbtn ghost" id="obSkip">Plus tard</button>
-        <button class="pbtn primary" id="obStart">C'est parti</button>
+        <button class="pbtn primary" id="obStart">Commencer</button>
       </div>
+      <button id="obHaveAccount">J'ai déjà un compte — restaurer mon tableau</button>
     </div>
     <div id="obStep1" style="display:none">
       <h1>Votre enfant</h1>
       <label>Son prénom</label>
       <input id="obName" placeholder="Ex : Léa" autocomplete="off">
+      <label style="margin-top:16px">Où en est-il dans la communication ?</label>
+      <div class="obChips" id="obLevel">
+        <button class="obChip" data-lvl="debut">Il commence tout juste (peu ou pas de mots)</button>
+        <button class="obChip" data-lvl="signes">Il fait quelques signes ou gestes</button>
+        <button class="obChip" data-lvl="pecs">Il utilise déjà des images / PECS</button>
+        <button class="obChip" data-lvl="phrases">Il combine plusieurs mots</button>
+      </div>
       <div class="obNav">
         <button class="pbtn ghost" id="obBack1">Retour</button>
         <button class="pbtn primary" id="obNext1">Continuer</button>
@@ -866,14 +918,44 @@
       <h1 id="obDoneTitle">C'est prêt ! 🎉</h1>
       <p>Le tableau est personnalisé et les voix se préparent en arrière-plan. Touchez les images pour parler, enchaînez-les, puis ▶ lit la phrase.</p>
       <p style="font-size:13px;color:#8FA3B8">Astuce : appui long de 2 s sur ⚙️ pour le mode parent (ajouter des pictos par la voix, mettre de vraies photos, créer un compte de sauvegarde).</p>
-      <div class="obNav"><button class="pbtn primary" id="obDone">Commencer</button></div>
+      <div class="obNav"><button class="pbtn primary" id="obDone">Essayer maintenant</button></div>
     </div>
+  </div>
+</div>
+
+<!-- Coach mark « première victoire » : invite à faire parler la tablette -->
+<div id="coach">
+  <span id="coachText">Touchez une carte — écoutez votre enfant parler ✨</span>
+  <button class="cx" id="coachClose">OK</button>
+</div>
+
+<!-- Soft-paywall Leova Plus : jamais bloquant, skip toujours visible -->
+<div id="paywall">
+  <div id="pwallCard">
+    <div class="pwHero">
+      <div class="pwBadge" id="pwBadge">Leova Plus</div>
+      <h1 id="pwTitle">Enrichissez son tableau sans limite</h1>
+      <p class="pwSub" id="pwSub">Leova reste <b>gratuit pour toujours</b>. Leova Plus enlève les limites de l'IA quand vous voulez créer beaucoup de nouveaux mots, images et voix.</p>
+    </div>
+    <ul class="pwBenefits">
+      <li><span class="pwck">✓</span><span>Belle voix et phrases naturelles <b>en illimité</b></span></li>
+      <li><span class="pwck">✓</span><span>Création <b>illimitée</b> de pictogrammes par l'IA</span></li>
+      <li><span class="pwck">✓</span><span>Vous soutenez une app pensée pour votre enfant</span></li>
+    </ul>
+    <div class="pwAnchor">
+      Les applications de communication coûtent <span class="pwOld">250 à 300 €</span>.<br>
+      Leova Plus : <b>4,99 €/mois</b>, résiliable à tout moment.
+    </div>
+    <button id="pwallBuy">🎁 Essayer 7 jours gratuitement</button>
+    <button id="pwallSkip">Continuer gratuitement</button>
+    <div id="pwallStatus"></div>
+    <div class="pwFine">7 jours offerts, puis 4,99 €/mois. Sans engagement, résiliable en un geste depuis Google Play. Aucune fonction essentielle n'est bloquée dans la version gratuite.</div>
   </div>
 </div>
 <script>
 "use strict";
 
-const APP_VERSION = "38"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "39"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1530,6 +1612,7 @@ function renderGrid() {
       speakItem(item);
       addToStrip(item);
       logJ({ t: now, k: "w", w: item.label }); // journal (local)
+      if (firstWinActive) firstWinDone();
     };
     attachParentDrag(b, item);
     gridEl.appendChild(b);
@@ -1824,14 +1907,7 @@ async function refreshPlan() {
   } catch { el.textContent = "Usage indisponible pour le moment."; }
 }
 
-document.getElementById("plusBtn").onclick = async () => {
-  try {
-    const p = await Billing().buy({ productId: PLUS_PRODUCT });
-    const r = await backendJson("/v1/billing/verify", { purchaseToken: p.purchaseToken, productId: p.productId || PLUS_PRODUCT });
-    alert(r.plan === "plus" ? "Leova Plus est actif — merci ! 💜" : "Achat enregistré (" + r.state + ").");
-    refreshPlan();
-  } catch (e) { alert("Achat impossible : " + e.message); }
-};
+document.getElementById("plusBtn").onclick = () => openPaywall("settings");
 
 document.getElementById("restorePlusBtn").onclick = async () => {
   try {
@@ -1953,7 +2029,11 @@ async function backendJson(path, body) {
     headers: Object.assign({ "content-type": "application/json" }, await backendHeaders()),
     body: JSON.stringify(body),
   });
-  if (r.status === 429) throw new Error("Quota mensuel gratuit atteint — réessayez le mois prochain.");
+  if (r.status === 429) {
+    const j = await r.json().catch(() => ({}));
+    if (j.error === "quota_epuise") maybePaywall("quota"); // propose Plus (non bloquant)
+    throw new Error("Quota mensuel gratuit atteint — réessayez le mois prochain ou passez à Leova Plus.");
+  }
   if (r.status === 422) throw new Error("Demande refusée : contenu inadapté à une app pour enfants.");
   if (!r.ok) throw new Error("backend " + r.status);
   return r.json();
@@ -3131,6 +3211,97 @@ function showOnboarding() {
   obEl("onboard").style.display = "block";
   obShow(0);
 }
+/* ---- Soft-paywall (jamais bloquant) ---- */
+let quotaPromptShown = false; // une seule relance « quota » par session
+function openPaywall(context) {
+  if (backendSecret) return; // accès parent illimité : pas d'offre
+  const badge = document.getElementById("pwBadge");
+  const title = document.getElementById("pwTitle");
+  const sub = document.getElementById("pwSub");
+  const name = store.get("childname", "");
+  if (context === "quota") {
+    badge.textContent = "Limite atteinte";
+    title.textContent = "Vous avez bien avancé ce mois-ci 👏";
+    sub.innerHTML = "Vous avez atteint la limite gratuite du mois. Passez à <b>Leova Plus</b> pour continuer à créer sans attendre" + (name ? ` le tableau de ${name}` : "") + " — ou revenez le mois prochain, le gratuit se recharge.";
+  } else {
+    badge.textContent = "Leova Plus";
+    title.textContent = "Enrichissez son tableau sans limite";
+    sub.innerHTML = "Leova reste <b>gratuit pour toujours</b>. Leova Plus enlève les limites de l'IA quand vous voulez créer beaucoup de nouveaux mots, images et voix.";
+  }
+  document.getElementById("pwallStatus").textContent = "";
+  document.getElementById("paywall").classList.add("open");
+}
+function closePaywall() { document.getElementById("paywall").classList.remove("open"); }
+
+// N'affiche l'offre d'onboarding qu'une fois ; l'offre « quota » une fois/session.
+async function maybePaywall(context) {
+  if (backendSecret) return;
+  if (context === "onboarding" && store.get("paywallSeen", false)) return;
+  if (context === "quota") { if (quotaPromptShown) return; quotaPromptShown = true; }
+  try {
+    const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
+    if (me.plan === "plus" || me.plan === "parent") return; // déjà abonné / parent
+  } catch {}
+  if (context === "onboarding") store.set("paywallSeen", true);
+  openPaywall(context);
+}
+
+document.getElementById("pwallSkip").onclick = closePaywall;
+document.getElementById("paywall").onclick = (e) => { if (e.target.id === "paywall") closePaywall(); };
+document.getElementById("pwallBuy").onclick = async () => {
+  const st = document.getElementById("pwallStatus");
+  if (!Billing()) { st.textContent = "L'abonnement s'active depuis l'app installée via Google Play."; return; }
+  st.textContent = "Ouverture de Google Play…";
+  try {
+    const p = await Billing().buy({ productId: PLUS_PRODUCT });
+    const r = await backendJson("/v1/billing/verify", { purchaseToken: p.purchaseToken, productId: p.productId || PLUS_PRODUCT });
+    if (r.plan === "plus") { closePaywall(); toast("Bienvenue dans Leova Plus — merci ! 💜"); refreshPlan(); }
+    else st.textContent = "Achat en attente (" + r.state + ").";
+  } catch (e) { st.textContent = String(e.message).includes("annulé") ? "" : "Impossible : " + e.message; }
+};
+
+/* ---- Première victoire : faire parler la tablette tout de suite ---- */
+let firstWinActive = false;
+function startFirstWin() {
+  const name = store.get("childname", "");
+  document.getElementById("coachText").textContent = name
+    ? `Touchez une carte — écoutez « ${name} » parler ✨`
+    : "Touchez une carte — écoutez la tablette parler ✨";
+  currentCat = "core"; renderTabs(); renderGrid();
+  firstWinActive = true;
+  document.getElementById("coach").classList.add("show");
+}
+function firstWinDone() {
+  if (!firstWinActive) return;
+  firstWinActive = false;
+  document.getElementById("coach").classList.remove("show");
+  setTimeout(() => maybePaywall("onboarding"), 1500); // au pic d'émotion
+}
+document.getElementById("coachClose").onclick = () => {
+  firstWinActive = false;
+  document.getElementById("coach").classList.remove("show");
+  maybePaywall("onboarding");
+};
+
+/* ---- Segmentation ---- */
+let obLevel = "";
+obEl("obLevel").addEventListener("click", (e) => {
+  const b = e.target.closest(".obChip");
+  if (!b) return;
+  obEl("obLevel").querySelectorAll(".obChip").forEach((x) => x.classList.remove("on"));
+  b.classList.add("on");
+  obLevel = b.dataset.lvl;
+});
+
+obEl("obHaveAccount").onclick = () => {
+  hidePersonalDefaults();
+  obEl("onboard").style.display = "none";
+  enterParentMode();
+  openPanel();
+  document.getElementById("panel").classList.add("open");
+  showPsec("account");
+};
+
 obEl("obStart").onclick = () => obShow(1);
 obEl("obBack1").onclick = () => obShow(0);
 obEl("obNext1").onclick = () => obShow(2);
@@ -3143,7 +3314,7 @@ obEl("obSkip").onclick = () => {
   obEl("onboard").style.display = "none";
   renderTabs(); renderGrid();
 };
-obEl("obDone").onclick = () => { obEl("onboard").style.display = "none"; };
+obEl("obDone").onclick = () => { obEl("onboard").style.display = "none"; startFirstWin(); };
 
 obEl("obGo").onclick = async () => {
   obShow(4);
@@ -3155,6 +3326,7 @@ obEl("obGo").onclick = async () => {
     status.textContent = "Je réfléchis au tableau de " + (childName || "votre enfant") + "…";
     const plans = (await backendJson("/v1/onboard", {
       childName,
+      level: obLevel,
       people: obEl("obPeople").value.trim(),
       likes: obEl("obLikes").value.trim(),
       places: obEl("obPlaces").value.trim(),
