@@ -767,6 +767,9 @@
     <div class="card">
     <h2 data-i18n="acct_l">Compte &amp; synchronisation</h2>
     <div class="aiStatus" id="acctStatus"></div>
+    <button class="pbtn" id="googleBtn" style="display:none;background:#fff;border:1.5px solid #DCE4EC;color:#1C2B3A">
+      <svg width="18" height="18" viewBox="0 0 48 48" style="vertical-align:-3px;margin-right:8px"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.7l6.2 5.2C41 35.4 44 30.2 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg><span data-i18n="google_btn">Continuer avec Google</span>
+    </button>
     <button class="pbtn primary" id="acctCta" style="display:none" data-i18n="acct_cta">🛡 Protéger le vocabulaire de mon enfant</button>
     <div id="acctForms" style="display:none">
       <div class="prow" style="margin-top:10px">
@@ -1033,7 +1036,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "42"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "43"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1228,6 +1231,7 @@ const STR = {
     close: "Fermer", exit_parent: "Quitter le mode parent", cancel: "Annuler", save: "✔ Enregistrer", delete: "🗑 Supprimer", hide: "🙈 Masquer",
     rt_h: "📋 Routine", rt_name: "Nom de la routine", rt_name_ph: "ex : Brossage de dents", rt_emoji: "Émoji", rt_steps: "Étapes, dans l'ordre", rt_addstep: "➕ Ajouter une étape", rp_done: "✓ Fini", rp_bravo: "Bravo !", rp_finished: "C'est terminé !", rp_say_done: "Bravo, c'est terminé !", rp_step: "{label} — étape {n} sur {total}", rp_first: "D'abord", rp_then: "Ensuite", rp_say_first: "D'abord, ", rp_say_then: "Ensuite, ",
     voice_h: "🔊 Voix", acct_cta: "🛡 Protéger le vocabulaire de mon enfant",
+    google_btn: "Continuer avec Google", g_connecting: "Connexion à Google…", g_native_only: "La connexion Google se fait depuis l'app installée via Google Play.",
     pwel_title: "Bienvenue dans Leova Plus", pwel_body: "La belle voix, les phrases naturelles et la création d'images par l'IA sont maintenant sans limite. Merci de soutenir Leova.", pwel_ok: "Continuer",
     st_plus_clean: "Leova Plus actif — tout est illimité ✓", g_phrases: "Phrases", g_voices: "Voix", g_magic: "Ajouts IA", g_images: "Images",
     edit_note: "Mode parent : touchez un picto pour le modifier · maintenez puis glissez pour réorganiser · ⚙️ pour les réglages.", trash_empty: "La corbeille est vide.", j_empty: "Aucune phrase lue pour l'instant (bouton ▶).", rt_empty: "Aucune routine pour l'instant.",
@@ -1293,6 +1297,7 @@ const STR = {
     close: "Close", exit_parent: "Exit parent mode", cancel: "Cancel", save: "✔ Save", delete: "🗑 Delete", hide: "🙈 Hide",
     rt_h: "📋 Routine", rt_name: "Routine name", rt_name_ph: "e.g. Brushing teeth", rt_emoji: "Emoji", rt_steps: "Steps, in order", rt_addstep: "➕ Add a step", rp_done: "✓ Done", rp_bravo: "Well done!", rp_finished: "All done!", rp_say_done: "Well done, all finished!", rp_step: "{label} — step {n} of {total}", rp_first: "First", rp_then: "Then", rp_say_first: "First, ", rp_say_then: "Then, ",
     voice_h: "🔊 Voice", acct_cta: "🛡 Protect my child's vocabulary",
+    google_btn: "Continue with Google", g_connecting: "Connecting to Google…", g_native_only: "Google sign-in works from the app installed via Google Play.",
     pwel_title: "Welcome to Leova Plus", pwel_body: "The beautiful voice, natural sentences and AI image creation are now unlimited. Thank you for supporting Leova.", pwel_ok: "Continue",
     st_plus_clean: "Leova Plus active — everything unlimited ✓", g_phrases: "Sentences", g_voices: "Voices", g_magic: "AI adds", g_images: "Images",
     edit_note: "Parent mode: touch a card to edit it · press and drag to reorder · ⚙️ for settings.", trash_empty: "The trash is empty.", j_empty: "No sentence read yet (▶ button).", rt_empty: "No routine yet.",
@@ -1358,6 +1363,7 @@ const STR = {
     close: "Cerrar", exit_parent: "Salir del modo padre", cancel: "Cancelar", save: "✔ Guardar", delete: "🗑 Eliminar", hide: "🙈 Ocultar",
     rt_h: "📋 Rutina", rt_name: "Nombre de la rutina", rt_name_ph: "ej.: Cepillado de dientes", rt_emoji: "Emoji", rt_steps: "Pasos, en orden", rt_addstep: "➕ Añadir un paso", rp_done: "✓ Hecho", rp_bravo: "¡Bien hecho!", rp_finished: "¡Terminado!", rp_say_done: "¡Bien hecho, terminado!", rp_step: "{label} — paso {n} de {total}", rp_first: "Primero", rp_then: "Luego", rp_say_first: "Primero, ", rp_say_then: "Luego, ",
     voice_h: "🔊 Voz", acct_cta: "🛡 Proteger el vocabulario de mi hijo",
+    google_btn: "Continuar con Google", g_connecting: "Conectando con Google…", g_native_only: "El inicio de sesión con Google funciona desde la app instalada vía Google Play.",
     pwel_title: "Bienvenido a Leova Plus", pwel_body: "La voz bonita, las frases naturales y la creación de imágenes por IA ya no tienen límite. Gracias por apoyar Leova.", pwel_ok: "Continuar",
     st_plus_clean: "Leova Plus activo — todo ilimitado ✓", g_phrases: "Frases", g_voices: "Voces", g_magic: "Añadidos IA", g_images: "Imágenes",
     edit_note: "Modo padre: toca una tarjeta para editarla · mantén y arrastra para reordenar · ⚙️ para los ajustes.", trash_empty: "La papelera está vacía.", j_empty: "Aún no se ha leído ninguna frase (botón ▶).", rt_empty: "Aún no hay rutinas.",
@@ -2863,8 +2869,9 @@ async function fbAuthCall(action, body) {
 
 function refreshAcct() {
   const on = hasAccount();
-  // Sans compte : UN seul appel à l'action ; le formulaire ne se déplie
-  // qu'à la demande (moins de bruit visuel).
+  // Sans compte : Google d'abord (1 appui), sinon l'appel à l'action e-mail ;
+  // le formulaire ne se déplie qu'à la demande (moins de bruit visuel).
+  document.getElementById("googleBtn").style.display = (!on && GoogleAuthP()) ? "" : "none";
   document.getElementById("acctCta").style.display = on ? "none" : "";
   document.getElementById("acctForms").style.display = "none";
   document.getElementById("acctActions").style.display = on ? "" : "none";
@@ -2877,6 +2884,31 @@ document.getElementById("acctCta").onclick = () => {
   document.getElementById("acctForms").style.display = "";
   document.getElementById("acctEmail").focus();
 };
+
+/* Fin commune de connexion (e-mail ou Google) : pose la session, puis
+   restaure la sauvegarde d'un compte existant ou pousse celle-ci. */
+async function completeSignIn(j, email, isNew) {
+  fbAuth = {
+    refreshToken: j.refreshToken || (fbAuth && fbAuth.refreshToken),
+    idToken: j.idToken,
+    exp: Date.now() + (parseInt(j.expiresIn, 10) - 300) * 1000,
+    email,
+  };
+  store.set("fbauth", fbAuth);
+  if (!isNew) {
+    // Compte existant : une sauvegarde en ligne existe peut-être déjà
+    const probe = await fetch(BACKEND_URL + "/v1/sync", { headers: { Authorization: "Bearer " + fbAuth.idToken } });
+    const localContent = customItems.length || Object.keys(overrides).length;
+    if (probe.ok && (!localContent ||
+        confirm("Une sauvegarde existe pour ce compte.\n\nOK : charger la sauvegarde sur cette tablette.\nAnnuler : garder le contenu de cette tablette (il remplacera la sauvegarde)."))) {
+      await pullSync(true);
+      window.location.reload();
+      return;
+    }
+  }
+  await pushSync();
+  refreshAcct();
+}
 
 document.getElementById("acctBtn").onclick = async () => {
   const email = document.getElementById("acctEmail").value.trim();
@@ -2897,32 +2929,48 @@ document.getElementById("acctBtn").onclick = async () => {
       // 2) Le compte existe déjà (autre tablette) : connexion classique
       j = await fbAuthCall("signInWithPassword", { email, password: pass, returnSecureToken: true });
     }
-    fbAuth = {
-      refreshToken: j.refreshToken || (fbAuth && fbAuth.refreshToken),
-      idToken: j.idToken,
-      exp: Date.now() + (parseInt(j.expiresIn, 10) - 300) * 1000,
-      email,
-    };
-    store.set("fbauth", fbAuth);
-    if (!isNew) {
-      // Compte existant : une sauvegarde en ligne existe peut-être déjà
-      const probe = await fetch(BACKEND_URL + "/v1/sync", { headers: { Authorization: "Bearer " + fbAuth.idToken } });
-      const localContent = customItems.length || Object.keys(overrides).length;
-      if (probe.ok && (!localContent ||
-          confirm("Une sauvegarde existe pour ce compte.\n\nOK : charger la sauvegarde sur cette tablette.\nAnnuler : garder le contenu de cette tablette (il remplacera la sauvegarde)."))) {
-        await pullSync(true);
-        window.location.reload();
-        return;
-      }
-    }
-    await pushSync();
-    refreshAcct();
+    await completeSignIn(j, email, isNew);
   } catch (e) {
     setAcctStatus(
       /INVALID_LOGIN|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(e.message) ? "E-mail ou mot de passe incorrect." :
       /WEAK_PASSWORD/.test(e.message) ? "Mot de passe trop court (6 caractères min.)." :
       /INVALID_EMAIL/.test(e.message) ? "Adresse e-mail invalide." :
       "Échec : " + e.message);
+  }
+};
+
+/* ---- Connexion Google (app native : Credential Manager) ---- */
+const GoogleAuthP = () => (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.GoogleAuth) || null;
+const GOOGLE_WEB_CLIENT = "11414001422-74fmeldataophkqcmm790o74gjbs6nh9.apps.googleusercontent.com"; // client OAuth web du projet (public)
+
+document.getElementById("googleBtn").onclick = async () => {
+  const plugin = GoogleAuthP();
+  if (!plugin) { setAcctStatus(t("g_native_only")); return; }
+  setAcctStatus(t("g_connecting"));
+  try {
+    const g = await plugin.signIn({ clientId: GOOGLE_WEB_CLIENT });
+    const idpBody = "id_token=" + encodeURIComponent(g.idToken) + "&providerId=google.com";
+    let j, isNew = false;
+    try {
+      // 1) Lier le compte anonyme (uid — plan, usage — conservé)
+      const anon = await fbToken();
+      j = await fbAuthCall("signInWithIdp", {
+        requestUri: "http://localhost", postBody: idpBody,
+        returnSecureToken: true, idToken: anon || undefined,
+      });
+      isNew = true;
+    } catch (e) {
+      if (!/ALREADY_LINKED|EMAIL_EXISTS|FEDERATED_USER_ID/.test(e.message)) throw e;
+      // 2) Ce compte Google est déjà connu : on retrouve son compte (restauration)
+      j = await fbAuthCall("signInWithIdp", {
+        requestUri: "http://localhost", postBody: idpBody, returnSecureToken: true,
+      });
+      isNew = false;
+    }
+    await completeSignIn(j, j.email || g.email, isNew);
+  } catch (e) {
+    if (!/annulé|CANCEL/i.test(e.message)) setAcctStatus("Échec : " + e.message);
+    else setAcctStatus("");
   }
 };
 

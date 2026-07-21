@@ -73,7 +73,7 @@ Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
 "action" : "create" (nouveau pictogramme), "image" (changer seulement l'image d'un pictogramme existant) ou "say" (changer seulement la phrase prononcée d'un pictogramme existant) ;
 "target" : si action "image" ou "say", le label EXACT du pictogramme existant concerné, sinon null ;
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
-"say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
+"say" : le MOT court (ou groupe de 1-2 mots) que la tablette prononce quand l'enfant touche la carte — le plus souvent IDENTIQUE au "label" (ex label "Restaurant" → say "Restaurant"). Surtout PAS une phrase : les cartes s'enchaînent pour former la phrase, lue ensuite par le bouton ▶. Ne diffère du label que pour corriger une prononciation (ex label "JeaJea" → say "Jaja") ;
 "cat" : la catégorie la plus logique parmi : ${catList} ;
 "search" : un nom commun simple EN ${L} pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
 "imageHint" : si le parent donne une consigne sur l'apparence de l'image, cette consigne en une phrase, sinon null ;
