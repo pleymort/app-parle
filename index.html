@@ -139,31 +139,71 @@
     to   { box-shadow: 0 0 0 22px #4A90D9 inset, 0 0 0 10px rgba(74,144,217,.35); background: #4A90D9; color: white; }
   }
 
-  /* ---- Mode parent ---- */
+  /* ---- Mode parent — design system « calme, net » ----
+     1 carte blanche = 1 idée ; 3 niveaux de typo ; boutons uniformes ;
+     statuts codifiés (vert = OK, gris = neutre, rouge = action). */
   #panel {
     position: fixed; inset: 0; background: rgba(20,40,60,.45); z-index: 50;
-    display: none; align-items: center; justify-content: center; padding: 16px;
+    display: none; align-items: center; justify-content: center; padding: 14px;
   }
   #panel.open { display: flex; }
   #panelCard {
-    background: white; border-radius: 20px; padding: 22px; width: 100%; max-width: 440px;
-    max-height: 90vh; overflow-y: auto;
+    background: #F2F5F9; border-radius: 22px; padding: 18px 14px 14px; width: 100%; max-width: 480px;
+    max-height: 92vh; overflow-y: auto;
   }
-  #panelCard h2 { color: #24425F; font-size: 20px; margin-bottom: 4px; }
-  #panelCard p.sub { color: #7C8FA3; font-size: 13px; margin-bottom: 16px; }
-  .prow { margin-bottom: 14px; }
-  .prow label { display: block; font-size: 13px; font-weight: 700; color: #55677A; margin-bottom: 5px; }
-  .prow input[type=text], .prow select {
-    width: 100%; padding: 10px; border: 2px solid #D8E1EA; border-radius: 10px; font-size: 16px;
+  #panelCard > h2 { color: #1C2B3A; font-size: 19px; margin: 0 6px 2px; letter-spacing: -.01em; }
+  .card {
+    background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 10px;
+    box-shadow: 0 1px 2px rgba(30,60,90,.05);
   }
+  .card > h2 { color: #1C2B3A; font-size: 15px; margin: 0 0 10px; }
+  #panelCard p.sub { color: #8FA0B2; font-size: 13px; margin-bottom: 12px; }
+  .prow { margin-bottom: 12px; }
+  .prow:last-child { margin-bottom: 0; }
+  .prow label { display: block; font-size: 12.5px; font-weight: 700; color: #6B7C8E; margin-bottom: 6px; letter-spacing: .01em; }
+  .prow input:not([type=checkbox]):not([type=range]):not([type=file]), .prow select {
+    display: block; width: 100%; box-sizing: border-box;
+    padding: 12px; border: 1.5px solid #DCE4EC; border-radius: 12px; font-size: 16px;
+    background: #FBFCFE; font-family: inherit;
+  }
+  .prow input:focus, .prow select:focus { outline: none; border-color: #4A90D9; background: #fff; }
   .prow input[type=range] { width: 100%; }
   .pbtn {
-    border: none; border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700;
-    cursor: pointer; margin-right: 8px; margin-top: 4px;
+    display: block; width: 100%; box-sizing: border-box;
+    border: none; border-radius: 12px; min-height: 46px; padding: 12px 16px;
+    font-size: 15px; font-weight: 700; font-family: inherit;
+    cursor: pointer; margin: 8px 0 0;
   }
   .pbtn.primary { background: #4A90D9; color: white; }
-  .pbtn.ghost { background: #EDF2F7; color: #55677A; }
+  .pbtn.ghost { background: #EEF2F7; color: #44566A; }
   .pbtn.warn { background: #FDECEC; color: #C0392B; }
+  .pbtn { text-align: center; }
+  .dact .pbtn { text-align: left; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 .pbtn { flex: 1; }
+  /* Écran de bienvenue après l'achat Leova Plus */
+  #plusWelcome {
+    position: fixed; inset: 0; z-index: 64; display: none;
+    background: rgba(18,26,40,.6); align-items: center; justify-content: center; padding: 16px;
+  }
+  #plusWelcome.open { display: flex; }
+  #plusWelcomeCard {
+    background: #fff; border-radius: 24px; max-width: 420px; width: 100%;
+    padding: 32px 24px; text-align: center;
+  }
+  #plusWelcomeCard .pw1 { font-size: 52px; }
+  #plusWelcomeCard h1 { font-size: 22px; color: #1C2B3A; margin: 10px 0 8px; }
+  #plusWelcomeCard p { font-size: 15px; color: #4A5B6E; line-height: 1.55; margin-bottom: 18px; }
+  /* Statuts codifiés */
+  .aiStatus.ok, .stOk { color: #1F9D55 !important; }
+  .stBad { color: #C0392B !important; }
+  /* Jauges d'usage (formule gratuite) */
+  .gaugeRow { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12.5px; color: #6B7C8E; font-weight: 600; }
+  .gaugeRow .gl { width: 92px; flex-shrink: 0; }
+  .gauge { flex: 1; height: 6px; background: #EDF1F5; border-radius: 3px; overflow: hidden; }
+  .gauge i { display: block; height: 100%; border-radius: 3px; background: #4A90D9; }
+  .gauge i.hot { background: #E67E22; }
+  .gaugeRow .gv { width: 64px; text-align: right; font-variant-numeric: tabular-nums; flex-shrink: 0; }
   #photoPreview { margin-top: 8px; }
   #photoPreview img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; }
   .hint { font-size: 12px; color: #9DB2C7; margin-top: 4px; }
@@ -232,13 +272,19 @@
   #pinPad button.pinAux { background: #F1F5F9; color: #8899AA; font-size: 16px; }
   .kioskState { font-size: 13px; font-weight: 700; margin-top: 6px; min-height: 18px; }
 
-  /* ---- Onglets du panneau parent ---- */
-  #ptabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 16px; }
-  .ptab {
-    border: none; border-radius: 999px; padding: 8px 13px; font-size: 13.5px; font-weight: 700;
-    background: #EDF2F7; color: #55677A; cursor: pointer;
+  /* ---- Onglets du panneau parent : UNE rangée, défilable ---- */
+  #ptabs {
+    display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto;
+    margin: 10px 0 12px; padding: 2px 2px 6px;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
-  .ptab.on { background: #4A90D9; color: #fff; }
+  #ptabs::-webkit-scrollbar { display: none; }
+  .ptab {
+    border: none; border-radius: 999px; padding: 9px 14px; font-size: 13.5px; font-weight: 700;
+    background: #fff; color: #55677A; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(30,60,90,.06);
+  }
+  .ptab.on { background: #1C2B3A; color: #fff; }
   .psec { display: none; }
   .psec.on { display: block; }
 
@@ -372,12 +418,12 @@
   .trashRow .pbtn { margin: 0; padding: 7px 12px; font-size: 13px; }
 
   /* ---- Tableau de bord (accueil parent) ---- */
-  #dashTiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .dtile { background: #F4F8FC; border-radius: 14px; padding: 12px 14px; }
-  .dtile .dv { font-size: 20px; font-weight: 800; color: #24425F; min-height: 26px; }
-  .dtile .dl { font-size: 12px; font-weight: 700; color: #8FA3B8; margin-top: 2px; }
-  .dact { display: flex; flex-direction: column; gap: 8px; }
-  .dact .pbtn { margin: 0; text-align: left; }
+  #dashTiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .dtile { background: #fff; border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(30,60,90,.05); }
+  .dtile .dv { font-size: 21px; font-weight: 800; color: #1C2B3A; min-height: 26px; letter-spacing: -.01em; }
+  .dtile .dl { font-size: 12px; font-weight: 700; color: #97A6B6; margin-top: 2px; }
+  .dact { display: flex; flex-direction: column; }
+  .dact .pbtn { text-align: left; }
 /* ---- Onboarding (premier lancement) ---- */
 #onboard {
   position: fixed; inset: 0; z-index: 60; display: none;
@@ -501,43 +547,47 @@
     </div>
 
     <div class="psec" data-psec="vocab">
-    <h2 style="font-size:17px" data-i18n="magic_h">✨ Ajout magique</h2>
+    <div class="card">
+    <h2 data-i18n="magic_h">✨ Ajout magique</h2>
     <div class="prow">
       <label data-i18n="magic_label">Dites ou écrivez ce que l'enfant doit pouvoir demander</label>
       <div class="magicRow">
         <input type="text" id="magicInput" data-i18n-ph="magic_ph">
-        <button class="pbtn ghost" id="magicMic" title="Dicter au micro">🎤</button>
+        <button class="pbtn ghost" id="magicMic" title="Dicter au micro" style="width:auto;margin:0">🎤</button>
       </div>
-      <button class="pbtn primary" id="magicBtn" style="margin-top:8px" data-i18n="magic_create">✨ Créer</button>
+      <button class="pbtn primary" id="magicBtn" data-i18n="magic_create">✨ Créer</button>
       <div class="aiStatus" id="magicStatus"></div>
       <div id="magicResult" style="display:none">
         <div id="magicList"></div>
         <div class="hint" data-i18n="magic_pick_hint">Touchez une vignette…</div>
-        <button class="pbtn primary" id="magicAdd" data-i18n="magic_add">✔ Ajouter</button>
-        <button class="pbtn warn" id="magicUndo" data-i18n="magic_undo">✖ Annuler</button>
+        <div class="row2">
+          <button class="pbtn warn" id="magicUndo" data-i18n="magic_undo">✖ Annuler</button>
+          <button class="pbtn primary" id="magicAdd" data-i18n="magic_add">✔ Ajouter</button>
+        </div>
       </div>
     </div>
+    </div>
 
-    <button class="pbtn ghost" id="photoWizBtn" style="margin-top:8px" data-i18n="photowiz_btn">👨‍👩‍👦 Assistant photos des proches</button>
+    <div class="card">
+    <button class="pbtn ghost" id="photoWizBtn" style="margin:0" data-i18n="photowiz_btn">👨‍👩‍👦 Assistant photos des proches</button>
     <div class="hint" data-i18n="photowiz_hint">Passe en revue les personnes sans photo…</div>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="routines_h">📋 Routines</h2>
-    <p class="sub" style="margin-bottom:8px" data-i18n="routines_sub">Une suite d'étapes visuelles…</p>
+    <div class="card">
+    <h2 data-i18n="routines_h">📋 Routines</h2>
     <div id="routineList"></div>
     <button class="pbtn ghost" id="addRoutineBtn" data-i18n="routine_add">➕ Nouvelle routine</button>
+    <div class="hint" data-i18n="routines_sub">Une suite d'étapes visuelles…</div>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="cats_h">Catégories</h2>
-    <p class="sub" style="margin-bottom:8px" data-i18n="cats_sub">Changez l'émoji ou le nom…</p>
+    <div class="card">
+    <h2 data-i18n="cats_h">Catégories</h2>
     <div id="catList"></div>
     <button class="pbtn ghost" id="addCatBtn" data-i18n="cat_add">➕ Nouvelle catégorie</button>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="addimg_h">Ajouter une image</h2>
+    <div class="card">
+    <h2 data-i18n="addimg_h">Ajouter une image</h2>
     <div class="prow">
       <label data-i18n="newlabel_l">Mot à prononcer</label>
       <input type="text" id="newLabel" data-i18n-ph="newlabel_ph">
@@ -557,26 +607,29 @@
       <div id="pickResults"></div>
       <div class="aiStatus" id="aiStatus2"></div>
       <div id="photoPreview"></div>
-      <input type="text" id="newEmoji" data-i18n-ph="emoji_ph" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
+      <input type="text" id="newEmoji" data-i18n-ph="emoji_ph" style="margin-top:8px">
       <div class="hint" data-i18n="addimg_hint">Les photos réelles marchent mieux…</div>
     </div>
     <button class="pbtn primary" id="addBtn" data-i18n="add">Ajouter</button>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="trash_h">🗑 Corbeille</h2>
-    <p class="sub" style="margin-bottom:8px" data-i18n="trash_sub">Récupérables 30 jours.</p>
+    <div class="card">
+    <h2 data-i18n="trash_h">🗑 Corbeille</h2>
     <div id="trashList"></div>
+    <div class="hint" data-i18n="trash_sub">Récupérables 30 jours.</div>
+    </div>
     </div>
 
     <div class="psec" data-psec="display">
+    <div class="card">
     <div class="prow">
       <label data-i18n="set_lang">Langue (voix et interface)</label>
       <select id="langSel"></select>
       <div class="hint" data-i18n="lang_hint">La voix et l'IA suivent cette langue.</div>
     </div>
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-    <h2 style="font-size:17px" data-i18n="disp_h">🖐️ Affichage &amp; confort</h2>
+    </div>
+    <div class="card">
+    <h2 data-i18n="disp_h">🖐️ Affichage &amp; confort</h2>
     <div class="prow">
       <label data-i18n="size_l">Taille des cartes</label>
       <select id="accSize">
@@ -619,121 +672,143 @@
         <input type="checkbox" id="accAnim" checked> <span data-i18n="acc_anim">Animations et vibration</span>
       </label>
     </div>
-
+    </div>
     </div>
 
     <div class="psec" data-psec="lock">
-    <h2 style="font-size:17px" data-i18n="kiosk_h">🔒 Mode kiosk</h2>
-    <p class="sub" style="margin-bottom:8px" data-i18n="kiosk_sub">Verrouille la tablette sur Leova.</p>
+    <div class="card">
+    <h2 data-i18n="kiosk_h">🔒 Mode kiosk</h2>
+    <p class="sub" data-i18n="kiosk_sub">Verrouille la tablette sur Leova.</p>
     <div class="prow">
       <label data-i18n="pin_l">Code parent (4 chiffres)</label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span id="pinStatus" style="font-weight:700;color:#55677A"></span>
-        <button class="pbtn ghost" id="setPinBtn" style="margin:0" data-i18n="pin_set">Définir / modifier le code</button>
       </div>
+      <button class="pbtn ghost" id="setPinBtn" data-i18n="pin_set">Définir / modifier le code</button>
     </div>
-    <label style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#55677A">
+    <label style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#44566A;margin-top:12px">
       <input type="checkbox" id="kioskChk"> <span data-i18n="kiosk_chk">Activer le mode kiosk</span>
     </label>
     <div class="kioskState" id="kioskState"></div>
     <div class="hint" data-i18n="kiosk_hint">Verrouillage par épinglage d'écran Android.</div>
-
+    </div>
     </div>
 
     <div class="psec" data-psec="voice">
+    <div class="card">
+    <h2 data-i18n="voice_h">🔊 Voix</h2>
     <div class="prow">
       <label data-i18n="rate_l">Vitesse de la voix</label>
       <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
       <button class="pbtn ghost" id="testVoice" data-i18n="test_voice">🔊 Tester la voix</button>
     </div>
     <div class="prow">
-      <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:#44566A;font-weight:600">
         <input type="checkbox" id="reformChk"> <span data-i18n="reform_chk">Reformuler en phrase naturelle</span>
       </label>
     </div>
     <button class="pbtn ghost" id="genVoicesBtn" data-i18n="genvoices">🎙️ Générer toutes les voix</button>
     <div class="aiStatus" id="aiStatus"></div>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="vmgr_h">🎛️ Gestionnaire de voix</h2>
-    <p class="sub" style="margin-bottom:8px" data-i18n="vmgr_sub">Écoutez chaque mot ; 🔄 re-télécharge la voix.</p>
+    <div class="card">
+    <h2 data-i18n="vmgr_h">🎛️ Gestionnaire de voix</h2>
     <div class="aiStatus" id="voiceGauge"></div>
     <div id="voiceList"></div>
+    <div class="hint" data-i18n="vmgr_sub">Écoutez chaque mot ; 🔄 re-télécharge la voix.</div>
+    </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="ai_h">Intelligence artificielle</h2>
+    <div class="card">
+    <h2 data-i18n="ai_h">Intelligence artificielle</h2>
     <div class="prow">
       <label data-i18n="code_l">Code d'accès Leova (facultatif)</label>
       <input type="text" id="bsecret" data-i18n-ph="code_ph">
-      <button class="pbtn ghost" id="testBackendBtn" style="margin-top:8px" data-i18n="test_backend">🔌 Tester le serveur</button>
+      <button class="pbtn ghost" id="testBackendBtn" data-i18n="test_backend">🔌 Tester le serveur</button>
       <div class="aiStatus" id="backendStatus"></div>
       <div class="hint" data-i18n="ai_hint">L'IA passe par le serveur Leova (Europe, RGPD).</div>
     </div>
     </div>
+    </div>
 
     <div class="psec" data-psec="journal">
-    <h2 style="font-size:17px" data-i18n="j_h">📊 Ce qu'il a dit</h2>
+    <div class="card">
+    <h2 data-i18n="j_h">📊 Ce qu'il a dit</h2>
     <div class="aiStatus" id="jToday"></div>
-    <div class="prow">
+    <div class="prow" style="margin-top:10px">
       <label data-i18n="j_7days">Les 7 derniers jours</label>
       <div id="jChart"></div>
     </div>
     <div class="prow">
       <label data-i18n="j_top">Mots préférés (30 jours)</label>
-      <div id="jTop" class="hint" style="font-size:14px;color:#55677A"></div>
+      <div id="jTop" class="hint" style="font-size:14px;color:#44566A;margin-top:0"></div>
     </div>
     <div class="prow">
       <label data-i18n="j_new">Nouveaux mots (7 jours)</label>
-      <div id="jNew" class="hint" style="font-size:14px;color:#55677A"></div>
+      <div id="jNew" class="hint" style="font-size:14px;color:#44566A;margin-top:0"></div>
     </div>
-    <div class="prow">
-      <label data-i18n="j_phrases">Dernières phrases</label>
-      <div id="jPhrases"></div>
     </div>
+    <div class="card">
+    <h2 data-i18n="j_phrases">Dernières phrases</h2>
+    <div id="jPhrases"></div>
     <button class="pbtn primary" id="reportBtn" data-i18n="j_report">🖨 Rapport (30 jours)</button>
     <div class="hint" data-i18n="j_hint">Le journal reste sur cette tablette.</div>
     </div>
+    </div>
 
     <div class="psec" data-psec="account">
-    <div class="prow">
-      <label>Leova Plus</label>
-      <div class="aiStatus" id="planStatus">…</div>
-      <button class="pbtn" id="plusBtn" style="display:none" data-i18n="plus_btn">💜 Passer à Leova Plus</button>
-      <button class="pbtn ghost" id="restorePlusBtn" style="display:none;margin-top:8px" data-i18n="restore_btn">↺ Restaurer un achat</button>
+    <div class="card">
+    <h2>Leova Plus</h2>
+    <div class="aiStatus" id="planStatus">…</div>
+    <div id="planGauges"></div>
+    <button class="pbtn primary" id="plusBtn" style="display:none" data-i18n="plus_btn">💜 Passer à Leova Plus</button>
+    <button class="pbtn ghost" id="restorePlusBtn" style="display:none" data-i18n="restore_btn">↺ Restaurer un achat</button>
     </div>
-    <div class="prow">
-      <label data-i18n="acct_l">Compte &amp; synchronisation</label>
-      <div class="aiStatus" id="acctStatus"></div>
-      <div id="acctForms">
-        <input type="email" id="acctEmail" data-i18n-ph="acct_email_ph" autocomplete="username" style="margin-bottom:8px">
+
+    <div class="card">
+    <h2 data-i18n="acct_l">Compte &amp; synchronisation</h2>
+    <div class="aiStatus" id="acctStatus"></div>
+    <button class="pbtn primary" id="acctCta" style="display:none" data-i18n="acct_cta">🛡 Protéger le vocabulaire de mon enfant</button>
+    <div id="acctForms" style="display:none">
+      <div class="prow" style="margin-top:10px">
+        <input type="email" id="acctEmail" data-i18n-ph="acct_email_ph" autocomplete="username">
+      </div>
+      <div class="prow">
         <input type="password" id="acctPass" data-i18n-ph="acct_pass_ph" autocomplete="current-password">
-        <button class="pbtn primary" id="acctBtn" style="margin-top:8px" data-i18n="acct_btn">Créer / Me connecter</button>
-        <button class="pbtn ghost" id="acctForgot" style="margin-top:8px" data-i18n="acct_forgot">Mot de passe oublié</button>
       </div>
-      <div id="acctActions" style="display:none">
-        <button class="pbtn ghost" id="syncNowBtn" data-i18n="sync_now">🔄 Synchroniser maintenant</button>
-        <button class="pbtn ghost" id="acctOut" style="margin-top:8px" data-i18n="acct_out">Se déconnecter</button>
-      </div>
-      <div class="hint" data-i18n="acct_hint">Sauvegarde et synchronise le vocabulaire.</div>
+      <button class="pbtn primary" id="acctBtn" data-i18n="acct_btn">Créer / Me connecter</button>
+      <button class="pbtn ghost" id="acctForgot" data-i18n="acct_forgot">Mot de passe oublié</button>
+    </div>
+    <div id="acctActions" style="display:none">
+      <button class="pbtn ghost" id="syncNowBtn" data-i18n="sync_now">🔄 Synchroniser maintenant</button>
+      <button class="pbtn ghost" id="acctOut" data-i18n="acct_out">Se déconnecter</button>
+    </div>
+    <div class="hint" data-i18n="acct_hint">Sauvegarde et synchronise le vocabulaire.</div>
     </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-
-    <h2 style="font-size:17px" data-i18n="exp_h">📦 Exporter / importer / imprimer</h2>
-    <div class="prow">
-      <button class="pbtn ghost" id="exportBtn" data-i18n="exp_btn">⬇️ Exporter le vocabulaire</button>
-      <label class="pbtn ghost" style="display:inline-block"><span data-i18n="imp_btn">⬆️ Importer un fichier</span><input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
-      <button class="pbtn ghost" id="printBtn" data-i18n="print_btn">🖨 Imprimer le tableau</button>
-      <div class="aiStatus" id="exportStatus"></div>
-      <div class="hint" data-i18n="exp_hint">Partagez ou imprimez le tableau.</div>
+    <div class="card">
+    <h2 data-i18n="exp_h">📦 Exporter / importer / imprimer</h2>
+    <button class="pbtn ghost" id="exportBtn" style="margin:0" data-i18n="exp_btn">⬇️ Exporter le vocabulaire</button>
+    <label class="pbtn ghost"><span data-i18n="imp_btn">⬆️ Importer un fichier</span><input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
+    <button class="pbtn ghost" id="printBtn" data-i18n="print_btn">🖨 Imprimer le tableau</button>
+    <div class="aiStatus" id="exportStatus"></div>
+    <div class="hint" data-i18n="exp_hint">Partagez ou imprimez le tableau.</div>
     </div>
     </div>
 
-    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-    <button class="pbtn ghost" id="closePanel" data-i18n="close">Fermer</button>
-    <button class="pbtn warn" id="exitParent" data-i18n="exit_parent">Quitter le mode parent</button>
+    <div class="row2" style="margin-top:2px">
+      <button class="pbtn ghost" id="closePanel" data-i18n="close">Fermer</button>
+      <button class="pbtn warn" id="exitParent" data-i18n="exit_parent">Quitter le mode parent</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bienvenue dans Leova Plus (après achat) -->
+<div id="plusWelcome">
+  <div id="plusWelcomeCard">
+    <div class="pw1">💜</div>
+    <h1 data-i18n="pwel_title">Bienvenue dans Leova Plus</h1>
+    <p data-i18n="pwel_body">La belle voix, les phrases naturelles et la création d'images par l'IA sont maintenant sans limite. Merci de soutenir Leova.</p>
+    <button class="pbtn primary" id="plusWelcomeOk" data-i18n="pwel_ok">Continuer</button>
   </div>
 </div>
 
@@ -958,7 +1033,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "41"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "42"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1152,6 +1227,9 @@ const STR = {
     exp_h: "📦 Exporter / importer / imprimer", exp_btn: "⬇️ Exporter le vocabulaire (fichier)", imp_btn: "⬆️ Importer un fichier", print_btn: "🖨 Imprimer le tableau (classeur papier)", exp_hint: "Partagez le tableau avec une autre famille, ou imprimez un classeur PECS papier de secours (depuis la version web sur ordinateur).",
     close: "Fermer", exit_parent: "Quitter le mode parent", cancel: "Annuler", save: "✔ Enregistrer", delete: "🗑 Supprimer", hide: "🙈 Masquer",
     rt_h: "📋 Routine", rt_name: "Nom de la routine", rt_name_ph: "ex : Brossage de dents", rt_emoji: "Émoji", rt_steps: "Étapes, dans l'ordre", rt_addstep: "➕ Ajouter une étape", rp_done: "✓ Fini", rp_bravo: "Bravo !", rp_finished: "C'est terminé !", rp_say_done: "Bravo, c'est terminé !", rp_step: "{label} — étape {n} sur {total}", rp_first: "D'abord", rp_then: "Ensuite", rp_say_first: "D'abord, ", rp_say_then: "Ensuite, ",
+    voice_h: "🔊 Voix", acct_cta: "🛡 Protéger le vocabulaire de mon enfant",
+    pwel_title: "Bienvenue dans Leova Plus", pwel_body: "La belle voix, les phrases naturelles et la création d'images par l'IA sont maintenant sans limite. Merci de soutenir Leova.", pwel_ok: "Continuer",
+    st_plus_clean: "Leova Plus actif — tout est illimité ✓", g_phrases: "Phrases", g_voices: "Voix", g_magic: "Ajouts IA", g_images: "Images",
     edit_note: "Mode parent : touchez un picto pour le modifier · maintenez puis glissez pour réorganiser · ⚙️ pour les réglages.", trash_empty: "La corbeille est vide.", j_empty: "Aucune phrase lue pour l'instant (bouton ▶).", rt_empty: "Aucune routine pour l'instant.",
     st_offline: "Hors ligne — usage indisponible.", st_parent: "Accès parent : illimité ✓", st_plus: "Leova Plus actif ✓", st_free: "Formule gratuite", st_usage: " — ce mois-ci : {r} phrases, {t} voix, {m} ajouts magiques, {i} images.", st_unavail: "Usage indisponible pour le moment.", d_connected: "connecté ✓", d_none: "aucune", d_unlimited: "Illimitée", d_free: "Gratuite", acct_connected: "Connecté : {email} ✓", acct_none: "Pas de compte — le vocabulaire n'existe que sur cette tablette.", acct_saved: "Connecté : {email} — sauvegardé ✓",
     pw_hint: "Choisissez (ou prenez) une photo bien cadrée de son visage — c'est elle que l'enfant touchera pour l'appeler.", pw_take: "📷 Prendre / choisir une photo", pw_skip: "⏭ Passer", pw_stop: "✖ Arrêter",
@@ -1214,6 +1292,9 @@ const STR = {
     exp_h: "📦 Export / import / print", exp_btn: "⬇️ Export the vocabulary (file)", imp_btn: "⬆️ Import a file", print_btn: "🖨 Print the board (paper binder)", exp_hint: "Share the board with another family, or print a backup paper PECS binder (from the web version on a computer).",
     close: "Close", exit_parent: "Exit parent mode", cancel: "Cancel", save: "✔ Save", delete: "🗑 Delete", hide: "🙈 Hide",
     rt_h: "📋 Routine", rt_name: "Routine name", rt_name_ph: "e.g. Brushing teeth", rt_emoji: "Emoji", rt_steps: "Steps, in order", rt_addstep: "➕ Add a step", rp_done: "✓ Done", rp_bravo: "Well done!", rp_finished: "All done!", rp_say_done: "Well done, all finished!", rp_step: "{label} — step {n} of {total}", rp_first: "First", rp_then: "Then", rp_say_first: "First, ", rp_say_then: "Then, ",
+    voice_h: "🔊 Voice", acct_cta: "🛡 Protect my child's vocabulary",
+    pwel_title: "Welcome to Leova Plus", pwel_body: "The beautiful voice, natural sentences and AI image creation are now unlimited. Thank you for supporting Leova.", pwel_ok: "Continue",
+    st_plus_clean: "Leova Plus active — everything unlimited ✓", g_phrases: "Sentences", g_voices: "Voices", g_magic: "AI adds", g_images: "Images",
     edit_note: "Parent mode: touch a card to edit it · press and drag to reorder · ⚙️ for settings.", trash_empty: "The trash is empty.", j_empty: "No sentence read yet (▶ button).", rt_empty: "No routine yet.",
     st_offline: "Offline — usage unavailable.", st_parent: "Parent access: unlimited ✓", st_plus: "Leova Plus active ✓", st_free: "Free plan", st_usage: " — this month: {r} sentences, {t} voices, {m} magic adds, {i} images.", st_unavail: "Usage unavailable right now.", d_connected: "connected ✓", d_none: "none", d_unlimited: "Unlimited", d_free: "Free", acct_connected: "Signed in: {email} ✓", acct_none: "No account — the vocabulary only exists on this tablet.", acct_saved: "Signed in: {email} — saved ✓",
     pw_hint: "Choose (or take) a well-framed photo of their face — that's what the child will touch to call them.", pw_take: "📷 Take / choose a photo", pw_skip: "⏭ Skip", pw_stop: "✖ Stop",
@@ -1276,6 +1357,9 @@ const STR = {
     exp_h: "📦 Exportar / importar / imprimir", exp_btn: "⬇️ Exportar el vocabulario (archivo)", imp_btn: "⬆️ Importar un archivo", print_btn: "🖨 Imprimir el tablero (cuaderno de papel)", exp_hint: "Comparte el tablero con otra familia, o imprime un cuaderno PECS de papel de respaldo (desde la versión web en un ordenador).",
     close: "Cerrar", exit_parent: "Salir del modo padre", cancel: "Cancelar", save: "✔ Guardar", delete: "🗑 Eliminar", hide: "🙈 Ocultar",
     rt_h: "📋 Rutina", rt_name: "Nombre de la rutina", rt_name_ph: "ej.: Cepillado de dientes", rt_emoji: "Emoji", rt_steps: "Pasos, en orden", rt_addstep: "➕ Añadir un paso", rp_done: "✓ Hecho", rp_bravo: "¡Bien hecho!", rp_finished: "¡Terminado!", rp_say_done: "¡Bien hecho, terminado!", rp_step: "{label} — paso {n} de {total}", rp_first: "Primero", rp_then: "Luego", rp_say_first: "Primero, ", rp_say_then: "Luego, ",
+    voice_h: "🔊 Voz", acct_cta: "🛡 Proteger el vocabulario de mi hijo",
+    pwel_title: "Bienvenido a Leova Plus", pwel_body: "La voz bonita, las frases naturales y la creación de imágenes por IA ya no tienen límite. Gracias por apoyar Leova.", pwel_ok: "Continuar",
+    st_plus_clean: "Leova Plus activo — todo ilimitado ✓", g_phrases: "Frases", g_voices: "Voces", g_magic: "Añadidos IA", g_images: "Imágenes",
     edit_note: "Modo padre: toca una tarjeta para editarla · mantén y arrastra para reordenar · ⚙️ para los ajustes.", trash_empty: "La papelera está vacía.", j_empty: "Aún no se ha leído ninguna frase (botón ▶).", rt_empty: "Aún no hay rutinas.",
     st_offline: "Sin conexión — uso no disponible.", st_parent: "Acceso padre: ilimitado ✓", st_plus: "Leova Plus activo ✓", st_free: "Plan gratuito", st_usage: " — este mes: {r} frases, {t} voces, {m} añadidos mágicos, {i} imágenes.", st_unavail: "Uso no disponible ahora mismo.", d_connected: "conectado ✓", d_none: "ninguna", d_unlimited: "Ilimitado", d_free: "Gratis", acct_connected: "Conectado: {email} ✓", acct_none: "Sin cuenta — el vocabulario solo existe en esta tableta.", acct_saved: "Conectado: {email} — guardado ✓",
     pw_hint: "Elige (o haz) una foto bien encuadrada de su cara — es la que el niño tocará para llamarle.", pw_take: "📷 Hacer / elegir una foto", pw_skip: "⏭ Saltar", pw_stop: "✖ Parar",
@@ -2133,15 +2217,40 @@ async function refreshPlan() {
   const restoreBtn = document.getElementById("restorePlusBtn");
   buyBtn.style.display = "none";
   restoreBtn.style.display = "none";
+  const gauges = document.getElementById("planGauges");
+  gauges.innerHTML = "";
+  el.classList.remove("ok");
+  // Deux appels peuvent se chevaucher (ouverture + changement d'onglet) :
+  // seul le plus récent a le droit d'écrire le résultat.
+  const seq = (refreshPlan._seq = (refreshPlan._seq || 0) + 1);
   if (!navigator.onLine) { el.textContent = t("st_offline"); return; }
   try {
     const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
-    if (me.plan === "parent") { el.textContent = t("st_parent"); return; }
+    if (seq !== refreshPlan._seq) return;
+    gauges.innerHTML = "";
+    if (me.plan === "parent") { el.textContent = t("st_parent"); el.classList.add("ok"); return; }
+    if (me.plan === "plus") {
+      // Abonné : pas de comptabilité — un statut clair suffit
+      el.textContent = t("st_plus_clean");
+      el.classList.add("ok");
+      return;
+    }
+    // Formule gratuite : jauges fines, lisibles d'un coup d'œil
+    el.textContent = t("st_free");
     const u = me.usage;
-    const line = (v) => v.quota === null ? v.used : v.used + "/" + v.quota;
-    el.textContent = (me.plan === "plus" ? t("st_plus") : t("st_free")) +
-      t("st_usage", { r: line(u.reformulate), t: line(u.tts), m: line(u.magic), i: line(u.image) });
-    if (me.plan !== "plus" && Billing()) {
+    const rows = [
+      [t("g_phrases"), u.reformulate], [t("g_voices"), u.tts],
+      [t("g_magic"), u.magic], [t("g_images"), u.image],
+    ];
+    for (const [label, v] of rows) {
+      if (v.quota === null) continue;
+      const pct = Math.min(100, Math.round((v.used / v.quota) * 100));
+      const row = document.createElement("div");
+      row.className = "gaugeRow";
+      row.innerHTML = `<span class="gl">${label}</span><span class="gauge"><i${pct >= 80 ? ' class="hot"' : ""} style="width:${pct}%"></i></span><span class="gv">${v.used}/${v.quota}</span>`;
+      gauges.appendChild(row);
+    }
+    if (Billing()) {
       buyBtn.style.display = "";
       restoreBtn.style.display = "";
     }
@@ -2754,10 +2863,20 @@ async function fbAuthCall(action, body) {
 
 function refreshAcct() {
   const on = hasAccount();
-  document.getElementById("acctForms").style.display = on ? "none" : "";
+  // Sans compte : UN seul appel à l'action ; le formulaire ne se déplie
+  // qu'à la demande (moins de bruit visuel).
+  document.getElementById("acctCta").style.display = on ? "none" : "";
+  document.getElementById("acctForms").style.display = "none";
   document.getElementById("acctActions").style.display = on ? "" : "none";
+  const st = document.getElementById("acctStatus");
+  st.classList.toggle("ok", on);
   setAcctStatus(on ? t("acct_connected", { email: fbAuth.email }) : t("acct_none"));
 }
+document.getElementById("acctCta").onclick = () => {
+  document.getElementById("acctCta").style.display = "none";
+  document.getElementById("acctForms").style.display = "";
+  document.getElementById("acctEmail").focus();
+};
 
 document.getElementById("acctBtn").onclick = async () => {
   const email = document.getElementById("acctEmail").value.trim();
@@ -3497,6 +3616,7 @@ async function maybePaywall(context) {
   openPaywall(context);
 }
 
+document.getElementById("plusWelcomeOk").onclick = () => document.getElementById("plusWelcome").classList.remove("open");
 document.getElementById("pwallSkip").onclick = closePaywall;
 document.getElementById("paywall").onclick = (e) => { if (e.target.id === "paywall") closePaywall(); };
 document.getElementById("pwallBuy").onclick = async () => {
@@ -3506,8 +3626,11 @@ document.getElementById("pwallBuy").onclick = async () => {
   try {
     const p = await Billing().buy({ productId: PLUS_PRODUCT });
     const r = await backendJson("/v1/billing/verify", { purchaseToken: p.purchaseToken, productId: p.productId || PLUS_PRODUCT });
-    if (r.plan === "plus") { closePaywall(); toast("Bienvenue dans Leova Plus — merci ! 💜"); refreshPlan(); }
-    else st.textContent = "Achat en attente (" + r.state + ").";
+    if (r.plan === "plus") {
+      closePaywall();
+      document.getElementById("plusWelcome").classList.add("open"); // écran de bienvenue dédié
+      refreshPlan();
+    } else st.textContent = "Achat en attente (" + r.state + ").";
   } catch (e) { st.textContent = String(e.message).includes("annulé") ? "" : "Impossible : " + e.message; }
 };
 
