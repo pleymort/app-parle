@@ -102,7 +102,7 @@ app.post("/v1/reformulate", meter("reformulate"), async (req, res) => {
     // Les libellés qui sont des PERSONNES (surnoms familiaux) : le modèle ne
     // doit jamais les « corriger » (ex : Pépé ≠ pipi).
     const people = Array.isArray(req.body?.people) ? req.body.people.slice(0, 8).map(String) : [];
-    const phrase = await reformulate(labels, people);
+    const phrase = await reformulate(labels, people, req.body?.lang);
     res.json({ phrase });
   } catch (e) {
     handleAIError(res, "reformulate")(e);
@@ -114,7 +114,7 @@ app.post("/v1/tts", meter("tts"), async (req, res) => {
   try {
     const text = String(req.body?.text || "").trim().slice(0, 300);
     if (!text) return res.status(400).json({ error: "text_requis" });
-    const { buf, cached } = await tts(text);
+    const { buf, cached } = await tts(text, req.body?.lang);
     res.set("content-type", "audio/wav").set("x-cache", cached ? "hit" : "miss").send(buf);
   } catch (e) {
     console.error("tts:", e);
@@ -127,7 +127,7 @@ app.post("/v1/transcribe", meter("magic"), async (req, res) => {
   try {
     const b64 = String(req.body?.audioBase64 || "");
     if (!b64) return res.status(400).json({ error: "audio_requis" });
-    const text = await transcribe(String(req.body?.mimeType || "audio/webm"), b64);
+    const text = await transcribe(String(req.body?.mimeType || "audio/webm"), b64, req.body?.lang);
     res.json({ text });
   } catch (e) {
     handleAIError(res, "transcribe")(e);
@@ -146,6 +146,7 @@ app.post("/v1/onboard", meter("magic"), async (req, res) => {
       places: s(req.body?.places, 600),
       cats: Array.isArray(req.body?.cats) ? req.body.cats.slice(0, 30) : [],
       existing: Array.isArray(req.body?.existing) ? req.body.existing.slice(0, 200) : [],
+      lang: req.body?.lang,
     });
     res.json({ plans });
   } catch (e) {
@@ -191,6 +192,7 @@ app.post("/v1/magic", meter("magic"), async (req, res) => {
       concept,
       cats: Array.isArray(req.body?.cats) ? req.body.cats.slice(0, 30) : [],
       existing: Array.isArray(req.body?.existing) ? req.body.existing.slice(0, 200) : [],
+      lang: req.body?.lang,
     });
     res.json({ plans });
   } catch (e) {

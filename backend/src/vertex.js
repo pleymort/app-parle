@@ -1,5 +1,6 @@
 import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
 import { config } from "./config.js";
+import { langName } from "./lang.js";
 
 // Sur Cloud Run, l'authentification se fait automatiquement via le compte de
 // service du service (ADC) — aucune clé à gérer. En local :
@@ -30,20 +31,20 @@ function checkBlocked(res) {
 
 // Reformule une suite de pictogrammes en une phrase naturelle (remplace l'appel
 // Gemini direct qui était fait depuis l'app avec la clé du parent).
-export async function reformulate(labels, people) {
+export async function reformulate(labels, people, lang) {
   const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
+  const L = langName(lang);
   const prompt =
     "Un enfant qui ne parle pas a touché ces pictogrammes, dans l'ordre, " +
     "sur son application de communication : " + labels.map((l) => `« ${l} »`).join(", ") + "." +
     (people && people.length
       ? ` ATTENTION : ${people.map((p) => `« ${p} »`).join(" et ")} ${people.length > 1 ? "sont des PERSONNES" : "est une PERSONNE"} de son entourage (surnom familial à reprendre TEL QUEL, sans le modifier ni l'interpréter comme un autre mot).`
       : "") +
-    " Écris UNE seule phrase courte et NATURELLE en français, à la première personne, " +
+    ` Écris UNE seule phrase courte et NATURELLE EN ${L.toUpperCase()}, à la première personne, ` +
     "qui exprime ce qu'il veut dire avec ces mots-là. Chaque mot touché doit se retrouver " +
     "dans la phrase (ou son sens exact) ; ajoute librement les petits mots nécessaires " +
-    "(articles, prépositions, verbes de liaison) pour que la phrase soit fluide, mais " +
-    "n'invente aucune idée absente et ne déforme aucun mot. " +
-    "Exemple : « Je veux », « Pizza » → « Je veux de la pizza. » Réponds uniquement avec la phrase.";
+    "pour que la phrase soit fluide, mais n'invente aucune idée absente et ne déforme aucun mot. " +
+    `Réponds uniquement avec la phrase, en ${L}.`;
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
   });
@@ -54,15 +55,17 @@ export async function reformulate(labels, people) {
 
 /* Plan d'« ajout magique » : le parent donne un concept, l'IA décide de tout.
    Même contrat JSON que côté app (actions create / image / say). */
-export async function magicPlan({ concept, cats, existing }) {
+export async function magicPlan({ concept, cats, existing, lang }) {
   const model = vertex.getGenerativeModel({
     model: config.textModel,
     generationConfig: { responseMimeType: "application/json" },
     safetySettings: SAFETY,
   });
+  const L = langName(lang);
   const catList = (cats || []).map((c) => `"${c.id}" (${c.label})`).join(", ");
   const existingList = (existing || []).map((l) => `"${l}"`).join(", ");
   const prompt =
+    `TOUT le contenu produit (label, say, search) doit être EN ${L.toUpperCase()}. ` +
     `Tu configures l'application de communication (CAA) d'un enfant de 6 ans non verbal. Le parent demande : "${concept}".
 Pictogrammes déjà présents dans l'app : ${existingList}.
 La demande peut être : UN concept à créer ("le trampoline"), une LISTE ("fraise, banane, yaourt"), un THÈME à développer ("le petit-déjeuner" → les aliments typiques), la MODIFICATION DE L'IMAGE d'un pictogramme déjà présent ("change l'image de Gâteau, mets un cupcake"), ou la MODIFICATION DE LA PHRASE PRONONCÉE ("quand il touche JeaJea, dis Jaja" ; pour corriger une prononciation, orthographie la phrase phonétiquement).
@@ -72,7 +75,7 @@ Réponds UNIQUEMENT un tableau JSON de 1 à 8 objets, chacun avec ces clés :
 "label" : le mot court affiché sous le pictogramme (1 à 2 mots, majuscule initiale, ex "Piscine") ;
 "say" : la phrase courte et naturelle que la tablette prononcera à la place de l'enfant, à la première personne (ex "Je veux aller à la piscine") ;
 "cat" : la catégorie la plus logique parmi : ${catList} ;
-"search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
+"search" : un nom commun simple EN ${L} pour chercher un pictogramme dans la banque ARASAAC (ex "piscine") ;
 "imageHint" : si le parent donne une consigne sur l'apparence de l'image, cette consigne en une phrase, sinon null ;
 "emoji" : si le parent demande explicitement un émoji, l'émoji lui-même, sinon null ;
 "emojiFallback" : TOUJOURS fourni — un émoji simple qui représente bien le concept (image de secours).
@@ -90,7 +93,8 @@ Ne développe un thème que si le parent l'a clairement demandé ; pour un conce
 /* Onboarding : à partir des réponses du parent (proches avec surnoms exacts,
    passions, lieux), génère le tableau de démarrage personnalisé de l'enfant.
    Même contrat de carte que l'ajout magique (label/say/cat/search/emoji…). */
-export async function onboardPlan({ childName, level, people, likes, places, cats, existing }) {
+export async function onboardPlan({ childName, level, people, likes, places, cats, existing, lang }) {
+  const L = langName(lang);
   const levelHint = {
     debut: "L'enfant DÉBUTE (peu ou pas de mots) : reste très simple, 6 à 10 cartes maximum, uniquement les plus motivantes et les proches essentiels.",
     signes: "L'enfant fait quelques signes : environ 10 à 14 cartes, concrètes et très motivantes.",
@@ -104,6 +108,7 @@ export async function onboardPlan({ childName, level, people, likes, places, cat
   });
   const catList = (cats || []).map((c) => `"${c.id}" (${c.label})`).join(", ");
   const prompt =
+    `TOUT le contenu produit (label, say, search) doit être EN ${L.toUpperCase()}. ` +
     `Tu prépares le tableau de démarrage d'une application de communication (CAA) pour un enfant non verbal` +
     (childName ? ` prénommé « ${childName} »` : "") + `. ${levelHint}
 Réponses du parent :
@@ -115,7 +120,7 @@ Génère un tableau JSON de 6 à 24 objets : une carte par personne citée, une 
 "label" : le mot court affiché sous le pictogramme (surnom EXACT pour une personne, majuscule initiale) ;
 "say" : le mot prononcé par la tablette — identique au label, SAUF orthographe phonétique si le surnom risque d'être mal lu par une synthèse vocale française (ex label "JeaJea" → say "Jaja") ;
 "cat" : la catégorie la plus logique parmi : ${catList} ;
-"search" : un nom commun simple pour chercher un pictogramme dans la banque ARASAAC (pour une personne : "grand-mère", "frère", "maîtresse"…) ;
+"search" : un nom commun simple EN ${L} pour chercher un pictogramme dans la banque ARASAAC (pour une personne : "grand-mère", "frère", "maîtresse"…) ;
 "emoji" : un émoji si un émoji évident représente très bien le concept, sinon null. Pour les PERSONNES, toujours null (un pictogramme, puis une vraie photo, les représentera mieux qu'un émoji) ;
 "emojiFallback" : TOUJOURS fourni — un émoji simple de secours.
 N'invente rien qui n'a pas été cité par le parent. Réponds UNIQUEMENT le tableau JSON.`;
@@ -129,12 +134,12 @@ N'invente rien qui n'a pas été cité par le parent. Réponds UNIQUEMENT le tab
 }
 
 // Transcrit la dictée du parent (bouton 🎤 de l'ajout magique).
-export async function transcribe(mimeType, dataB64) {
+export async function transcribe(mimeType, dataB64, lang) {
   const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [
       { inlineData: { mimeType, data: dataB64 } },
-      { text: "Transcris fidèlement ce que dit cette personne en français. Réponds uniquement le texte transcrit, rien d'autre." },
+      { text: `Transcris fidèlement ce que dit cette personne en ${langName(lang)}. Réponds uniquement le texte transcrit, rien d'autre.` },
     ] }],
   });
   checkBlocked(res);

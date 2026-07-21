@@ -2,16 +2,20 @@ import textToSpeech from "@google-cloud/text-to-speech";
 import { Storage } from "@google-cloud/storage";
 import { createHash } from "node:crypto";
 import { config } from "./config.js";
+import { normLang, voiceFor } from "./lang.js";
 
 const ttsClient = new textToSpeech.TextToSpeechClient();
 const storage = new Storage();
 
 /* Synthèse vocale avec cache Cloud Storage mutualisé :
    clé = sha256(voix + texte) → un mot généré une fois sert à tous.
+   La voix dépend de la langue → les langues ne se mélangent jamais dans le cache.
    Sortie : WAV (LINEAR16 24 kHz), directement jouable par l'app. */
-export async function tts(text) {
+export async function tts(text, lang) {
+  const langCode = normLang(lang);
+  const voice = voiceFor(langCode);
   const key =
-    createHash("sha256").update(config.ttsVoice + "|" + text).digest("hex") + ".wav";
+    createHash("sha256").update(voice + "|" + text).digest("hex") + ".wav";
   const bucket = config.ttsBucket ? storage.bucket(config.ttsBucket) : null;
 
   if (bucket) {
@@ -25,7 +29,7 @@ export async function tts(text) {
 
   const [res] = await ttsClient.synthesizeSpeech({
     input: { text },
-    voice: { languageCode: "fr-FR", name: config.ttsVoice },
+    voice: { languageCode: langCode, name: voice },
     audioConfig: { audioEncoding: "LINEAR16", sampleRateHertz: 24000 },
   });
   const buf = Buffer.from(res.audioContent);

@@ -457,7 +457,7 @@
 <body>
 
 <div id="strip">
-  <div id="stripItems"><span id="stripHint">Touche les images pour parler…</span></div>
+  <div id="stripItems"><span id="stripHint" data-i18n="strip_hint">Touche les images pour parler…</span></div>
   <button id="clearBtn" class="stripBtn" aria-label="Effacer">✕</button>
   <button id="playBtn" class="stripBtn" aria-label="Lire la phrase">▶</button>
 </div>
@@ -570,6 +570,12 @@
     </div>
 
     <div class="psec" data-psec="display">
+    <div class="prow">
+      <label data-i18n="set_lang">Langue (voix et interface)</label>
+      <select id="langSel"></select>
+      <div class="hint">La voix de l'enfant et les créations par IA suivent cette langue ; l'interface est traduite (fr/en/es).</div>
+    </div>
+    <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
     <h2 style="font-size:17px">🖐️ Affichage &amp; confort</h2>
     <div class="prow">
       <label>Taille des cartes</label>
@@ -862,71 +868,71 @@
   <div class="obCard">
     <div class="obSteps" id="obStepTag">Bienvenue</div>
     <div id="obStep0">
-      <h1>Donnez une voix à votre enfant 💙</h1>
-      <p>Avec Leova, votre enfant touche des images et la tablette parle pour lui — avec les mots de sa vie et les vrais surnoms de sa famille.</p>
-      <p><b>En 3 minutes</b>, je prépare son tableau personnalisé : images et voix déjà prêtes.</p>
+      <h1 data-i18n="w_title">Donnez une voix à votre enfant 💙</h1>
+      <p data-i18n="w_body1">Avec Leova…</p>
+      <p data-i18n-html="w_body2"><b>En 3 minutes</b>…</p>
       <div class="obNav">
-        <button class="pbtn ghost" id="obSkip">Plus tard</button>
-        <button class="pbtn primary" id="obStart">Commencer</button>
+        <button class="pbtn ghost" id="obSkip" data-i18n="w_later">Plus tard</button>
+        <button class="pbtn primary" id="obStart" data-i18n="w_start">Commencer</button>
       </div>
-      <button id="obHaveAccount">J'ai déjà un compte — restaurer mon tableau</button>
+      <button id="obHaveAccount" data-i18n="w_have">J'ai déjà un compte</button>
     </div>
     <div id="obStep1" style="display:none">
-      <h1>Votre enfant</h1>
-      <label>Son prénom</label>
-      <input id="obName" placeholder="Ex : Léa" autocomplete="off">
-      <label style="margin-top:16px">Où en est-il dans la communication ?</label>
+      <h1 data-i18n="c_title">Votre enfant</h1>
+      <label data-i18n="c_name">Son prénom</label>
+      <input id="obName" data-i18n-ph="c_name" autocomplete="off">
+      <label style="margin-top:16px" data-i18n="c_level">Où en est-il ?</label>
       <div class="obChips" id="obLevel">
-        <button class="obChip" data-lvl="debut">Il commence tout juste (peu ou pas de mots)</button>
-        <button class="obChip" data-lvl="signes">Il fait quelques signes ou gestes</button>
-        <button class="obChip" data-lvl="pecs">Il utilise déjà des images / PECS</button>
-        <button class="obChip" data-lvl="phrases">Il combine plusieurs mots</button>
+        <button class="obChip" data-lvl="debut" data-i18n="lvl_debut">…</button>
+        <button class="obChip" data-lvl="signes" data-i18n="lvl_signes">…</button>
+        <button class="obChip" data-lvl="pecs" data-i18n="lvl_pecs">…</button>
+        <button class="obChip" data-lvl="phrases" data-i18n="lvl_phrases">…</button>
       </div>
       <div class="obNav">
-        <button class="pbtn ghost" id="obBack1">Retour</button>
-        <button class="pbtn primary" id="obNext1">Continuer</button>
+        <button class="pbtn ghost" id="obBack1" data-i18n="back">Retour</button>
+        <button class="pbtn primary" id="obNext1" data-i18n="cont">Continuer</button>
       </div>
     </div>
     <div id="obStep2" style="display:none">
-      <h1>Ses proches</h1>
-      <p>Listez les personnes importantes <b>avec leurs surnoms exacts</b> — c'est ce que la tablette dira.</p>
-      <label>Personnes importantes</label>
-      <textarea id="obPeople" placeholder="Ex : Maman, Papa, sa sœur Chloé (on dit Coco), Mamie Jo, sa nounou Fatima…"></textarea>
+      <h1 data-i18n="p_title">Ses proches</h1>
+      <p data-i18n-html="p_hint">…</p>
+      <label data-i18n="p_label">Personnes importantes</label>
+      <textarea id="obPeople" data-i18n-ph="p_ph"></textarea>
       <div class="obNav">
-        <button class="pbtn ghost" id="obBack2">Retour</button>
-        <button class="pbtn primary" id="obNext2">Continuer</button>
+        <button class="pbtn ghost" id="obBack2" data-i18n="back">Retour</button>
+        <button class="pbtn primary" id="obNext2" data-i18n="cont">Continuer</button>
       </div>
     </div>
     <div id="obStep3" style="display:none">
-      <h1>Ce qu'il adore</h1>
-      <p>Ses motivations sont les premiers mots qui donnent envie de communiquer.</p>
-      <label>Aliments, activités, personnages…</label>
-      <textarea id="obLikes" placeholder="Ex : la pizza, la piscine, les puzzles, Pat Patrouille, les chatouilles…"></textarea>
-      <label>Lieux ou moments importants (facultatif)</label>
-      <textarea id="obPlaces" placeholder="Ex : l'école, le parc, chez Mamie, le bain, le brossage de dents…"></textarea>
+      <h1 data-i18n="l_title">Ce qu'il adore</h1>
+      <p data-i18n="l_hint">…</p>
+      <label data-i18n="l_label">Aliments, activités…</label>
+      <textarea id="obLikes" data-i18n-ph="l_ph"></textarea>
+      <label data-i18n="pl_label">Lieux (facultatif)</label>
+      <textarea id="obPlaces" data-i18n-ph="pl_ph"></textarea>
       <div class="obNav">
-        <button class="pbtn ghost" id="obBack3">Retour</button>
-        <button class="pbtn primary" id="obGo">✨ Créer son tableau</button>
+        <button class="pbtn ghost" id="obBack3" data-i18n="back">Retour</button>
+        <button class="pbtn primary" id="obGo" data-i18n="create">✨ Créer</button>
       </div>
     </div>
     <div id="obStep4" style="display:none">
-      <h1>Je prépare tout…</h1>
+      <h1 data-i18n="prep_title">Je prépare tout…</h1>
       <div id="obGenStatus">…</div>
       <div id="obGenGrid"></div>
     </div>
     <div id="obStep5" style="display:none">
-      <h1 id="obDoneTitle">C'est prêt ! 🎉</h1>
-      <p>Le tableau est personnalisé et les voix se préparent en arrière-plan. Touchez les images pour parler, enchaînez-les, puis ▶ lit la phrase.</p>
-      <p style="font-size:13px;color:#8FA3B8">Astuce : appui long de 2 s sur ⚙️ pour le mode parent (ajouter des pictos par la voix, mettre de vraies photos, créer un compte de sauvegarde).</p>
-      <div class="obNav"><button class="pbtn primary" id="obDone">Essayer maintenant</button></div>
+      <h1 id="obDoneTitle">🎉</h1>
+      <p data-i18n="done_body">…</p>
+      <p style="font-size:13px;color:#8FA3B8" data-i18n="done_tip">…</p>
+      <div class="obNav"><button class="pbtn primary" id="obDone" data-i18n="done_start">Essayer maintenant</button></div>
     </div>
   </div>
 </div>
 
 <!-- Coach mark « première victoire » : invite à faire parler la tablette -->
 <div id="coach">
-  <span id="coachText">Touchez une carte — écoutez votre enfant parler ✨</span>
-  <button class="cx" id="coachClose">OK</button>
+  <span id="coachText">…</span>
+  <button class="cx" id="coachClose" data-i18n="coach_ok">OK</button>
 </div>
 
 <!-- Soft-paywall Leova Plus : jamais bloquant, skip toujours visible -->
@@ -934,28 +940,25 @@
   <div id="pwallCard">
     <div class="pwHero">
       <div class="pwBadge" id="pwBadge">Leova Plus</div>
-      <h1 id="pwTitle">Enrichissez son tableau sans limite</h1>
-      <p class="pwSub" id="pwSub">Leova reste <b>gratuit pour toujours</b>. Leova Plus enlève les limites de l'IA quand vous voulez créer beaucoup de nouveaux mots, images et voix.</p>
+      <h1 id="pwTitle" data-i18n="pw_title">…</h1>
+      <p class="pwSub" id="pwSub" data-i18n-html="pw_sub">…</p>
     </div>
     <ul class="pwBenefits">
-      <li><span class="pwck">✓</span><span>Belle voix et phrases naturelles <b>en illimité</b></span></li>
-      <li><span class="pwck">✓</span><span>Création <b>illimitée</b> de pictogrammes par l'IA</span></li>
-      <li><span class="pwck">✓</span><span>Vous soutenez une app pensée pour votre enfant</span></li>
+      <li><span class="pwck">✓</span><span data-i18n-html="pw_b1">…</span></li>
+      <li><span class="pwck">✓</span><span data-i18n-html="pw_b2">…</span></li>
+      <li><span class="pwck">✓</span><span data-i18n="pw_b3">…</span></li>
     </ul>
-    <div class="pwAnchor">
-      Les applications de communication coûtent <span class="pwOld">250 à 300 €</span>.<br>
-      Leova Plus : <b>4,99 €/mois</b>, résiliable à tout moment.
-    </div>
-    <button id="pwallBuy">🎁 Essayer 7 jours gratuitement</button>
-    <button id="pwallSkip">Continuer gratuitement</button>
+    <div class="pwAnchor" data-i18n-html="pw_anchor">…</div>
+    <button id="pwallBuy" data-i18n="pw_buy">🎁 Essai 7 jours</button>
+    <button id="pwallSkip" data-i18n="pw_skip">Continuer gratuitement</button>
     <div id="pwallStatus"></div>
-    <div class="pwFine">7 jours offerts, puis 4,99 €/mois. Sans engagement, résiliable en un geste depuis Google Play. Aucune fonction essentielle n'est bloquée dans la version gratuite.</div>
+    <div class="pwFine" data-i18n="pw_fine">…</div>
   </div>
 </div>
 <script>
 "use strict";
 
-const APP_VERSION = "39"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "40"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1060,7 +1063,158 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines", "childname"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines", "childname", "lang"];
+
+/* ---- Langue (voix + IA + interface) ----
+   Le serveur produit voix et contenus IA dans cette langue ; l'interface est
+   traduite en fr/en/es (repli anglais pour les autres). Détectée à la 1re
+   ouverture depuis la tablette, modifiable dans les réglages, synchronisée. */
+const SUPPORTED_LANGS = [
+  { code: "fr-FR", label: "Français" },
+  { code: "en-US", label: "English" },
+  { code: "es-ES", label: "Español" },
+  { code: "de-DE", label: "Deutsch" },
+  { code: "it-IT", label: "Italiano" },
+  { code: "pt-BR", label: "Português" },
+  { code: "nl-NL", label: "Nederlands" },
+];
+function detectLang() {
+  const dev = (navigator.language || "fr-FR");
+  const base = dev.slice(0, 2).toLowerCase();
+  const m = SUPPORTED_LANGS.find((l) => l.code.slice(0, 2) === base);
+  return m ? m.code : "fr-FR";
+}
+// Détectée d'abord ; la valeur stockée est appliquée juste après `store`
+// (déclaré plus bas) pour éviter une lecture avant initialisation (TDZ).
+let lang = detectLang();
+// Langue de l'INTERFACE (traduite en fr/en/es ; repli anglais).
+function uiLang() {
+  const b = lang.slice(0, 2).toLowerCase();
+  return ["fr", "en", "es"].includes(b) ? b : "en";
+}
+
+/* ---- Dictionnaire d'interface (fr / en / es) ---- */
+const STR = {
+  fr: {
+    strip_hint: "Touche les images pour parler…",
+    ob_welcome: "Bienvenue", ob_s1: "Étape 1 sur 3", ob_s2: "Étape 2 sur 3", ob_s3: "Étape 3 sur 3", ob_prep: "Création en cours", ob_done: "Terminé",
+    w_title: "Donnez une voix à votre enfant 💙",
+    w_body1: "Avec Leova, votre enfant touche des images et la tablette parle pour lui — avec les mots de sa vie et les vrais surnoms de sa famille.",
+    w_body2: "<b>En 3 minutes</b>, je prépare son tableau personnalisé : images et voix déjà prêtes.",
+    w_later: "Plus tard", w_start: "Commencer", w_have: "J'ai déjà un compte — restaurer mon tableau",
+    c_title: "Votre enfant", c_name: "Son prénom", c_level: "Où en est-il dans la communication ?",
+    lvl_debut: "Il commence tout juste (peu ou pas de mots)", lvl_signes: "Il fait quelques signes ou gestes",
+    lvl_pecs: "Il utilise déjà des images / PECS", lvl_phrases: "Il combine plusieurs mots",
+    p_title: "Ses proches", p_hint: "Listez les personnes importantes <b>avec leurs surnoms exacts</b> — c'est ce que la tablette dira.",
+    p_label: "Personnes importantes", p_ph: "Ex : Maman, Papa, sa sœur Chloé (on dit Coco), Mamie Jo…",
+    l_title: "Ce qu'il adore", l_hint: "Ses motivations sont les premiers mots qui donnent envie de communiquer.",
+    l_label: "Aliments, activités, personnages…", l_ph: "Ex : la pizza, la piscine, les puzzles, Pat Patrouille…",
+    pl_label: "Lieux ou moments importants (facultatif)", pl_ph: "Ex : l'école, le parc, chez Mamie, le bain…",
+    back: "Retour", cont: "Continuer", create: "✨ Créer son tableau",
+    prep_title: "Je prépare tout…",
+    done_body: "Le tableau est personnalisé et les voix se préparent en arrière-plan. Touchez les images pour parler, enchaînez-les, puis ▶ lit la phrase.",
+    done_tip: "Astuce : appui long de 2 s sur ⚙️ pour le mode parent (ajouter des pictos, mettre de vraies photos, créer un compte de sauvegarde).",
+    done_start: "Essayer maintenant",
+    coach_ok: "OK",
+    pw_qbadge: "Limite atteinte", pw_qtitle: "Vous avez bien avancé ce mois-ci 👏",
+    pw_qsub: "Vous avez atteint la limite gratuite du mois. Passez à <b>Leova Plus</b> pour continuer à créer sans attendre — ou revenez le mois prochain, le gratuit se recharge.",
+    pw_title: "Enrichissez son tableau sans limite",
+    pw_sub: "Leova reste <b>gratuit pour toujours</b>. Leova Plus enlève les limites de l'IA quand vous voulez créer beaucoup de nouveaux mots, images et voix.",
+    pw_b1: "Belle voix et phrases naturelles <b>en illimité</b>", pw_b2: "Création <b>illimitée</b> de pictogrammes par l'IA", pw_b3: "Vous soutenez une app pensée pour votre enfant",
+    pw_anchor: "Les applications de communication coûtent <span class='pwOld'>250 à 300 €</span>.<br>Leova Plus : <b>4,99 €/mois</b>, résiliable à tout moment.",
+    pw_buy: "🎁 Essayer 7 jours gratuitement", pw_skip: "Continuer gratuitement",
+    pw_fine: "7 jours offerts, puis 4,99 €/mois. Sans engagement, résiliable en un geste depuis Google Play. Aucune fonction essentielle n'est bloquée dans la version gratuite.",
+    set_lang: "Langue (voix et interface)",
+    coach_name: "Touchez une carte — écoutez « {name} » parler ✨", coach_noname: "Touchez une carte — écoutez la tablette parler ✨",
+    done_name: "Le tableau de {name} est prêt ! 🎉", done_noname: "Le tableau est prêt ! 🎉",
+    gen_think: "Je réfléchis au tableau de {name}…", gen_make: "Je crée « {label} »…",
+    gen_fail: "Échec : {msg} — vous pourrez personnaliser plus tard via le mode parent (⚙️, appui long).",
+  },
+  en: {
+    strip_hint: "Touch the pictures to talk…",
+    ob_welcome: "Welcome", ob_s1: "Step 1 of 3", ob_s2: "Step 2 of 3", ob_s3: "Step 3 of 3", ob_prep: "Creating…", ob_done: "Done",
+    w_title: "Give your child a voice 💙",
+    w_body1: "With Leova, your child touches pictures and the tablet speaks for them — with the words of their life and their family's real nicknames.",
+    w_body2: "<b>In 3 minutes</b>, I'll build their personalized board: pictures and voice ready to go.",
+    w_later: "Later", w_start: "Get started", w_have: "I already have an account — restore my board",
+    c_title: "Your child", c_name: "Their first name", c_level: "Where are they with communication?",
+    lvl_debut: "Just starting (few or no words)", lvl_signes: "Uses a few signs or gestures",
+    lvl_pecs: "Already uses pictures / PECS", lvl_phrases: "Combines several words",
+    p_title: "Their loved ones", p_hint: "List the important people <b>with their exact nicknames</b> — that's what the tablet will say.",
+    p_label: "Important people", p_ph: "E.g. Mummy, Daddy, her sister Chloe (we say Coco), Grandma Jo…",
+    l_title: "What they love", l_hint: "Their favorite things are the first words that spark a wish to communicate.",
+    l_label: "Foods, activities, characters…", l_ph: "E.g. pizza, the pool, puzzles, Paw Patrol…",
+    pl_label: "Important places or moments (optional)", pl_ph: "E.g. school, the park, Grandma's, bath time…",
+    back: "Back", cont: "Continue", create: "✨ Create their board",
+    prep_title: "Getting everything ready…",
+    done_body: "The board is personalized and the voices are being prepared in the background. Touch pictures to talk, line them up, then ▶ reads the sentence.",
+    done_tip: "Tip: press and hold ⚙️ for 2s to open parent mode (add cards, use real photos, create a backup account).",
+    done_start: "Try it now",
+    coach_ok: "OK",
+    pw_qbadge: "Limit reached", pw_qtitle: "You've made great progress this month 👏",
+    pw_qsub: "You've reached this month's free limit. Upgrade to <b>Leova Plus</b> to keep creating right away — or come back next month, the free tier resets.",
+    pw_title: "Grow their board without limits",
+    pw_sub: "Leova stays <b>free forever</b>. Leova Plus removes the AI limits when you want to create lots of new words, images and voices.",
+    pw_b1: "Beautiful voice and natural sentences, <b>unlimited</b>", pw_b2: "<b>Unlimited</b> AI-created pictograms", pw_b3: "You support an app built for your child",
+    pw_anchor: "Communication apps cost <span class='pwOld'>€250 to €300</span>.<br>Leova Plus: <b>€4.99/month</b>, cancel anytime.",
+    pw_buy: "🎁 Try 7 days free", pw_skip: "Continue for free",
+    pw_fine: "7 days free, then €4.99/month. No commitment, cancel in one tap from Google Play. No essential feature is locked in the free version.",
+    set_lang: "Language (voice and interface)",
+    coach_name: "Touch a card — hear “{name}” speak ✨", coach_noname: "Touch a card — hear the tablet speak ✨",
+    done_name: "{name}'s board is ready! 🎉", done_noname: "The board is ready! 🎉",
+    gen_think: "Designing {name}'s board…", gen_make: "Creating “{label}”…",
+    gen_fail: "Failed: {msg} — you can personalize later in parent mode (⚙️, long press).",
+  },
+  es: {
+    strip_hint: "Toca las imágenes para hablar…",
+    ob_welcome: "Bienvenida", ob_s1: "Paso 1 de 3", ob_s2: "Paso 2 de 3", ob_s3: "Paso 3 de 3", ob_prep: "Creando…", ob_done: "Listo",
+    w_title: "Dale una voz a tu hijo 💙",
+    w_body1: "Con Leova, tu hijo toca imágenes y la tableta habla por él — con las palabras de su vida y los apodos reales de su familia.",
+    w_body2: "<b>En 3 minutos</b>, preparo su tablero personalizado: imágenes y voz ya listas.",
+    w_later: "Más tarde", w_start: "Empezar", w_have: "Ya tengo una cuenta — restaurar mi tablero",
+    c_title: "Tu hijo", c_name: "Su nombre", c_level: "¿En qué punto está en la comunicación?",
+    lvl_debut: "Está empezando (pocas o ninguna palabra)", lvl_signes: "Hace algunos signos o gestos",
+    lvl_pecs: "Ya usa imágenes / PECS", lvl_phrases: "Combina varias palabras",
+    p_title: "Sus seres queridos", p_hint: "Enumera a las personas importantes <b>con sus apodos exactos</b> — es lo que dirá la tableta.",
+    p_label: "Personas importantes", p_ph: "Ej.: Mamá, Papá, su hermana Chloe (decimos Coco), la abuela Jo…",
+    l_title: "Lo que le encanta", l_hint: "Sus motivaciones son las primeras palabras que dan ganas de comunicar.",
+    l_label: "Comidas, actividades, personajes…", l_ph: "Ej.: la pizza, la piscina, los puzzles, la Patrulla Canina…",
+    pl_label: "Lugares o momentos importantes (opcional)", pl_ph: "Ej.: la escuela, el parque, casa de la abuela, el baño…",
+    back: "Atrás", cont: "Continuar", create: "✨ Crear su tablero",
+    prep_title: "Preparando todo…",
+    done_body: "El tablero está personalizado y las voces se preparan en segundo plano. Toca las imágenes para hablar, encadénalas y ▶ lee la frase.",
+    done_tip: "Consejo: mantén pulsado ⚙️ 2s para el modo padre (añadir tarjetas, usar fotos reales, crear una cuenta de copia).",
+    done_start: "Probar ahora",
+    coach_ok: "OK",
+    pw_qbadge: "Límite alcanzado", pw_qtitle: "Has avanzado mucho este mes 👏",
+    pw_qsub: "Has alcanzado el límite gratuito del mes. Pasa a <b>Leova Plus</b> para seguir creando sin esperar — o vuelve el mes que viene, el plan gratis se renueva.",
+    pw_title: "Amplía su tablero sin límites",
+    pw_sub: "Leova sigue siendo <b>gratis para siempre</b>. Leova Plus quita los límites de la IA cuando quieras crear muchas palabras, imágenes y voces.",
+    pw_b1: "Voz bonita y frases naturales, <b>sin límite</b>", pw_b2: "Creación <b>ilimitada</b> de pictogramas con IA", pw_b3: "Apoyas una app pensada para tu hijo",
+    pw_anchor: "Las apps de comunicación cuestan <span class='pwOld'>250 a 300 €</span>.<br>Leova Plus: <b>4,99 €/mes</b>, cancelable cuando quieras.",
+    pw_buy: "🎁 Probar 7 días gratis", pw_skip: "Continuar gratis",
+    pw_fine: "7 días gratis, luego 4,99 €/mes. Sin compromiso, cancelable con un toque desde Google Play. Ninguna función esencial está bloqueada en la versión gratuita.",
+    set_lang: "Idioma (voz e interfaz)",
+    coach_name: "Toca una tarjeta — escucha hablar a “{name}” ✨", coach_noname: "Toca una tarjeta — escucha hablar a la tableta ✨",
+    done_name: "¡El tablero de {name} está listo! 🎉", done_noname: "¡El tablero está listo! 🎉",
+    gen_think: "Pensando el tablero de {name}…", gen_make: "Creando “{label}”…",
+    gen_fail: "Error: {msg} — podrás personalizar más tarde en el modo padre (⚙️, pulsación larga).",
+  },
+};
+function t(key, vars) {
+  let s = (STR[uiLang()] || STR.en)[key];
+  if (s === undefined) s = STR.en[key];
+  if (s === undefined) return key;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+// Applique les traductions aux éléments porteurs de data-i18n / -ph / -html.
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
+  document.documentElement.lang = uiLang();
+}
 
 const store = {
   get(key, fallback) {
@@ -1072,6 +1226,8 @@ const store = {
     if (SYNC_KEYS.includes(key)) scheduleSync(); // sauvegarde auto (débouncée)
   }
 };
+
+lang = store.get("lang", lang); // langue mémorisée (sinon détection tablette)
 
 let customItems = store.get("custom", []);
 let hidden = new Set(store.get("hidden", []));
@@ -1344,11 +1500,15 @@ async function ttsBackend(text) {
   const r = await fetch(BACKEND_URL + "/v1/tts", {
     method: "POST",
     headers: Object.assign({ "content-type": "application/json" }, await backendHeaders()),
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, lang }),
   });
   if (!r.ok) throw new Error("backend " + r.status);
   return r.blob();
 }
+
+// Clé du cache voix (IndexedDB) : inclut la langue → une même graphie dans
+// deux langues (« Pizza ») garde la bonne prononciation.
+const voiceKey = (text) => VOICE + "|" + lang + "|" + text;
 
 // La belle voix vient du serveur Leova (repli : voix de l'appareil, géré par speak)
 const voiceBlob = ttsBackend;
@@ -1366,7 +1526,7 @@ async function ensureVoice(text) {
   if (!navigator.onLine || genQueue.has(text)) return;
   genQueue.add(text);
   try {
-    const key = VOICE + "|" + text;
+    const key = voiceKey(text);
     if (!(await idbGet(key))) await idbSet(key, await voiceBlob(text));
   } catch {} finally { genQueue.delete(text); }
 }
@@ -1393,7 +1553,7 @@ async function speakItem(item) {
 
 async function speak(text) {
   const seq = ++speakSeq;
-  const cached = await idbGet(VOICE + "|" + text);
+  const cached = await idbGet(voiceKey(text));
   if (cached) {
     if (seq !== speakSeq) return;
     try {
@@ -1473,7 +1633,7 @@ async function reformulateBackend(labels, people) {
     headers: Object.assign({ "content-type": "application/json" }, await backendHeaders()),
     // people = les surnoms de PERSONNES présents dans la phrase, pour que le
     // modèle ne les « corrige » jamais (ex : Pépé ≠ pipi)
-    body: JSON.stringify({ labels, people: people || [] }),
+    body: JSON.stringify({ labels, people: people || [], lang }),
   });
   if (!r.ok) throw new Error("backend " + r.status);
   const phrase = (await r.json()).phrase;
@@ -1768,7 +1928,7 @@ function addToStrip(item) {
 function renderStrip() {
   stripItemsEl.innerHTML = "";
   if (strip.length === 0) {
-    stripItemsEl.innerHTML = `<span id="stripHint">Touche les images pour parler…</span>`;
+    stripItemsEl.innerHTML = `<span id="stripHint">${t("strip_hint")}</span>`;
     renderSuggest();
     return;
   }
@@ -1852,6 +2012,7 @@ function openPanel() {
   document.getElementById("bsecret").value = backendSecret;
   refreshPlan(); // plan + usage du mois (asynchrone, sans bloquer l'ouverture)
   refreshAcct(); // état du compte de synchronisation
+  document.getElementById("langSel").value = lang;
   document.getElementById("accSize").value = acc.size || "M";
   document.getElementById("accGap").value = acc.gap || "M";
   document.getElementById("accDbl").value = String(acc.dbl || 0);
@@ -2027,7 +2188,8 @@ async function backendJson(path, body) {
   const r = await fetch(BACKEND_URL + path, {
     method: "POST",
     headers: Object.assign({ "content-type": "application/json" }, await backendHeaders()),
-    body: JSON.stringify(body),
+    // lang injectée pour tous les appels (ignorée par les endpoints sans IA)
+    body: JSON.stringify(Object.assign({ lang }, body)),
   });
   if (r.status === 429) {
     const j = await r.json().catch(() => ({}));
@@ -2356,6 +2518,17 @@ document.getElementById("testBackendBtn").onclick = async () => {
 };
 /* ---- Affichage & confort ---- */
 function saveAcc() { store.set("acc", acc); applyAcc(); }
+// Sélecteur de langue : peuplé une fois, applique interface + langue IA/voix
+(() => {
+  const sel = document.getElementById("langSel");
+  sel.innerHTML = SUPPORTED_LANGS.map((l) => `<option value="${l.code}">${l.label}</option>`).join("");
+  sel.onchange = (e) => {
+    lang = e.target.value;
+    store.set("lang", lang);
+    applyI18n();
+    renderStrip(); // le message d'invite est traduit
+  };
+})();
 document.getElementById("accSize").onchange = (e) => { acc.size = e.target.value; saveAcc(); };
 document.getElementById("accGap").onchange = (e) => { acc.gap = e.target.value; saveAcc(); };
 document.getElementById("accDbl").onchange = (e) => { acc.dbl = parseInt(e.target.value, 10) || 0; saveAcc(); };
@@ -2378,7 +2551,7 @@ document.getElementById("genVoicesBtn").onclick = async () => {
   let done = 0;
   for (const item of items) {
     const text = item.say || item.label;
-    const key = VOICE + "|" + text;
+    const key = voiceKey(text);
     if (await idbGet(key)) { done++; status.textContent = `Voix générées : ${done}/${items.length}`; continue; }
     // Le serveur n'a pas de limite de vitesse ; un 429 = quota mensuel épuisé,
     // inutile d'insister — la génération reprendra là où elle s'est arrêtée.
@@ -2996,7 +3169,7 @@ async function renderVoices() {
   box.innerHTML = "";
   let ready = 0;
   for (const w of words) {
-    const has = !!(await idbGet(VOICE + "|" + w));
+    const has = !!(await idbGet(voiceKey(w)));
     if (has) ready++;
     const row = document.createElement("div");
     row.className = "voiceRow";
@@ -3008,7 +3181,7 @@ async function renderVoices() {
       const st = row.querySelector(".vst");
       st.textContent = "…";
       try {
-        await idbSet(VOICE + "|" + w, await voiceBlob(w));
+        await idbSet(voiceKey(w), await voiceBlob(w));
         st.textContent = "✓";
         speak(w);
       } catch { st.textContent = "✗"; }
@@ -3169,7 +3342,7 @@ async function refreshDash() {
       .catch(() => { planEl.textContent = "—"; });
   } else planEl.textContent = "—";
   let ready = 0;
-  for (const it of items) if (await idbGet(VOICE + "|" + (it.say || it.label))) ready++;
+  for (const it of items) if (await idbGet(voiceKey(it.say || it.label))) ready++;
   document.getElementById("dashVoices").textContent = ready + "/" + items.length;
 }
 
@@ -3200,8 +3373,7 @@ const OB_PERSONAL_DEFAULTS = ["didi", "podo", "romain", "jeajea", "maitresse", "
 
 function obShow(step) {
   for (let i = 0; i <= 5; i++) obEl("obStep" + i).style.display = i === step ? "" : "none";
-  obEl("obStepTag").textContent =
-    ["Bienvenue", "Étape 1 sur 3", "Étape 2 sur 3", "Étape 3 sur 3", "Création en cours", "Terminé"][step];
+  obEl("obStepTag").textContent = t(["ob_welcome", "ob_s1", "ob_s2", "ob_s3", "ob_prep", "ob_done"][step]);
 }
 function hidePersonalDefaults() {
   OB_PERSONAL_DEFAULTS.forEach((id) => hidden.add(id));
@@ -3218,15 +3390,14 @@ function openPaywall(context) {
   const badge = document.getElementById("pwBadge");
   const title = document.getElementById("pwTitle");
   const sub = document.getElementById("pwSub");
-  const name = store.get("childname", "");
   if (context === "quota") {
-    badge.textContent = "Limite atteinte";
-    title.textContent = "Vous avez bien avancé ce mois-ci 👏";
-    sub.innerHTML = "Vous avez atteint la limite gratuite du mois. Passez à <b>Leova Plus</b> pour continuer à créer sans attendre" + (name ? ` le tableau de ${name}` : "") + " — ou revenez le mois prochain, le gratuit se recharge.";
+    badge.textContent = t("pw_qbadge");
+    title.textContent = t("pw_qtitle");
+    sub.innerHTML = t("pw_qsub");
   } else {
     badge.textContent = "Leova Plus";
-    title.textContent = "Enrichissez son tableau sans limite";
-    sub.innerHTML = "Leova reste <b>gratuit pour toujours</b>. Leova Plus enlève les limites de l'IA quand vous voulez créer beaucoup de nouveaux mots, images et voix.";
+    title.textContent = t("pw_title");
+    sub.innerHTML = t("pw_sub");
   }
   document.getElementById("pwallStatus").textContent = "";
   document.getElementById("paywall").classList.add("open");
@@ -3264,9 +3435,7 @@ document.getElementById("pwallBuy").onclick = async () => {
 let firstWinActive = false;
 function startFirstWin() {
   const name = store.get("childname", "");
-  document.getElementById("coachText").textContent = name
-    ? `Touchez une carte — écoutez « ${name} » parler ✨`
-    : "Touchez une carte — écoutez la tablette parler ✨";
+  document.getElementById("coachText").textContent = name ? t("coach_name", { name }) : t("coach_noname");
   currentCat = "core"; renderTabs(); renderGrid();
   firstWinActive = true;
   document.getElementById("coach").classList.add("show");
@@ -3323,7 +3492,7 @@ obEl("obGo").onclick = async () => {
   grid.innerHTML = "";
   const childName = obEl("obName").value.trim();
   try {
-    status.textContent = "Je réfléchis au tableau de " + (childName || "votre enfant") + "…";
+    status.textContent = t("gen_think", { name: childName || "…" });
     const plans = (await backendJson("/v1/onboard", {
       childName,
       level: obLevel,
@@ -3343,7 +3512,7 @@ obEl("obGo").onclick = async () => {
       // l'IA duplique parfois un mot déjà présent : filtre déterministe
       if (allItems().some((i) => i.label.toLowerCase() === String(p.label).toLowerCase())) continue;
       n++;
-      status.textContent = `Je crée « ${p.label} »…`;
+      status.textContent = t("gen_make", { label: p.label });
       let vis;
       try { vis = await resolveVisual(p, p.label); }
       catch { vis = { emoji: p.emojiFallback || "⭐", photo: null }; }
@@ -3364,10 +3533,10 @@ obEl("obGo").onclick = async () => {
     // Belles voix en arrière-plan : les nouvelles cartes puis tout le tableau
     const words = [...new Set(allItems().map((i) => i.say || i.label))];
     (async () => { for (const w of words) await ensureVoice(w); })();
-    obEl("obDoneTitle").textContent = "Le tableau de " + (childName || "votre enfant") + " est prêt ! 🎉";
+    obEl("obDoneTitle").textContent = childName ? t("done_name", { name: childName }) : t("done_noname");
     obShow(5);
   } catch (e) {
-    status.textContent = "Échec : " + e.message + " — vous pourrez personnaliser plus tard via le mode parent (⚙️, appui long).";
+    status.textContent = t("gen_fail", { msg: e.message });
     hidePersonalDefaults();
     store.set("onboarded", true);
     setTimeout(() => { obEl("onboard").style.display = "none"; renderTabs(); renderGrid(); }, 6000);
@@ -3382,6 +3551,7 @@ if (navigator.onLine) {
   fetch(BACKEND_URL + "/health").catch(() => {});
   if (!backendSecret) fbToken();
 }
+applyI18n(); // traductions d'interface avant le premier rendu
 applyAcc(); // tailles, contraste et thème avant le premier rendu
 renderTabs();
 renderGrid();

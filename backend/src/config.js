@@ -13,6 +13,8 @@ export const config = {
   imageLocation: process.env.VERTEX_IMAGE_LOCATION || "europe-west1",
   // Voix de l'app : Chirp3-HD "Kore" via l'API Cloud Text-to-Speech (stable,
   // même famille de voix que la Kore de Gemini utilisée jusqu'ici côté app).
+  // "Kore" existe dans toutes les langues Chirp3-HD → même personnage vocal
+  // partout (cohérence de marque). Repli sur le français si langue inconnue.
   ttsVoice: process.env.TTS_VOICE || "fr-FR-Chirp3-HD-Kore",
   // Cache audio mutualisé : un mot généré une fois sert à toutes les familles.
   ttsBucket: process.env.TTS_BUCKET || "",
