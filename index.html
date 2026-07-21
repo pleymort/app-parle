@@ -465,7 +465,7 @@
 <!-- Prédiction : les suites probables du dernier picto touché (apprises de l'enfant) -->
 <div id="suggest"></div>
 
-<div id="editNote">Mode parent : touchez un picto pour le modifier (nom, image, voix, masquer…) · maintenez puis glissez pour réorganiser, déposer sur un onglet (changer de catégorie) ou sur 🗑 (supprimer) · ⚙️ pour les réglages.</div>
+<div id="editNote" data-i18n="edit_note">Mode parent : touchez un picto pour le modifier · maintenez puis glissez pour réorganiser · ⚙️ pour les réglages.</div>
 <div id="tabs"></div>
 <div id="grid"></div>
 
@@ -473,99 +473,99 @@
 
 <div id="panel">
   <div id="panelCard">
-    <h2>Réglages (parents) <span id="verTag" style="float:right;font-size:12px;color:#B9C7D6;font-weight:600"></span></h2>
+    <h2><span data-i18n="s_title">Réglages (parents)</span> <span id="verTag" style="float:right;font-size:12px;color:#B9C7D6;font-weight:600"></span></h2>
 
     <div id="ptabs">
-      <button class="ptab on" data-psec="home">🏠 Accueil</button>
-      <button class="ptab" data-psec="vocab">📚 Vocabulaire</button>
-      <button class="ptab" data-psec="display">🖐️ Affichage</button>
-      <button class="ptab" data-psec="voice">🗣️ Voix &amp; IA</button>
-      <button class="ptab" data-psec="journal">📊 Journal</button>
-      <button class="ptab" data-psec="account">☁️ Compte</button>
-      <button class="ptab" data-psec="lock">🔒 Sécurité</button>
+      <button class="ptab on" data-psec="home" data-i18n="tab_home">🏠 Accueil</button>
+      <button class="ptab" data-psec="vocab" data-i18n="tab_vocab">📚 Vocabulaire</button>
+      <button class="ptab" data-psec="display" data-i18n="tab_display">🖐️ Affichage</button>
+      <button class="ptab" data-psec="voice" data-i18n="tab_voice">🗣️ Voix &amp; IA</button>
+      <button class="ptab" data-psec="journal" data-i18n="tab_journal">📊 Journal</button>
+      <button class="ptab" data-psec="account" data-i18n="tab_account">☁️ Compte</button>
+      <button class="ptab" data-psec="lock" data-i18n="tab_lock">🔒 Sécurité</button>
     </div>
 
     <div class="psec on" data-psec="home">
       <div id="dashTiles">
-        <div class="dtile"><div class="dv" id="dashWords">…</div><div class="dl">mots actifs</div></div>
-        <div class="dtile"><div class="dv" id="dashVoices">…</div><div class="dl">voix prêtes</div></div>
-        <div class="dtile"><div class="dv" id="dashSync">…</div><div class="dl">sauvegarde</div></div>
-        <div class="dtile"><div class="dv" id="dashPlan">…</div><div class="dl">formule</div></div>
+        <div class="dtile"><div class="dv" id="dashWords">…</div><div class="dl" data-i18n="d_words">mots actifs</div></div>
+        <div class="dtile"><div class="dv" id="dashVoices">…</div><div class="dl" data-i18n="d_voices">voix prêtes</div></div>
+        <div class="dtile"><div class="dv" id="dashSync">…</div><div class="dl" data-i18n="d_sync">sauvegarde</div></div>
+        <div class="dtile"><div class="dv" id="dashPlan">…</div><div class="dl" data-i18n="d_plan">formule</div></div>
       </div>
       <div class="dact">
-        <button class="pbtn primary" id="qaMagic">✨ Ajout magique — dites-le, l'IA fait le reste</button>
-        <button class="pbtn ghost" id="qaPhoto">📷 Ajouter une image ou une photo</button>
-        <button class="pbtn ghost" id="qaSync">🔄 Sauvegarder / synchroniser</button>
+        <button class="pbtn primary" id="qaMagic" data-i18n="qa_magic">✨ Ajout magique</button>
+        <button class="pbtn ghost" id="qaPhoto" data-i18n="qa_photo">📷 Ajouter une image</button>
+        <button class="pbtn ghost" id="qaSync" data-i18n="qa_sync">🔄 Synchroniser</button>
       </div>
-      <p class="sub" style="margin-top:14px">L'enfant ne voit pas cet écran. Sur la grille : touchez un picto pour le masquer, maintenez-glissez pour réorganiser.</p>
+      <p class="sub" style="margin-top:14px" data-i18n="home_note">L'enfant ne voit pas cet écran.</p>
     </div>
 
     <div class="psec" data-psec="vocab">
-    <h2 style="font-size:17px">✨ Ajout magique</h2>
+    <h2 style="font-size:17px" data-i18n="magic_h">✨ Ajout magique</h2>
     <div class="prow">
-      <label>Dites ou écrivez ce que l'enfant doit pouvoir demander — un mot, une liste, ou un thème</label>
+      <label data-i18n="magic_label">Dites ou écrivez ce que l'enfant doit pouvoir demander</label>
       <div class="magicRow">
-        <input type="text" id="magicInput" placeholder='ex : "trampoline" · "fraise, banane, yaourt" · "le petit-déjeuner"'>
+        <input type="text" id="magicInput" data-i18n-ph="magic_ph">
         <button class="pbtn ghost" id="magicMic" title="Dicter au micro">🎤</button>
       </div>
-      <button class="pbtn primary" id="magicBtn" style="margin-top:8px">✨ Créer</button>
+      <button class="pbtn primary" id="magicBtn" style="margin-top:8px" data-i18n="magic_create">✨ Créer</button>
       <div class="aiStatus" id="magicStatus"></div>
       <div id="magicResult" style="display:none">
         <div id="magicList"></div>
-        <div class="hint">Touchez une vignette pour la cocher/décocher · 🔄 pour changer son image.</div>
-        <button class="pbtn primary" id="magicAdd">✔ Ajouter</button>
-        <button class="pbtn warn" id="magicUndo">✖ Annuler</button>
+        <div class="hint" data-i18n="magic_pick_hint">Touchez une vignette…</div>
+        <button class="pbtn primary" id="magicAdd" data-i18n="magic_add">✔ Ajouter</button>
+        <button class="pbtn warn" id="magicUndo" data-i18n="magic_undo">✖ Annuler</button>
       </div>
     </div>
 
-    <button class="pbtn ghost" id="photoWizBtn" style="margin-top:8px">👨‍👩‍👦 Assistant photos des proches</button>
-    <div class="hint">Passe en revue les personnes sans photo : l'enfant reconnaît infiniment mieux une vraie photo qu'un dessin.</div>
+    <button class="pbtn ghost" id="photoWizBtn" style="margin-top:8px" data-i18n="photowiz_btn">👨‍👩‍👦 Assistant photos des proches</button>
+    <div class="hint" data-i18n="photowiz_hint">Passe en revue les personnes sans photo…</div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">📋 Routines « D'abord / Ensuite »</h2>
-    <p class="sub" style="margin-bottom:8px">Une suite d'étapes visuelles que l'enfant déroule lui-même (ex : brossage de dents). Elles apparaissent dans un onglet 📋 sur sa grille.</p>
+    <h2 style="font-size:17px" data-i18n="routines_h">📋 Routines</h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="routines_sub">Une suite d'étapes visuelles…</p>
     <div id="routineList"></div>
-    <button class="pbtn ghost" id="addRoutineBtn">➕ Nouvelle routine</button>
+    <button class="pbtn ghost" id="addRoutineBtn" data-i18n="routine_add">➕ Nouvelle routine</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">Catégories</h2>
-    <p class="sub" style="margin-bottom:8px">Changez l'émoji ou le nom, ou créez-en une nouvelle.</p>
+    <h2 style="font-size:17px" data-i18n="cats_h">Catégories</h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="cats_sub">Changez l'émoji ou le nom…</p>
     <div id="catList"></div>
-    <button class="pbtn ghost" id="addCatBtn">➕ Nouvelle catégorie</button>
+    <button class="pbtn ghost" id="addCatBtn" data-i18n="cat_add">➕ Nouvelle catégorie</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">Ajouter une image</h2>
+    <h2 style="font-size:17px" data-i18n="addimg_h">Ajouter une image</h2>
     <div class="prow">
-      <label>Mot à prononcer</label>
-      <input type="text" id="newLabel" placeholder="ex : doudou, piscine, mamie…">
+      <label data-i18n="newlabel_l">Mot à prononcer</label>
+      <input type="text" id="newLabel" data-i18n-ph="newlabel_ph">
     </div>
     <div class="prow">
-      <label>Catégorie</label>
+      <label data-i18n="cat_l">Catégorie</label>
       <select id="newCat"></select>
     </div>
     <div class="prow">
-      <label>Image : une photo (recommandé) ou un émoji</label>
+      <label data-i18n="img_l">Image : une photo ou un émoji</label>
       <input type="file" id="newPhoto" accept="image/*">
       <div class="aiBtns">
-        <button class="pbtn ghost" id="arasaacBtn">🔍 Chercher un picto</button>
-        <button class="pbtn ghost" id="genImgBtn">✨ Générer (IA)</button>
-        <button class="pbtn ghost" id="cleanBtn">🪄 Photo → picto (IA)</button>
+        <button class="pbtn ghost" id="arasaacBtn" data-i18n="btn_arasaac">🔍 Chercher un picto</button>
+        <button class="pbtn ghost" id="genImgBtn" data-i18n="btn_gen">✨ Générer (IA)</button>
+        <button class="pbtn ghost" id="cleanBtn" data-i18n="btn_clean">🪄 Photo → picto</button>
       </div>
       <div id="pickResults"></div>
       <div class="aiStatus" id="aiStatus2"></div>
       <div id="photoPreview"></div>
-      <input type="text" id="newEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
-      <div class="hint">Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).</div>
+      <input type="text" id="newEmoji" data-i18n-ph="emoji_ph" style="margin-top:8px;width:100%;padding:10px;border:2px solid #D8E1EA;border-radius:10px;font-size:16px">
+      <div class="hint" data-i18n="addimg_hint">Les photos réelles marchent mieux…</div>
     </div>
-    <button class="pbtn primary" id="addBtn">Ajouter</button>
+    <button class="pbtn primary" id="addBtn" data-i18n="add">Ajouter</button>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">🗑 Corbeille</h2>
-    <p class="sub" style="margin-bottom:8px">Les pictos supprimés restent récupérables 30 jours.</p>
+    <h2 style="font-size:17px" data-i18n="trash_h">🗑 Corbeille</h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="trash_sub">Récupérables 30 jours.</p>
     <div id="trashList"></div>
     </div>
 
@@ -573,192 +573,192 @@
     <div class="prow">
       <label data-i18n="set_lang">Langue (voix et interface)</label>
       <select id="langSel"></select>
-      <div class="hint">La voix de l'enfant et les créations par IA suivent cette langue ; l'interface est traduite (fr/en/es).</div>
+      <div class="hint" data-i18n="lang_hint">La voix et l'IA suivent cette langue.</div>
     </div>
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-    <h2 style="font-size:17px">🖐️ Affichage &amp; confort</h2>
+    <h2 style="font-size:17px" data-i18n="disp_h">🖐️ Affichage &amp; confort</h2>
     <div class="prow">
-      <label>Taille des cartes</label>
+      <label data-i18n="size_l">Taille des cartes</label>
       <select id="accSize">
-        <option value="S">Petites (plus de cartes à l'écran)</option>
-        <option value="M">Moyennes (par défaut)</option>
-        <option value="L">Grandes</option>
-        <option value="XL">Très grandes (motricité difficile)</option>
+        <option value="S" data-i18n="size_S">Petites</option>
+        <option value="M" data-i18n="size_M">Moyennes</option>
+        <option value="L" data-i18n="size_L">Grandes</option>
+        <option value="XL" data-i18n="size_XL">Très grandes</option>
       </select>
     </div>
     <div class="prow">
-      <label>Espacement entre les cartes</label>
+      <label data-i18n="gap_l">Espacement entre les cartes</label>
       <select id="accGap">
-        <option value="S">Serré</option>
-        <option value="M">Normal (par défaut)</option>
-        <option value="L">Large (évite les touchers accidentels)</option>
+        <option value="S" data-i18n="gap_S">Serré</option>
+        <option value="M" data-i18n="gap_M">Normal</option>
+        <option value="L" data-i18n="gap_L">Large</option>
       </select>
     </div>
     <div class="prow">
-      <label>Toucher</label>
+      <label data-i18n="touch_l">Toucher</label>
       <select id="accDbl">
-        <option value="0">Appuis répétés : tous acceptés (par défaut)</option>
-        <option value="400">Ignorer les doubles appuis (0,4 s)</option>
-        <option value="800">Ignorer les doubles appuis (0,8 s)</option>
+        <option value="0" data-i18n="dbl_0">Appuis répétés acceptés</option>
+        <option value="400" data-i18n="dbl_400">Ignorer les doubles appuis (0,4 s)</option>
+        <option value="800" data-i18n="dbl_800">Ignorer les doubles appuis (0,8 s)</option>
       </select>
       <select id="accHold" style="margin-top:8px">
-        <option value="0">Activation immédiate (par défaut)</option>
-        <option value="300">Maintenir 0,3 s pour activer</option>
-        <option value="600">Maintenir 0,6 s pour activer</option>
+        <option value="0" data-i18n="hold_0">Activation immédiate</option>
+        <option value="300" data-i18n="hold_300">Maintenir 0,3 s</option>
+        <option value="600" data-i18n="hold_600">Maintenir 0,6 s</option>
       </select>
-      <div class="hint">« Maintenir pour activer » évite les activations en effleurant ou en balayant la main.</div>
+      <div class="hint" data-i18n="touch_hint">« Maintenir pour activer » évite les touchers accidentels.</div>
     </div>
     <div class="prow">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px">
-        <input type="checkbox" id="accContrast"> Contraste élevé (contours nets, texte noir)
+        <input type="checkbox" id="accContrast"> <span data-i18n="acc_contrast">Contraste élevé</span>
       </label>
       <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
-        <input type="checkbox" id="accDark"> Thème sombre (soir, sensibilité à la lumière)
+        <input type="checkbox" id="accDark"> <span data-i18n="acc_dark">Thème sombre</span>
       </label>
       <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
-        <input type="checkbox" id="accAnim" checked> Animations et vibration au toucher
+        <input type="checkbox" id="accAnim" checked> <span data-i18n="acc_anim">Animations et vibration</span>
       </label>
     </div>
 
     </div>
 
     <div class="psec" data-psec="lock">
-    <h2 style="font-size:17px">🔒 Mode kiosk</h2>
-    <p class="sub" style="margin-bottom:8px">Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app ni ouvrir autre chose. On revient aux réglages avec le code parent.</p>
+    <h2 style="font-size:17px" data-i18n="kiosk_h">🔒 Mode kiosk</h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="kiosk_sub">Verrouille la tablette sur Leova.</p>
     <div class="prow">
-      <label>Code parent (4 chiffres) — pour ouvrir les réglages et quitter le kiosk</label>
+      <label data-i18n="pin_l">Code parent (4 chiffres)</label>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span id="pinStatus" style="font-weight:700;color:#55677A"></span>
-        <button class="pbtn ghost" id="setPinBtn" style="margin:0">Définir / modifier le code</button>
+        <button class="pbtn ghost" id="setPinBtn" style="margin:0" data-i18n="pin_set">Définir / modifier le code</button>
       </div>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#55677A">
-      <input type="checkbox" id="kioskChk"> Activer le mode kiosk
+      <input type="checkbox" id="kioskChk"> <span data-i18n="kiosk_chk">Activer le mode kiosk</span>
     </label>
     <div class="kioskState" id="kioskState"></div>
-    <div class="hint">Sur la tablette, le verrouillage utilise l'épinglage d'écran d'Android (sortie possible en maintenant Retour + Aperçu). Pour un verrouillage total impossible à quitter, il faudra provisionner la tablette en « propriétaire d'appareil » (étape ultérieure).</div>
+    <div class="hint" data-i18n="kiosk_hint">Verrouillage par épinglage d'écran Android.</div>
 
     </div>
 
     <div class="psec" data-psec="voice">
     <div class="prow">
-      <label>Vitesse de la voix</label>
+      <label data-i18n="rate_l">Vitesse de la voix</label>
       <input type="range" id="rate" min="0.5" max="1.2" step="0.05">
-      <button class="pbtn ghost" id="testVoice">🔊 Tester la voix</button>
+      <button class="pbtn ghost" id="testVoice" data-i18n="test_voice">🔊 Tester la voix</button>
     </div>
     <div class="prow">
       <label style="display:flex;align-items:center;gap:8px;font-size:14px">
-        <input type="checkbox" id="reformChk"> Reformuler la bande-phrase en phrase naturelle
+        <input type="checkbox" id="reformChk"> <span data-i18n="reform_chk">Reformuler en phrase naturelle</span>
       </label>
     </div>
-    <button class="pbtn ghost" id="genVoicesBtn">🎙️ Générer toutes les voix (une seule fois)</button>
+    <button class="pbtn ghost" id="genVoicesBtn" data-i18n="genvoices">🎙️ Générer toutes les voix</button>
     <div class="aiStatus" id="aiStatus"></div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">🎛️ Gestionnaire de voix</h2>
-    <p class="sub" style="margin-bottom:8px">Écoutez chaque mot ; 🔄 re-télécharge sa voix depuis le serveur (utile si un mot sonne différemment des autres).</p>
+    <h2 style="font-size:17px" data-i18n="vmgr_h">🎛️ Gestionnaire de voix</h2>
+    <p class="sub" style="margin-bottom:8px" data-i18n="vmgr_sub">Écoutez chaque mot ; 🔄 re-télécharge la voix.</p>
     <div class="aiStatus" id="voiceGauge"></div>
     <div id="voiceList"></div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">Intelligence artificielle</h2>
+    <h2 style="font-size:17px" data-i18n="ai_h">Intelligence artificielle</h2>
     <div class="prow">
-      <label>Code d'accès Leova (facultatif — accès illimité)</label>
-      <input type="text" id="bsecret" placeholder="Collez le code d'accès (il reste sur la tablette)">
-      <button class="pbtn ghost" id="testBackendBtn" style="margin-top:8px">🔌 Tester le serveur</button>
+      <label data-i18n="code_l">Code d'accès Leova (facultatif)</label>
+      <input type="text" id="bsecret" data-i18n-ph="code_ph">
+      <button class="pbtn ghost" id="testBackendBtn" style="margin-top:8px" data-i18n="test_backend">🔌 Tester le serveur</button>
       <div class="aiStatus" id="backendStatus"></div>
-      <div class="hint">L'IA (reformulation, belle voix, création de pictos) passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.</div>
+      <div class="hint" data-i18n="ai_hint">L'IA passe par le serveur Leova (Europe, RGPD).</div>
     </div>
     </div>
 
     <div class="psec" data-psec="journal">
-    <h2 style="font-size:17px">📊 Ce qu'il a dit</h2>
+    <h2 style="font-size:17px" data-i18n="j_h">📊 Ce qu'il a dit</h2>
     <div class="aiStatus" id="jToday"></div>
     <div class="prow">
-      <label>Les 7 derniers jours (mots touchés)</label>
+      <label data-i18n="j_7days">Les 7 derniers jours</label>
       <div id="jChart"></div>
     </div>
     <div class="prow">
-      <label>Mots préférés (30 jours)</label>
+      <label data-i18n="j_top">Mots préférés (30 jours)</label>
       <div id="jTop" class="hint" style="font-size:14px;color:#55677A"></div>
     </div>
     <div class="prow">
-      <label>Nouveaux mots (7 jours)</label>
+      <label data-i18n="j_new">Nouveaux mots (7 jours)</label>
       <div id="jNew" class="hint" style="font-size:14px;color:#55677A"></div>
     </div>
     <div class="prow">
-      <label>Dernières phrases</label>
+      <label data-i18n="j_phrases">Dernières phrases</label>
       <div id="jPhrases"></div>
     </div>
-    <button class="pbtn primary" id="reportBtn">🖨 Rapport pour l'orthophoniste (30 jours)</button>
-    <div class="hint">Le journal reste sur cette tablette (non synchronisé, non envoyé au serveur). Le rapport s'imprime depuis la version web sur un ordinateur.</div>
+    <button class="pbtn primary" id="reportBtn" data-i18n="j_report">🖨 Rapport (30 jours)</button>
+    <div class="hint" data-i18n="j_hint">Le journal reste sur cette tablette.</div>
     </div>
 
     <div class="psec" data-psec="account">
     <div class="prow">
       <label>Leova Plus</label>
       <div class="aiStatus" id="planStatus">…</div>
-      <button class="pbtn" id="plusBtn" style="display:none">💜 Passer à Leova Plus</button>
-      <button class="pbtn ghost" id="restorePlusBtn" style="display:none;margin-top:8px">↺ Restaurer un achat</button>
+      <button class="pbtn" id="plusBtn" style="display:none" data-i18n="plus_btn">💜 Passer à Leova Plus</button>
+      <button class="pbtn ghost" id="restorePlusBtn" style="display:none;margin-top:8px" data-i18n="restore_btn">↺ Restaurer un achat</button>
     </div>
     <div class="prow">
-      <label>Compte &amp; synchronisation (maison ↔ école)</label>
+      <label data-i18n="acct_l">Compte &amp; synchronisation</label>
       <div class="aiStatus" id="acctStatus"></div>
       <div id="acctForms">
-        <input type="email" id="acctEmail" placeholder="E-mail" autocomplete="username" style="margin-bottom:8px">
-        <input type="password" id="acctPass" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password">
-        <button class="pbtn primary" id="acctBtn" style="margin-top:8px">Créer mon compte / Me connecter</button>
-        <button class="pbtn ghost" id="acctForgot" style="margin-top:8px">Mot de passe oublié</button>
+        <input type="email" id="acctEmail" data-i18n-ph="acct_email_ph" autocomplete="username" style="margin-bottom:8px">
+        <input type="password" id="acctPass" data-i18n-ph="acct_pass_ph" autocomplete="current-password">
+        <button class="pbtn primary" id="acctBtn" style="margin-top:8px" data-i18n="acct_btn">Créer / Me connecter</button>
+        <button class="pbtn ghost" id="acctForgot" style="margin-top:8px" data-i18n="acct_forgot">Mot de passe oublié</button>
       </div>
       <div id="acctActions" style="display:none">
-        <button class="pbtn ghost" id="syncNowBtn">🔄 Synchroniser maintenant</button>
-        <button class="pbtn ghost" id="acctOut" style="margin-top:8px">Se déconnecter (la tablette garde tout)</button>
+        <button class="pbtn ghost" id="syncNowBtn" data-i18n="sync_now">🔄 Synchroniser maintenant</button>
+        <button class="pbtn ghost" id="acctOut" style="margin-top:8px" data-i18n="acct_out">Se déconnecter</button>
       </div>
-      <div class="hint">Sauvegarde le vocabulaire en ligne (Europe) et le synchronise entre plusieurs tablettes : maison, école/AESH… Connectez le même compte sur chaque tablette.</div>
+      <div class="hint" data-i18n="acct_hint">Sauvegarde et synchronise le vocabulaire.</div>
     </div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
 
-    <h2 style="font-size:17px">📦 Exporter / importer / imprimer</h2>
+    <h2 style="font-size:17px" data-i18n="exp_h">📦 Exporter / importer / imprimer</h2>
     <div class="prow">
-      <button class="pbtn ghost" id="exportBtn">⬇️ Exporter le vocabulaire (fichier)</button>
-      <label class="pbtn ghost" style="display:inline-block">⬆️ Importer un fichier<input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
-      <button class="pbtn ghost" id="printBtn">🖨 Imprimer le tableau (classeur papier)</button>
+      <button class="pbtn ghost" id="exportBtn" data-i18n="exp_btn">⬇️ Exporter le vocabulaire</button>
+      <label class="pbtn ghost" style="display:inline-block"><span data-i18n="imp_btn">⬆️ Importer un fichier</span><input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
+      <button class="pbtn ghost" id="printBtn" data-i18n="print_btn">🖨 Imprimer le tableau</button>
       <div class="aiStatus" id="exportStatus"></div>
-      <div class="hint">L'export permet de partager le tableau avec une autre famille ou de garder une copie sans compte. L'impression crée un classeur PECS papier de secours (à faire depuis la version web sur ordinateur : pleymort.github.io/app-parle).</div>
+      <div class="hint" data-i18n="exp_hint">Partagez ou imprimez le tableau.</div>
     </div>
     </div>
 
     <hr style="border:none;border-top:2px solid #EDF2F7;margin:16px 0">
-    <button class="pbtn ghost" id="closePanel">Fermer</button>
-    <button class="pbtn warn" id="exitParent">Quitter le mode parent</button>
+    <button class="pbtn ghost" id="closePanel" data-i18n="close">Fermer</button>
+    <button class="pbtn warn" id="exitParent" data-i18n="exit_parent">Quitter le mode parent</button>
   </div>
 </div>
 
 <!-- Éditeur de routine (mode parent) -->
 <div id="routineEdit">
   <div id="routineEditCard">
-    <h2 style="color:#24425F;font-size:19px;margin-bottom:12px">📋 Routine</h2>
+    <h2 style="color:#24425F;font-size:19px;margin-bottom:12px" data-i18n="rt_h">📋 Routine</h2>
     <div class="prow">
-      <label>Nom de la routine</label>
-      <input type="text" id="rtName" placeholder="ex : Brossage de dents">
+      <label data-i18n="rt_name">Nom de la routine</label>
+      <input type="text" id="rtName" data-i18n-ph="rt_name_ph">
     </div>
     <div class="prow">
-      <label>Émoji</label>
+      <label data-i18n="rt_emoji">Émoji</label>
       <input type="text" id="rtEmoji" placeholder="🪥" style="width:90px">
     </div>
     <div class="prow">
-      <label>Étapes, dans l'ordre</label>
+      <label data-i18n="rt_steps">Étapes, dans l'ordre</label>
       <div id="rtSteps"></div>
-      <button class="pbtn ghost" id="rtAddStep">➕ Ajouter une étape</button>
+      <button class="pbtn ghost" id="rtAddStep" data-i18n="rt_addstep">➕ Ajouter une étape</button>
       <div id="rtPicker" style="display:none"></div>
     </div>
     <div class="editRow2">
-      <button class="pbtn warn" id="rtDelete">🗑 Supprimer</button>
-      <button class="pbtn ghost" id="rtCancel">Annuler</button>
-      <button class="pbtn primary" id="rtSave">✔ Enregistrer</button>
+      <button class="pbtn warn" id="rtDelete" data-i18n="delete">🗑 Supprimer</button>
+      <button class="pbtn ghost" id="rtCancel" data-i18n="cancel">Annuler</button>
+      <button class="pbtn primary" id="rtSave" data-i18n="save">✔ Enregistrer</button>
     </div>
   </div>
 </div>
@@ -771,7 +771,7 @@
     <div id="rpPrefix">D'abord</div>
     <div id="rpVis"></div>
     <div id="rpLabel"></div>
-    <button id="rpDone">✓ Fini</button>
+    <button id="rpDone" data-i18n="rp_done">✓ Fini</button>
   </div>
 </div>
 
@@ -781,13 +781,13 @@
     <div class="obSteps" id="pwStep"></div>
     <h1 id="pwName">…</h1>
     <div id="pwVis"></div>
-    <p id="pwHint">Choisissez (ou prenez) une photo bien cadrée de son visage — c'est elle que l'enfant touchera pour l'appeler.</p>
-    <label class="pbtn primary" style="display:block;text-align:center">📷 Prendre / choisir une photo
+    <p id="pwHint" data-i18n="pw_hint">Choisissez une photo bien cadrée de son visage.</p>
+    <label class="pbtn primary" style="display:block;text-align:center"><span data-i18n="pw_take">📷 Prendre / choisir une photo</span>
       <input type="file" id="pwFile" accept="image/*" style="display:none">
     </label>
     <div class="editRow2">
-      <button class="pbtn ghost" id="pwSkip">⏭ Passer</button>
-      <button class="pbtn ghost" id="pwStop">✖ Arrêter</button>
+      <button class="pbtn ghost" id="pwSkip" data-i18n="pw_skip">⏭ Passer</button>
+      <button class="pbtn ghost" id="pwStop" data-i18n="pw_stop">✖ Arrêter</button>
     </div>
     <div class="aiStatus" id="pwStatus"></div>
   </div>
@@ -798,45 +798,45 @@
   <div id="editCard">
     <div id="editHead">
       <span id="editVis"></span>
-      <h2>Modifier ce picto</h2>
+      <h2 data-i18n="edit_h">Modifier ce picto</h2>
     </div>
     <div class="prow">
-      <label>Mot affiché</label>
+      <label data-i18n="edit_label">Mot affiché</label>
       <input type="text" id="editLabel">
     </div>
     <div class="prow">
-      <label>Ce que dit la tablette</label>
-      <input type="text" id="editSay" placeholder="ex : Jaja (pour corriger une prononciation)">
-      <button class="pbtn ghost" id="editPlay" style="margin-top:8px">▶ Écouter</button>
+      <label data-i18n="edit_say">Ce que dit la tablette</label>
+      <input type="text" id="editSay" data-i18n-ph="edit_say_ph">
+      <button class="pbtn ghost" id="editPlay" style="margin-top:8px" data-i18n="edit_play">▶ Écouter</button>
     </div>
     <div class="prow">
-      <label>Changer l'image</label>
+      <label data-i18n="edit_img">Changer l'image</label>
       <div class="aiBtns">
-        <button class="pbtn ghost" id="editPick">🔍 Pictos</button>
-        <button class="pbtn ghost" id="editGen">✨ Dessiner (IA)</button>
-        <label class="pbtn ghost" style="display:inline-block">📷 Photo<input type="file" id="editPhoto" accept="image/*" style="display:none"></label>
+        <button class="pbtn ghost" id="editPick" data-i18n="edit_pick">🔍 Pictos</button>
+        <button class="pbtn ghost" id="editGen" data-i18n="edit_gen">✨ Dessiner (IA)</button>
+        <label class="pbtn ghost" style="display:inline-block"><span data-i18n="edit_photo">📷 Photo</span><input type="file" id="editPhoto" accept="image/*" style="display:none"></label>
       </div>
       <div id="editPicks"></div>
-      <input type="text" id="editEmoji" placeholder="…ou colle un émoji ici 🧸" style="margin-top:8px">
+      <input type="text" id="editEmoji" data-i18n-ph="emoji_ph" style="margin-top:8px">
       <div class="aiStatus" id="editStatus"></div>
     </div>
     <div class="prow">
-      <label>Vraie voix (facultatif — ex : « Mémé » dit par Mémé)</label>
+      <label data-i18n="rec_label">Vraie voix (facultatif)</label>
       <div class="aiBtns">
-        <button class="pbtn ghost" id="recBtn">🎙 Enregistrer</button>
-        <button class="pbtn ghost" id="recPlay" style="display:none">▶ Écouter l'enregistrement</button>
+        <button class="pbtn ghost" id="recBtn" data-i18n="rec_btn">🎙 Enregistrer</button>
+        <button class="pbtn ghost" id="recPlay" style="display:none" data-i18n="rec_play">▶ Écouter l'enregistrement</button>
         <button class="pbtn warn" id="recDel" style="display:none">🗑</button>
       </div>
       <div class="aiStatus" id="recStatus"></div>
-      <div class="hint">Quand cette carte a une vraie voix enregistrée, elle est utilisée à la place de la voix de synthèse (sur cette tablette).</div>
+      <div class="hint" data-i18n="rec_hint">La vraie voix remplace la synthèse pour cette carte.</div>
     </div>
     <div class="editRow2">
-      <button class="pbtn ghost" id="editHide">🙈 Masquer</button>
-      <button class="pbtn warn" id="editDelete">🗑 Supprimer</button>
+      <button class="pbtn ghost" id="editHide" data-i18n="hide">🙈 Masquer</button>
+      <button class="pbtn warn" id="editDelete" data-i18n="delete">🗑 Supprimer</button>
     </div>
     <div class="editRow2">
-      <button class="pbtn ghost" id="editClose">Fermer</button>
-      <button class="pbtn primary" id="editSave">✔ Enregistrer</button>
+      <button class="pbtn ghost" id="editClose" data-i18n="close">Fermer</button>
+      <button class="pbtn primary" id="editSave" data-i18n="save">✔ Enregistrer</button>
     </div>
   </div>
 </div>
@@ -958,7 +958,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "40"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "41"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1129,6 +1129,33 @@ const STR = {
     done_name: "Le tableau de {name} est prêt ! 🎉", done_noname: "Le tableau est prêt ! 🎉",
     gen_think: "Je réfléchis au tableau de {name}…", gen_make: "Je crée « {label} »…",
     gen_fail: "Échec : {msg} — vous pourrez personnaliser plus tard via le mode parent (⚙️, appui long).",
+    s_title: "Réglages (parents)", tab_home: "🏠 Accueil", tab_vocab: "📚 Vocabulaire", tab_display: "🖐️ Affichage", tab_voice: "🗣️ Voix & IA", tab_journal: "📊 Journal", tab_account: "☁️ Compte", tab_lock: "🔒 Sécurité",
+    d_words: "mots actifs", d_voices: "voix prêtes", d_sync: "sauvegarde", d_plan: "formule",
+    qa_magic: "✨ Ajout magique — dites-le, l'IA fait le reste", qa_photo: "📷 Ajouter une image ou une photo", qa_sync: "🔄 Sauvegarder / synchroniser",
+    home_note: "L'enfant ne voit pas cet écran. Sur la grille : touchez un picto pour le masquer, maintenez-glissez pour réorganiser.",
+    magic_h: "✨ Ajout magique", magic_label: "Dites ou écrivez ce que l'enfant doit pouvoir demander — un mot, une liste, ou un thème", magic_ph: 'ex : "trampoline" · "fraise, banane, yaourt" · "le petit-déjeuner"', magic_create: "✨ Créer", magic_pick_hint: "Touchez une vignette pour la cocher/décocher · 🔄 pour changer son image.", magic_add: "✔ Ajouter", magic_undo: "✖ Annuler",
+    photowiz_btn: "👨‍👩‍👦 Assistant photos des proches", photowiz_hint: "Passe en revue les personnes sans photo : l'enfant reconnaît infiniment mieux une vraie photo qu'un dessin.",
+    routines_h: "📋 Routines « D'abord / Ensuite »", routines_sub: "Une suite d'étapes visuelles que l'enfant déroule lui-même (ex : brossage de dents). Elles apparaissent dans un onglet 📋 sur sa grille.", routine_add: "➕ Nouvelle routine",
+    cats_h: "Catégories", cats_sub: "Changez l'émoji ou le nom, ou créez-en une nouvelle.", cat_add: "➕ Nouvelle catégorie",
+    addimg_h: "Ajouter une image", newlabel_l: "Mot à prononcer", newlabel_ph: "ex : doudou, piscine, mamie…", cat_l: "Catégorie", img_l: "Image : une photo (recommandé) ou un émoji",
+    btn_arasaac: "🔍 Chercher un picto", btn_gen: "✨ Générer (IA)", btn_clean: "🪄 Photo → picto (IA)", emoji_ph: "…ou colle un émoji ici 🧸", addimg_hint: "Les photos réelles (son doudou, sa cuillère, les personnes de la famille) marchent mieux que les dessins. « Chercher » utilise les pictogrammes ARASAAC (gratuit, ceux des classeurs PECS).", add: "Ajouter", trash_h: "🗑 Corbeille", trash_sub: "Les pictos supprimés restent récupérables 30 jours.",
+    lang_hint: "La voix de l'enfant et les créations par IA suivent cette langue ; l'interface est traduite (fr/en/es).", disp_h: "🖐️ Affichage & confort",
+    size_l: "Taille des cartes", size_S: "Petites (plus de cartes à l'écran)", size_M: "Moyennes (par défaut)", size_L: "Grandes", size_XL: "Très grandes (motricité difficile)",
+    gap_l: "Espacement entre les cartes", gap_S: "Serré", gap_M: "Normal (par défaut)", gap_L: "Large (évite les touchers accidentels)",
+    touch_l: "Toucher", dbl_0: "Appuis répétés : tous acceptés (par défaut)", dbl_400: "Ignorer les doubles appuis (0,4 s)", dbl_800: "Ignorer les doubles appuis (0,8 s)", hold_0: "Activation immédiate (par défaut)", hold_300: "Maintenir 0,3 s pour activer", hold_600: "Maintenir 0,6 s pour activer", touch_hint: "« Maintenir pour activer » évite les activations en effleurant ou en balayant la main.",
+    acc_contrast: "Contraste élevé (contours nets, texte noir)", acc_dark: "Thème sombre (soir, sensibilité à la lumière)", acc_anim: "Animations et vibration au toucher",
+    kiosk_h: "🔒 Mode kiosk", kiosk_sub: "Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app. On revient aux réglages avec le code parent.", pin_l: "Code parent (4 chiffres) — pour ouvrir les réglages et quitter le kiosk", pin_set: "Définir / modifier le code", kiosk_chk: "Activer le mode kiosk", kiosk_hint: "Le verrouillage utilise l'épinglage d'écran d'Android (sortie en maintenant Retour + Aperçu). Verrouillage total : provisionner la tablette en « propriétaire d'appareil ».",
+    rate_l: "Vitesse de la voix", test_voice: "🔊 Tester la voix", reform_chk: "Reformuler la bande-phrase en phrase naturelle", genvoices: "🎙️ Générer toutes les voix (une seule fois)", vmgr_h: "🎛️ Gestionnaire de voix", vmgr_sub: "Écoutez chaque mot ; 🔄 re-télécharge sa voix depuis le serveur (utile si un mot sonne différemment des autres).",
+    ai_h: "Intelligence artificielle", code_l: "Code d'accès Leova (facultatif — accès illimité)", code_ph: "Collez le code d'accès (il reste sur la tablette)", test_backend: "🔌 Tester le serveur", ai_hint: "L'IA passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.",
+    j_h: "📊 Ce qu'il a dit", j_7days: "Les 7 derniers jours (mots touchés)", j_top: "Mots préférés (30 jours)", j_new: "Nouveaux mots (7 jours)", j_phrases: "Dernières phrases", j_report: "🖨 Rapport pour l'orthophoniste (30 jours)", j_hint: "Le journal reste sur cette tablette (non synchronisé). Le rapport s'imprime depuis la version web sur un ordinateur.",
+    plus_btn: "💜 Passer à Leova Plus", restore_btn: "↺ Restaurer un achat", acct_l: "Compte & synchronisation (maison ↔ école)", acct_email_ph: "E-mail", acct_pass_ph: "Mot de passe (6 caractères min.)", acct_btn: "Créer mon compte / Me connecter", acct_forgot: "Mot de passe oublié", sync_now: "🔄 Synchroniser maintenant", acct_out: "Se déconnecter (la tablette garde tout)", acct_hint: "Sauvegarde le vocabulaire en ligne (Europe) et le synchronise entre plusieurs tablettes : maison, école/AESH…",
+    exp_h: "📦 Exporter / importer / imprimer", exp_btn: "⬇️ Exporter le vocabulaire (fichier)", imp_btn: "⬆️ Importer un fichier", print_btn: "🖨 Imprimer le tableau (classeur papier)", exp_hint: "Partagez le tableau avec une autre famille, ou imprimez un classeur PECS papier de secours (depuis la version web sur ordinateur).",
+    close: "Fermer", exit_parent: "Quitter le mode parent", cancel: "Annuler", save: "✔ Enregistrer", delete: "🗑 Supprimer", hide: "🙈 Masquer",
+    rt_h: "📋 Routine", rt_name: "Nom de la routine", rt_name_ph: "ex : Brossage de dents", rt_emoji: "Émoji", rt_steps: "Étapes, dans l'ordre", rt_addstep: "➕ Ajouter une étape", rp_done: "✓ Fini", rp_bravo: "Bravo !", rp_finished: "C'est terminé !", rp_say_done: "Bravo, c'est terminé !", rp_step: "{label} — étape {n} sur {total}", rp_first: "D'abord", rp_then: "Ensuite", rp_say_first: "D'abord, ", rp_say_then: "Ensuite, ",
+    edit_note: "Mode parent : touchez un picto pour le modifier · maintenez puis glissez pour réorganiser · ⚙️ pour les réglages.", trash_empty: "La corbeille est vide.", j_empty: "Aucune phrase lue pour l'instant (bouton ▶).", rt_empty: "Aucune routine pour l'instant.",
+    st_offline: "Hors ligne — usage indisponible.", st_parent: "Accès parent : illimité ✓", st_plus: "Leova Plus actif ✓", st_free: "Formule gratuite", st_usage: " — ce mois-ci : {r} phrases, {t} voix, {m} ajouts magiques, {i} images.", st_unavail: "Usage indisponible pour le moment.", d_connected: "connecté ✓", d_none: "aucune", d_unlimited: "Illimitée", d_free: "Gratuite", acct_connected: "Connecté : {email} ✓", acct_none: "Pas de compte — le vocabulaire n'existe que sur cette tablette.", acct_saved: "Connecté : {email} — sauvegardé ✓",
+    pw_hint: "Choisissez (ou prenez) une photo bien cadrée de son visage — c'est elle que l'enfant touchera pour l'appeler.", pw_take: "📷 Prendre / choisir une photo", pw_skip: "⏭ Passer", pw_stop: "✖ Arrêter",
+    edit_h: "Modifier ce picto", edit_label: "Mot affiché", edit_say: "Ce que dit la tablette", edit_say_ph: "ex : Jaja (pour corriger une prononciation)", edit_play: "▶ Écouter", edit_img: "Changer l'image", edit_pick: "🔍 Pictos", edit_gen: "✨ Dessiner (IA)", edit_photo: "📷 Photo", rec_label: "Vraie voix (facultatif — ex : « Mémé » dit par Mémé)", rec_btn: "🎙 Enregistrer", rec_play: "▶ Écouter l'enregistrement", rec_hint: "Quand cette carte a une vraie voix enregistrée, elle remplace la voix de synthèse (sur cette tablette).",
   },
   en: {
     strip_hint: "Touch the pictures to talk…",
@@ -1164,6 +1191,33 @@ const STR = {
     done_name: "{name}'s board is ready! 🎉", done_noname: "The board is ready! 🎉",
     gen_think: "Designing {name}'s board…", gen_make: "Creating “{label}”…",
     gen_fail: "Failed: {msg} — you can personalize later in parent mode (⚙️, long press).",
+    s_title: "Settings (parents)", tab_home: "🏠 Home", tab_vocab: "📚 Vocabulary", tab_display: "🖐️ Display", tab_voice: "🗣️ Voice & AI", tab_journal: "📊 Journal", tab_account: "☁️ Account", tab_lock: "🔒 Security",
+    d_words: "active words", d_voices: "voices ready", d_sync: "backup", d_plan: "plan",
+    qa_magic: "✨ Magic add — say it, AI does the rest", qa_photo: "📷 Add a picture or photo", qa_sync: "🔄 Back up / sync",
+    home_note: "The child doesn't see this screen. On the grid: touch a card to hide it, press and drag to reorder.",
+    magic_h: "✨ Magic add", magic_label: "Say or type what your child should be able to ask for — a word, a list, or a theme", magic_ph: 'e.g. "trampoline" · "strawberry, banana, yogurt" · "breakfast"', magic_create: "✨ Create", magic_pick_hint: "Tap a thumbnail to select/deselect · 🔄 to change its image.", magic_add: "✔ Add", magic_undo: "✖ Cancel",
+    photowiz_btn: "👨‍👩‍👦 Family photo assistant", photowiz_hint: "Goes through the people without a photo: a child recognizes a real photo far better than a drawing.",
+    routines_h: "📋 “First / Then” routines", routines_sub: "A sequence of visual steps the child goes through (e.g. brushing teeth). They appear in a 📋 tab on their grid.", routine_add: "➕ New routine",
+    cats_h: "Categories", cats_sub: "Change the emoji or name, or create a new one.", cat_add: "➕ New category",
+    addimg_h: "Add a picture", newlabel_l: "Word to speak", newlabel_ph: "e.g. teddy, pool, grandma…", cat_l: "Category", img_l: "Image: a photo (recommended) or an emoji",
+    btn_arasaac: "🔍 Search a picto", btn_gen: "✨ Generate (AI)", btn_clean: "🪄 Photo → picto (AI)", emoji_ph: "…or paste an emoji here 🧸", addimg_hint: "Real photos (their teddy, their spoon, family members) work better than drawings. “Search” uses ARASAAC pictograms (free, the ones in PECS binders).", add: "Add", trash_h: "🗑 Trash", trash_sub: "Deleted cards can be restored for 30 days.",
+    lang_hint: "The child's voice and AI creations follow this language; the interface is translated (fr/en/es).", disp_h: "🖐️ Display & comfort",
+    size_l: "Card size", size_S: "Small (more cards on screen)", size_M: "Medium (default)", size_L: "Large", size_XL: "Very large (motor difficulties)",
+    gap_l: "Spacing between cards", gap_S: "Tight", gap_M: "Normal (default)", gap_L: "Wide (avoids accidental taps)",
+    touch_l: "Touch", dbl_0: "Repeated taps: all accepted (default)", dbl_400: "Ignore double taps (0.4 s)", dbl_800: "Ignore double taps (0.8 s)", hold_0: "Immediate activation (default)", hold_300: "Hold 0.3 s to activate", hold_600: "Hold 0.6 s to activate", touch_hint: "“Hold to activate” avoids activations from brushing or swiping a hand across.",
+    acc_contrast: "High contrast (sharp outlines, black text)", acc_dark: "Dark theme (evening, light sensitivity)", acc_anim: "Animations and vibration on touch",
+    kiosk_h: "🔒 Kiosk mode", kiosk_sub: "Locks the tablet on Leova: the child can't leave the app. You return to settings with the parent code.", pin_l: "Parent code (4 digits) — to open settings and exit kiosk", pin_set: "Set / change the code", kiosk_chk: "Enable kiosk mode", kiosk_hint: "Locking uses Android screen pinning (exit by holding Back + Overview). For a fully locked kiosk, provision the tablet as “device owner”.",
+    rate_l: "Voice speed", test_voice: "🔊 Test the voice", reform_chk: "Rephrase the sentence strip into a natural sentence", genvoices: "🎙️ Generate all voices (once)", vmgr_h: "🎛️ Voice manager", vmgr_sub: "Listen to each word; 🔄 re-downloads its voice from the server (useful if a word sounds different).",
+    ai_h: "Artificial intelligence", code_l: "Leova access code (optional — unlimited)", code_ph: "Paste the access code (it stays on the tablet)", test_backend: "🔌 Test the server", ai_hint: "AI runs through the Leova server (Europe, GDPR) and works WITHOUT a code, with a free monthly quota. The access code removes the quotas.",
+    j_h: "📊 What they said", j_7days: "The last 7 days (words touched)", j_top: "Favorite words (30 days)", j_new: "New words (7 days)", j_phrases: "Latest sentences", j_report: "🖨 Report for the therapist (30 days)", j_hint: "The journal stays on this tablet (not synced). The report prints from the web version on a computer.",
+    plus_btn: "💜 Get Leova Plus", restore_btn: "↺ Restore a purchase", acct_l: "Account & sync (home ↔ school)", acct_email_ph: "Email", acct_pass_ph: "Password (6 characters min.)", acct_btn: "Create account / Sign in", acct_forgot: "Forgot password", sync_now: "🔄 Sync now", acct_out: "Sign out (the tablet keeps everything)", acct_hint: "Backs up the vocabulary online (Europe) and syncs it across tablets: home, school…",
+    exp_h: "📦 Export / import / print", exp_btn: "⬇️ Export the vocabulary (file)", imp_btn: "⬆️ Import a file", print_btn: "🖨 Print the board (paper binder)", exp_hint: "Share the board with another family, or print a backup paper PECS binder (from the web version on a computer).",
+    close: "Close", exit_parent: "Exit parent mode", cancel: "Cancel", save: "✔ Save", delete: "🗑 Delete", hide: "🙈 Hide",
+    rt_h: "📋 Routine", rt_name: "Routine name", rt_name_ph: "e.g. Brushing teeth", rt_emoji: "Emoji", rt_steps: "Steps, in order", rt_addstep: "➕ Add a step", rp_done: "✓ Done", rp_bravo: "Well done!", rp_finished: "All done!", rp_say_done: "Well done, all finished!", rp_step: "{label} — step {n} of {total}", rp_first: "First", rp_then: "Then", rp_say_first: "First, ", rp_say_then: "Then, ",
+    edit_note: "Parent mode: touch a card to edit it · press and drag to reorder · ⚙️ for settings.", trash_empty: "The trash is empty.", j_empty: "No sentence read yet (▶ button).", rt_empty: "No routine yet.",
+    st_offline: "Offline — usage unavailable.", st_parent: "Parent access: unlimited ✓", st_plus: "Leova Plus active ✓", st_free: "Free plan", st_usage: " — this month: {r} sentences, {t} voices, {m} magic adds, {i} images.", st_unavail: "Usage unavailable right now.", d_connected: "connected ✓", d_none: "none", d_unlimited: "Unlimited", d_free: "Free", acct_connected: "Signed in: {email} ✓", acct_none: "No account — the vocabulary only exists on this tablet.", acct_saved: "Signed in: {email} — saved ✓",
+    pw_hint: "Choose (or take) a well-framed photo of their face — that's what the child will touch to call them.", pw_take: "📷 Take / choose a photo", pw_skip: "⏭ Skip", pw_stop: "✖ Stop",
+    edit_h: "Edit this card", edit_label: "Displayed word", edit_say: "What the tablet says", edit_say_ph: "e.g. Jaja (to fix pronunciation)", edit_play: "▶ Listen", edit_img: "Change the image", edit_pick: "🔍 Pictos", edit_gen: "✨ Draw (AI)", edit_photo: "📷 Photo", rec_label: "Real voice (optional — e.g. “Grandma” said by Grandma)", rec_btn: "🎙 Record", rec_play: "▶ Play the recording", rec_hint: "When a card has a real recorded voice, it replaces the synthetic voice (on this tablet).",
   },
   es: {
     strip_hint: "Toca las imágenes para hablar…",
@@ -1199,6 +1253,33 @@ const STR = {
     done_name: "¡El tablero de {name} está listo! 🎉", done_noname: "¡El tablero está listo! 🎉",
     gen_think: "Pensando el tablero de {name}…", gen_make: "Creando “{label}”…",
     gen_fail: "Error: {msg} — podrás personalizar más tarde en el modo padre (⚙️, pulsación larga).",
+    s_title: "Ajustes (padres)", tab_home: "🏠 Inicio", tab_vocab: "📚 Vocabulario", tab_display: "🖐️ Pantalla", tab_voice: "🗣️ Voz e IA", tab_journal: "📊 Diario", tab_account: "☁️ Cuenta", tab_lock: "🔒 Seguridad",
+    d_words: "palabras activas", d_voices: "voces listas", d_sync: "copia", d_plan: "plan",
+    qa_magic: "✨ Añadir mágico — dilo, la IA hace el resto", qa_photo: "📷 Añadir una imagen o foto", qa_sync: "🔄 Guardar / sincronizar",
+    home_note: "El niño no ve esta pantalla. En el tablero: toca una tarjeta para ocultarla, mantén y arrastra para reordenar.",
+    magic_h: "✨ Añadir mágico", magic_label: "Di o escribe lo que tu hijo debe poder pedir — una palabra, una lista o un tema", magic_ph: 'ej.: "trampolín" · "fresa, plátano, yogur" · "el desayuno"', magic_create: "✨ Crear", magic_pick_hint: "Toca una miniatura para marcar/desmarcar · 🔄 para cambiar su imagen.", magic_add: "✔ Añadir", magic_undo: "✖ Cancelar",
+    photowiz_btn: "👨‍👩‍👦 Asistente de fotos de seres queridos", photowiz_hint: "Repasa a las personas sin foto: un niño reconoce mucho mejor una foto real que un dibujo.",
+    routines_h: "📋 Rutinas «Primero / Luego»", routines_sub: "Una secuencia de pasos visuales que el niño realiza (ej.: cepillarse los dientes). Aparecen en una pestaña 📋 en su tablero.", routine_add: "➕ Nueva rutina",
+    cats_h: "Categorías", cats_sub: "Cambia el emoji o el nombre, o crea una nueva.", cat_add: "➕ Nueva categoría",
+    addimg_h: "Añadir una imagen", newlabel_l: "Palabra a decir", newlabel_ph: "ej.: peluche, piscina, abuela…", cat_l: "Categoría", img_l: "Imagen: una foto (recomendado) o un emoji",
+    btn_arasaac: "🔍 Buscar un picto", btn_gen: "✨ Generar (IA)", btn_clean: "🪄 Foto → picto (IA)", emoji_ph: "…o pega un emoji aquí 🧸", addimg_hint: "Las fotos reales (su peluche, su cuchara, la familia) funcionan mejor que los dibujos. «Buscar» usa los pictogramas ARASAAC (gratis, los de los cuadernos PECS).", add: "Añadir", trash_h: "🗑 Papelera", trash_sub: "Los pictos eliminados se pueden recuperar 30 días.",
+    lang_hint: "La voz del niño y las creaciones por IA siguen este idioma; la interfaz está traducida (fr/en/es).", disp_h: "🖐️ Pantalla y comodidad",
+    size_l: "Tamaño de las tarjetas", size_S: "Pequeñas (más tarjetas en pantalla)", size_M: "Medianas (por defecto)", size_L: "Grandes", size_XL: "Muy grandes (dificultad motriz)",
+    gap_l: "Espacio entre tarjetas", gap_S: "Estrecho", gap_M: "Normal (por defecto)", gap_L: "Amplio (evita toques accidentales)",
+    touch_l: "Toque", dbl_0: "Toques repetidos: todos aceptados (por defecto)", dbl_400: "Ignorar toques dobles (0,4 s)", dbl_800: "Ignorar toques dobles (0,8 s)", hold_0: "Activación inmediata (por defecto)", hold_300: "Mantener 0,3 s para activar", hold_600: "Mantener 0,6 s para activar", touch_hint: "«Mantener para activar» evita activaciones al rozar o pasar la mano.",
+    acc_contrast: "Alto contraste (contornos nítidos, texto negro)", acc_dark: "Tema oscuro (noche, sensibilidad a la luz)", acc_anim: "Animaciones y vibración al tocar",
+    kiosk_h: "🔒 Modo kiosco", kiosk_sub: "Bloquea la tableta en Leova: el niño no puede salir de la app. Se vuelve a los ajustes con el código de padre.", pin_l: "Código de padre (4 dígitos) — para abrir los ajustes y salir del kiosco", pin_set: "Definir / cambiar el código", kiosk_chk: "Activar el modo kiosco", kiosk_hint: "El bloqueo usa el anclaje de pantalla de Android (salir manteniendo Atrás + Vista general). Para un bloqueo total, aprovisiona la tableta como «propietario del dispositivo».",
+    rate_l: "Velocidad de la voz", test_voice: "🔊 Probar la voz", reform_chk: "Reformular la tira en una frase natural", genvoices: "🎙️ Generar todas las voces (una vez)", vmgr_h: "🎛️ Gestor de voces", vmgr_sub: "Escucha cada palabra; 🔄 vuelve a descargar su voz del servidor (útil si una palabra suena diferente).",
+    ai_h: "Inteligencia artificial", code_l: "Código de acceso Leova (opcional — ilimitado)", code_ph: "Pega el código de acceso (se queda en la tableta)", test_backend: "🔌 Probar el servidor", ai_hint: "La IA pasa por el servidor Leova (Europa, RGPD) y funciona SIN código, con una cuota mensual gratuita. El código elimina las cuotas.",
+    j_h: "📊 Lo que ha dicho", j_7days: "Los últimos 7 días (palabras tocadas)", j_top: "Palabras favoritas (30 días)", j_new: "Palabras nuevas (7 días)", j_phrases: "Últimas frases", j_report: "🖨 Informe para el logopeda (30 días)", j_hint: "El diario se queda en esta tableta (no sincronizado). El informe se imprime desde la versión web en un ordenador.",
+    plus_btn: "💜 Obtener Leova Plus", restore_btn: "↺ Restaurar una compra", acct_l: "Cuenta y sincronización (casa ↔ escuela)", acct_email_ph: "Correo", acct_pass_ph: "Contraseña (mín. 6 caracteres)", acct_btn: "Crear cuenta / Iniciar sesión", acct_forgot: "Olvidé la contraseña", sync_now: "🔄 Sincronizar ahora", acct_out: "Cerrar sesión (la tableta lo conserva todo)", acct_hint: "Guarda el vocabulario en línea (Europa) y lo sincroniza entre varias tabletas: casa, escuela…",
+    exp_h: "📦 Exportar / importar / imprimir", exp_btn: "⬇️ Exportar el vocabulario (archivo)", imp_btn: "⬆️ Importar un archivo", print_btn: "🖨 Imprimir el tablero (cuaderno de papel)", exp_hint: "Comparte el tablero con otra familia, o imprime un cuaderno PECS de papel de respaldo (desde la versión web en un ordenador).",
+    close: "Cerrar", exit_parent: "Salir del modo padre", cancel: "Cancelar", save: "✔ Guardar", delete: "🗑 Eliminar", hide: "🙈 Ocultar",
+    rt_h: "📋 Rutina", rt_name: "Nombre de la rutina", rt_name_ph: "ej.: Cepillado de dientes", rt_emoji: "Emoji", rt_steps: "Pasos, en orden", rt_addstep: "➕ Añadir un paso", rp_done: "✓ Hecho", rp_bravo: "¡Bien hecho!", rp_finished: "¡Terminado!", rp_say_done: "¡Bien hecho, terminado!", rp_step: "{label} — paso {n} de {total}", rp_first: "Primero", rp_then: "Luego", rp_say_first: "Primero, ", rp_say_then: "Luego, ",
+    edit_note: "Modo padre: toca una tarjeta para editarla · mantén y arrastra para reordenar · ⚙️ para los ajustes.", trash_empty: "La papelera está vacía.", j_empty: "Aún no se ha leído ninguna frase (botón ▶).", rt_empty: "Aún no hay rutinas.",
+    st_offline: "Sin conexión — uso no disponible.", st_parent: "Acceso padre: ilimitado ✓", st_plus: "Leova Plus activo ✓", st_free: "Plan gratuito", st_usage: " — este mes: {r} frases, {t} voces, {m} añadidos mágicos, {i} imágenes.", st_unavail: "Uso no disponible ahora mismo.", d_connected: "conectado ✓", d_none: "ninguna", d_unlimited: "Ilimitado", d_free: "Gratis", acct_connected: "Conectado: {email} ✓", acct_none: "Sin cuenta — el vocabulario solo existe en esta tableta.", acct_saved: "Conectado: {email} — guardado ✓",
+    pw_hint: "Elige (o haz) una foto bien encuadrada de su cara — es la que el niño tocará para llamarle.", pw_take: "📷 Hacer / elegir una foto", pw_skip: "⏭ Saltar", pw_stop: "✖ Parar",
+    edit_h: "Editar esta tarjeta", edit_label: "Palabra mostrada", edit_say: "Lo que dice la tableta", edit_say_ph: "ej.: Jaja (para corregir la pronunciación)", edit_play: "▶ Escuchar", edit_img: "Cambiar la imagen", edit_pick: "🔍 Pictos", edit_gen: "✨ Dibujar (IA)", edit_photo: "📷 Foto", rec_label: "Voz real (opcional — ej.: «Abuela» dicho por la abuela)", rec_btn: "🎙 Grabar", rec_play: "▶ Escuchar la grabación", rec_hint: "Cuando una tarjeta tiene una voz real grabada, reemplaza la voz sintética (en esta tableta).",
   },
 };
 function t(key, vars) {
@@ -2052,20 +2133,19 @@ async function refreshPlan() {
   const restoreBtn = document.getElementById("restorePlusBtn");
   buyBtn.style.display = "none";
   restoreBtn.style.display = "none";
-  if (!navigator.onLine) { el.textContent = "Hors ligne — usage indisponible."; return; }
+  if (!navigator.onLine) { el.textContent = t("st_offline"); return; }
   try {
     const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
-    if (me.plan === "parent") { el.textContent = "Accès parent : illimité ✓"; return; }
+    if (me.plan === "parent") { el.textContent = t("st_parent"); return; }
     const u = me.usage;
     const line = (v) => v.quota === null ? v.used : v.used + "/" + v.quota;
-    el.textContent = (me.plan === "plus" ? "Leova Plus actif ✓" : "Formule gratuite") +
-      ` — ce mois-ci : ${line(u.reformulate)} phrases, ${line(u.tts)} voix, ` +
-      `${line(u.magic)} ajouts magiques, ${line(u.image)} images.`;
+    el.textContent = (me.plan === "plus" ? t("st_plus") : t("st_free")) +
+      t("st_usage", { r: line(u.reformulate), t: line(u.tts), m: line(u.magic), i: line(u.image) });
     if (me.plan !== "plus" && Billing()) {
       buyBtn.style.display = "";
       restoreBtn.style.display = "";
     }
-  } catch { el.textContent = "Usage indisponible pour le moment."; }
+  } catch { el.textContent = t("st_unavail"); }
 }
 
 document.getElementById("plusBtn").onclick = () => openPaywall("settings");
@@ -2638,7 +2718,7 @@ async function pushSync() {
     });
     if (r.ok) {
       localStorage.setItem("vp_syncrev", JSON.stringify(rev));
-      setAcctStatus("Connecté : " + fbAuth.email + " — sauvegardé ✓");
+      setAcctStatus(t("acct_saved", { email: fbAuth.email }));
     }
   } catch {}
 }
@@ -2676,8 +2756,7 @@ function refreshAcct() {
   const on = hasAccount();
   document.getElementById("acctForms").style.display = on ? "none" : "";
   document.getElementById("acctActions").style.display = on ? "" : "none";
-  setAcctStatus(on ? "Connecté : " + fbAuth.email + " ✓"
-    : "Pas de compte — le vocabulaire n'existe que sur cette tablette.");
+  setAcctStatus(on ? t("acct_connected", { email: fbAuth.email }) : t("acct_none"));
 }
 
 document.getElementById("acctBtn").onclick = async () => {
@@ -2861,7 +2940,7 @@ document.getElementById("editSave").onclick = () => {
 /* ---- Corbeille (liste dans l'onglet Vocabulaire) ---- */
 function renderTrash() {
   const box = document.getElementById("trashList");
-  if (!trash.length) { box.innerHTML = '<div class="hint">La corbeille est vide.</div>'; return; }
+  if (!trash.length) { box.innerHTML = `<div class="hint">${t("trash_empty")}</div>`; return; }
   box.innerHTML = "";
   for (const t of trash) {
     const row = document.createElement("div");
@@ -2939,7 +3018,7 @@ function renderJournal() {
   // Dernières phrases
   const box = document.getElementById("jPhrases");
   const phrases = journal.filter((e) => e.k === "p").slice(-8).reverse();
-  box.innerHTML = phrases.length ? "" : '<div class="hint">Aucune phrase lue pour l\'instant (bouton ▶).</div>';
+  box.innerHTML = phrases.length ? "" : `<div class="hint">${t("j_empty")}</div>`;
   for (const p of phrases) {
     const d = document.createElement("div");
     d.className = "jphrase";
@@ -3039,7 +3118,7 @@ let rtEditing = null; // routine en cours d'édition (copie de travail)
 
 function renderRoutines() {
   const box = document.getElementById("routineList");
-  if (!routines.length) { box.innerHTML = '<div class="hint">Aucune routine pour l\'instant.</div>'; return; }
+  if (!routines.length) { box.innerHTML = `<div class="hint">${t("rt_empty")}</div>`; return; }
   box.innerHTML = "";
   for (const r of routines) {
     const row = document.createElement("div");
@@ -3133,21 +3212,21 @@ function rpShow() {
   const { label, steps, idx } = rtRun;
   if (idx >= steps.length) {
     document.getElementById("rpProgress").textContent = label;
-    document.getElementById("rpPrefix").textContent = "Bravo !";
+    document.getElementById("rpPrefix").textContent = t("rp_bravo");
     document.getElementById("rpVis").innerHTML = `<span class="em">🎉</span>`;
-    document.getElementById("rpLabel").textContent = "C'est terminé !";
+    document.getElementById("rpLabel").textContent = t("rp_finished");
     document.getElementById("rpDone").textContent = "✓";
-    speak("Bravo, c'est terminé !");
+    speak(t("rp_say_done"));
     setTimeout(() => document.getElementById("routinePlayer").classList.remove("open"), 2600);
     return;
   }
   const item = steps[idx];
-  document.getElementById("rpProgress").textContent = `${label} — étape ${idx + 1} sur ${steps.length}`;
-  document.getElementById("rpPrefix").textContent = idx === 0 ? "D'abord" : "Ensuite";
+  document.getElementById("rpProgress").textContent = t("rp_step", { label, n: idx + 1, total: steps.length });
+  document.getElementById("rpPrefix").textContent = idx === 0 ? t("rp_first") : t("rp_then");
   document.getElementById("rpVis").innerHTML = pictoVisual(item);
   document.getElementById("rpLabel").textContent = item.label;
-  document.getElementById("rpDone").textContent = "✓ Fini";
-  speak((idx === 0 ? "D'abord, " : "Ensuite, ") + (item.say || item.label));
+  document.getElementById("rpDone").textContent = t("rp_done");
+  speak((idx === 0 ? t("rp_say_first") : t("rp_say_then")) + (item.say || item.label));
 }
 
 document.getElementById("rpDone").onclick = () => {
@@ -3326,19 +3405,20 @@ async function refreshDash() {
   const items = allItems().filter((i) => !hidden.has(i.id));
   document.getElementById("dashWords").textContent = items.length;
   const rev = store.get("syncrev", 0);
+  const loc = uiLang() === "fr" ? "fr-FR" : uiLang() === "es" ? "es-ES" : "en-US";
   document.getElementById("dashSync").textContent = hasAccount()
     ? (rev
-      ? new Date(rev).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " +
-        new Date(rev).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-      : "connecté ✓")
-    : "aucune";
+      ? new Date(rev).toLocaleDateString(loc, { day: "numeric", month: "short" }) + " " +
+        new Date(rev).toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" })
+      : t("d_connected"))
+    : t("d_none");
   const planEl = document.getElementById("dashPlan");
-  if (backendSecret) planEl.textContent = "Illimitée";
+  if (backendSecret) planEl.textContent = t("d_unlimited");
   else if (navigator.onLine) {
     planEl.textContent = "…";
     fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() })
       .then((r) => r.json())
-      .then((me) => { planEl.textContent = me.plan === "plus" ? "Plus 💜" : "Gratuite"; })
+      .then((me) => { planEl.textContent = me.plan === "plus" ? "Plus 💜" : t("d_free"); })
       .catch(() => { planEl.textContent = "—"; });
   } else planEl.textContent = "—";
   let ready = 0;
