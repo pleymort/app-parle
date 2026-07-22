@@ -125,18 +125,42 @@
   body.dark.hc .tab { border-color: #E6EEF6; color: #E6EEF6; }
 
   /* ---- Bouton parent ---- */
+  /* Décollé de l'angle (bottom/right 18px) : dans le coin exact, Android confond
+     l'appui avec un geste de bord et l'ignore. touch-action:none pour la même raison. */
   #gear {
-    position: fixed; bottom: 10px; right: 10px; width: 44px; height: 44px;
+    position: fixed; bottom: 18px; right: 18px; width: 52px; height: 52px;
     border-radius: 50%; border: none; background: rgba(150,165,180,.25);
-    font-size: 20px; color: #7C8FA3; z-index: 40; cursor: pointer;
+    font-size: 22px; color: #7C8FA3; z-index: 40; cursor: pointer;
+    touch-action: none; -webkit-tap-highlight-color: transparent;
   }
-  /* Retour visuel pendant l'appui long : l'anneau se remplit en 2 s */
+  /* Retour visuel pendant l'appui long : un halo bleu grandit AUTOUR du bouton en
+     2 s. Vers l'extérieur (et non en inset) → reste visible même si le doigt
+     couvre l'icône. */
   #gear.holding {
     animation: gearHold 2s linear forwards;
   }
   @keyframes gearHold {
-    from { box-shadow: 0 0 0 3px #4A90D9 inset, 0 0 0 0 rgba(74,144,217,.35); background: rgba(150,165,180,.25); }
-    to   { box-shadow: 0 0 0 22px #4A90D9 inset, 0 0 0 10px rgba(74,144,217,.35); background: #4A90D9; color: white; }
+    from { box-shadow: 0 0 0 0 rgba(74,144,217,.95), 0 0 0 0 rgba(74,144,217,.22); }
+    to   { box-shadow: 0 0 0 5px #4A90D9, 0 0 0 30px rgba(74,144,217,.22); background: #4A90D9; color: white; }
+  }
+  /* Pulse d'appel pendant le coach « mode parent » : attire l'œil vers ⚙️ */
+  #gear.attn { animation: gearAttn 1.5s ease-in-out infinite; }
+  @keyframes gearAttn {
+    0%,100% { box-shadow: 0 0 0 0 rgba(74,144,217,.5); }
+    50%     { box-shadow: 0 0 0 12px rgba(74,144,217,0); }
+  }
+  /* Étiquette « Maintenez 2 s… » au-dessus du bouton (jamais sous le doigt) */
+  #gearHint {
+    position: fixed; right: 18px; bottom: 78px; z-index: 41;
+    background: #243447; color: #fff; font-weight: 800; font-size: 13px;
+    padding: 8px 12px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    opacity: 0; transform: translateY(6px); pointer-events: none; white-space: nowrap;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  #gearHint.show { opacity: 1; transform: translateY(0); }
+  #gearHint::after {
+    content: ""; position: absolute; right: 20px; bottom: -6px;
+    border: 6px solid transparent; border-top-color: #243447; border-bottom: 0;
   }
 
   /* ---- Mode parent — design system « calme, net » ----
@@ -516,6 +540,7 @@
 <div id="grid"></div>
 
 <button id="gear" aria-label="Mode parent">⚙️</button>
+<div id="gearHint" data-i18n="gear_hint">Maintenez 2 s…</div>
 
 <div id="panel">
   <div id="panelCard">
@@ -1036,7 +1061,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "43"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "44"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1204,6 +1229,8 @@ const STR = {
     pw_fine: "7 jours offerts, puis 4,99 €/mois. Sans engagement, résiliable en un geste depuis Google Play. Aucune fonction essentielle n'est bloquée dans la version gratuite.",
     set_lang: "Langue (voix et interface)",
     coach_name: "Touchez une carte — écoutez « {name} » parler ✨", coach_noname: "Touchez une carte — écoutez la tablette parler ✨",
+    coach_parent: "👉 Maintenez l'icône ⚙️ (en bas à droite) 2 s pour le mode parent : ajouter des cartes, mettre de vraies photos, sauvegarder.",
+    gear_hint: "Maintenez 2 s…",
     done_name: "Le tableau de {name} est prêt ! 🎉", done_noname: "Le tableau est prêt ! 🎉",
     gen_think: "Je réfléchis au tableau de {name}…", gen_make: "Je crée « {label} »…",
     gen_fail: "Échec : {msg} — vous pourrez personnaliser plus tard via le mode parent (⚙️, appui long).",
@@ -1270,6 +1297,8 @@ const STR = {
     pw_fine: "7 days free, then €4.99/month. No commitment, cancel in one tap from Google Play. No essential feature is locked in the free version.",
     set_lang: "Language (voice and interface)",
     coach_name: "Touch a card — hear “{name}” speak ✨", coach_noname: "Touch a card — hear the tablet speak ✨",
+    coach_parent: "👉 Press and hold the ⚙️ icon (bottom-right) for 2s for parent mode: add cards, use real photos, back up.",
+    gear_hint: "Hold 2s…",
     done_name: "{name}'s board is ready! 🎉", done_noname: "The board is ready! 🎉",
     gen_think: "Designing {name}'s board…", gen_make: "Creating “{label}”…",
     gen_fail: "Failed: {msg} — you can personalize later in parent mode (⚙️, long press).",
@@ -1336,6 +1365,8 @@ const STR = {
     pw_fine: "7 días gratis, luego 4,99 €/mes. Sin compromiso, cancelable con un toque desde Google Play. Ninguna función esencial está bloqueada en la versión gratuita.",
     set_lang: "Idioma (voz e interfaz)",
     coach_name: "Toca una tarjeta — escucha hablar a “{name}” ✨", coach_noname: "Toca una tarjeta — escucha hablar a la tableta ✨",
+    coach_parent: "👉 Mantén pulsado el icono ⚙️ (abajo a la derecha) 2 s para el modo padre: añadir tarjetas, usar fotos reales, copia de seguridad.",
+    gear_hint: "Mantén 2 s…",
     done_name: "¡El tablero de {name} está listo! 🎉", done_noname: "¡El tablero está listo! 🎉",
     gen_think: "Pensando el tablero de {name}…", gen_make: "Creando “{label}”…",
     gen_fail: "Error: {msg} — podrás personalizar más tarde en el modo padre (⚙️, pulsación larga).",
@@ -1943,7 +1974,7 @@ function renderGrid() {
       speakItem(item);
       addToStrip(item);
       logJ({ t: now, k: "w", w: item.label }); // journal (local)
-      if (firstWinActive) firstWinDone();
+      if (coachMode === "firstwin") firstWinDone();
     };
     attachParentDrag(b, item);
     gridEl.appendChild(b);
@@ -2137,15 +2168,26 @@ document.getElementById("clearBtn").onclick = () => { strip = []; renderStrip();
 
 /* ================= Mode parent ================= */
 const gear = document.getElementById("gear");
-let gearTimer = null;
+const gearHint = document.getElementById("gearHint");
+let gearTimer = null, gearTicks = [];
 // Appui long de 2 secondes pour éviter une activation accidentelle par l'enfant.
-// L'anneau bleu qui se remplit montre au parent que l'appui est bien compté.
+// Triple retour au parent : halo qui grandit AUTOUR du bouton (visible même doigt
+// posé), étiquette « Maintenez 2 s… » au-dessus, et ticks haptiques à 0,7 s / 1,4 s
+// (il SENT la progression même sans la voir).
 function gearRelease() {
   clearTimeout(gearTimer);
+  gearTicks.forEach(clearTimeout); gearTicks = [];
   gear.classList.remove("holding");
+  gearHint.classList.remove("show");
 }
-gear.addEventListener("pointerdown", () => {
+gear.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
   gear.classList.add("holding");
+  gearHint.classList.add("show");
+  if (navigator.vibrate) {
+    gearTicks.push(setTimeout(() => navigator.vibrate(15), 700));
+    gearTicks.push(setTimeout(() => navigator.vibrate(15), 1400));
+  }
   gearTimer = setTimeout(() => {
     gearRelease();
     if (navigator.vibrate) navigator.vibrate(80);
@@ -2154,6 +2196,8 @@ gear.addEventListener("pointerdown", () => {
 });
 gear.addEventListener("pointerup", gearRelease);
 gear.addEventListener("pointerleave", gearRelease);
+// L'angle de l'écran peut faire annuler le pointeur par Android → on nettoie l'état
+gear.addEventListener("pointercancel", gearRelease);
 // Sur Android, l'appui long peut déclencher le menu contextuel : on le bloque
 gear.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -3653,20 +3697,21 @@ function closePaywall() { document.getElementById("paywall").classList.remove("o
 
 // N'affiche l'offre d'onboarding qu'une fois ; l'offre « quota » une fois/session.
 async function maybePaywall(context) {
-  if (backendSecret) return;
-  if (context === "onboarding" && store.get("paywallSeen", false)) return;
-  if (context === "quota") { if (quotaPromptShown) return; quotaPromptShown = true; }
+  if (backendSecret) return false;
+  if (context === "onboarding" && store.get("paywallSeen", false)) return false;
+  if (context === "quota") { if (quotaPromptShown) return false; quotaPromptShown = true; }
   try {
     const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
-    if (me.plan === "plus" || me.plan === "parent") return; // déjà abonné / parent
+    if (me.plan === "plus" || me.plan === "parent") return false; // déjà abonné / parent
   } catch {}
   if (context === "onboarding") store.set("paywallSeen", true);
   openPaywall(context);
+  return true;
 }
 
-document.getElementById("plusWelcomeOk").onclick = () => document.getElementById("plusWelcome").classList.remove("open");
-document.getElementById("pwallSkip").onclick = closePaywall;
-document.getElementById("paywall").onclick = (e) => { if (e.target.id === "paywall") closePaywall(); };
+document.getElementById("plusWelcomeOk").onclick = () => { document.getElementById("plusWelcome").classList.remove("open"); showParentCoach(); };
+document.getElementById("pwallSkip").onclick = () => { closePaywall(); showParentCoach(); };
+document.getElementById("paywall").onclick = (e) => { if (e.target.id === "paywall") { closePaywall(); showParentCoach(); } };
 document.getElementById("pwallBuy").onclick = async () => {
   const st = document.getElementById("pwallStatus");
   if (!Billing()) { st.textContent = "L'abonnement s'active depuis l'app installée via Google Play."; return; }
@@ -3682,25 +3727,47 @@ document.getElementById("pwallBuy").onclick = async () => {
   } catch (e) { st.textContent = String(e.message).includes("annulé") ? "" : "Impossible : " + e.message; }
 };
 
-/* ---- Première victoire : faire parler la tablette tout de suite ---- */
-let firstWinActive = false;
+/* ---- Coach-marks : « première victoire » puis « mode parent » ---- */
+// Le même bandeau sert deux messages, distingués par coachMode.
+let coachMode = null; // null | "firstwin" | "parent"
+
 function startFirstWin() {
   const name = store.get("childname", "");
   document.getElementById("coachText").textContent = name ? t("coach_name", { name }) : t("coach_noname");
   currentCat = "core"; renderTabs(); renderGrid();
-  firstWinActive = true;
+  coachMode = "firstwin";
   document.getElementById("coach").classList.add("show");
 }
 function firstWinDone() {
-  if (!firstWinActive) return;
-  firstWinActive = false;
+  if (coachMode !== "firstwin") return;
+  coachMode = null;
   document.getElementById("coach").classList.remove("show");
-  setTimeout(() => maybePaywall("onboarding"), 1500); // au pic d'émotion
+  setTimeout(afterOnboardingOffer, 1500); // au pic d'émotion
+}
+// Propose Plus ; si aucun paywall ne s'ouvre, enchaîne sur le coach « mode parent ».
+async function afterOnboardingOffer() {
+  const opened = await maybePaywall("onboarding");
+  if (!opened) showParentCoach();
+}
+// Coach « mode parent » : montré UNE seule fois. Pointe l'icône ⚙️ (qui pulse) et
+// dit clairement qu'il faut la MAINTENIR — le geste caché sinon indevinable.
+function showParentCoach() {
+  if (coachMode || store.get("coachedParent", false)) return;
+  store.set("coachedParent", true);
+  coachMode = "parent";
+  document.getElementById("coachText").textContent = t("coach_parent");
+  document.getElementById("coach").classList.add("show");
+  gear.classList.add("attn");
+}
+function closeCoach() {
+  const was = coachMode;
+  coachMode = null;
+  document.getElementById("coach").classList.remove("show");
+  gear.classList.remove("attn");
+  return was;
 }
 document.getElementById("coachClose").onclick = () => {
-  firstWinActive = false;
-  document.getElementById("coach").classList.remove("show");
-  maybePaywall("onboarding");
+  if (closeCoach() === "firstwin") afterOnboardingOffer();
 };
 
 /* ---- Segmentation ---- */
