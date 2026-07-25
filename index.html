@@ -99,6 +99,12 @@
     background: #24425F; color: #fff; font-weight: 800; font-size: 13px;
   }
   body.supervising #superBar { display: flex; }
+  /* Consultation seule (professionnel invité en lecture) : on retire les
+     commandes de modification plutôt que de les laisser échouer. */
+  body.readonly #openAtelierBtn, body.readonly #newStoryBtn,
+  body.readonly #addRoutineBtn, body.readonly #magicBtn, body.readonly #addBtn,
+  body.readonly #editSave, body.readonly #editDelete, body.readonly #editHide,
+  body.readonly #editReal, body.readonly #obzImpLabel { display: none !important; }
   /* ---- Bandeau du mode modelage ---- */
   #modelBar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 46; display: none;
@@ -1390,7 +1396,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "52"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "53"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1582,6 +1588,7 @@ const STR = {
     mdl_btn: "🖐️ Montrer des mots (modelage)", mdl_off: "Terminer",
     mdl_on: "🖐️ Mode modelage — vos appuis ne sont pas comptés pour l'enfant",
     mdl_hint: "À activer quand VOUS touchez les cartes pour montrer à l'enfant comment faire. Vos appuis sont alors tracés à part et n'apparaissent pas dans ses statistiques. S'arrête seul au bout de 15 minutes.",
+    sh_readonly: "Vous consultez ce tableau : seul le parent et les personnes autorisées à modifier peuvent le changer.",
     sh_offline: "Liste indisponible hors ligne — reconnectez-vous pour voir qui a accès.",
     sh_h: "👩‍⚕️ Partager avec un professionnel",
     sh_hint: "Donnez à l'orthophoniste ou à l'AESH le tableau de votre enfant sur leur propre tablette. C'est gratuit pour eux. Le journal d'usage n'est jamais partagé.",
@@ -1715,6 +1722,7 @@ const STR = {
     mdl_btn: "🖐️ Model words (demonstrating)", mdl_off: "Finish",
     mdl_on: "🖐️ Modelling mode — your taps are not counted for your child",
     mdl_hint: "Turn this on when YOU touch the cards to show your child how. Your taps are then tracked separately and stay out of their statistics. Stops on its own after 15 minutes.",
+    sh_readonly: "You are viewing this board: only the parent and people allowed to edit can change it.",
     sh_offline: "List unavailable offline — reconnect to see who has access.",
     sh_h: "👩‍⚕️ Share with a professional",
     sh_hint: "Give your speech therapist or teaching assistant your child's board on their own tablet. It's free for them. The usage log is never shared.",
@@ -1848,6 +1856,7 @@ const STR = {
     mdl_btn: "🖐️ Mostrar palabras (modelado)", mdl_off: "Terminar",
     mdl_on: "🖐️ Modo modelado — tus toques no cuentan para el niño",
     mdl_hint: "Actívalo cuando SEAS TÚ quien toca las tarjetas para enseñar al niño. Tus toques se registran aparte y no aparecen en sus estadísticas. Se detiene solo a los 15 minutos.",
+    sh_readonly: "Estás consultando este tablero: solo la familia y quienes tienen permiso pueden modificarlo.",
     sh_offline: "Lista no disponible sin conexión — reconéctate para ver quién tiene acceso.",
     sh_h: "👩‍⚕️ Compartir con un profesional",
     sh_hint: "Da al logopeda o al auxiliar el tablero de tu hijo en su propia tableta. Es gratis para ellos. El registro de uso nunca se comparte.",
@@ -3450,6 +3459,7 @@ document.getElementById("genVoicesBtn").onclick = async () => {
 };
 
 document.getElementById("addBtn").onclick = () => {
+  if (!requireEdit()) return;
   const label = document.getElementById("newLabel").value.trim();
   const emoji = document.getElementById("newEmoji").value.trim();
   const cat = document.getElementById("newCat").value;
@@ -3498,6 +3508,15 @@ const hasAccount = () => !!(fbAuth && fbAuth.email);
    compte/profil est invisible tant qu'on n'a qu'un enfant. */
 const syncPid = () => store.get("pid", "") || (fbAuth && fbAuth.uid ? "p_" + fbAuth.uid : "");
 let syncRole = "owner"; // rôle sur le profil courant, renvoyé par le serveur
+/* Un « viewer » consulte et peut modeler, mais ne modifie rien. On le bloque
+   AUSSI côté app : le serveur refuse déjà, mais laisser cliquer pour échouer
+   ensuite est une mauvaise expérience — surtout pour une AESH pressée. */
+const canEdit = () => syncRole !== "viewer";
+function requireEdit() {
+  if (canEdit()) return true;
+  toast(t("sh_readonly"));
+  return false;
+}
 const setAcctStatus = (t) => { document.getElementById("acctStatus").textContent = t; };
 
 function collectState() {
@@ -3518,6 +3537,7 @@ function scheduleSync() {
    modification par-dessus, plutôt que d'écraser silencieusement son travail. */
 async function pushSync(retry) {
   if (!hasAccount() || !navigator.onLine) return;
+  if (!canEdit()) return; // consultation seule : rien à renvoyer au serveur
   try {
     const tk = await fbToken();
     if (!tk) return;
@@ -3898,17 +3918,20 @@ document.getElementById("editEmoji").oninput = (e) => {
 };
 
 document.getElementById("editHide").onclick = () => {
+  if (!requireEdit()) return;
   toggleHidden(editTarget.id);
   closeEdit();
   toast(hidden.has(editTarget.id) ? `« ${editTarget.label} » masqué` : `« ${editTarget.label} » réaffiché ✓`);
 };
 
 document.getElementById("editDelete").onclick = () => {
+  if (!requireEdit()) return;
   closeEdit();
   deleteItem(editTarget); // va dans la corbeille, avec toast « Annuler »
 };
 
 document.getElementById("editSave").onclick = () => {
+  if (!requireEdit()) return;
   const label = document.getElementById("editLabel").value.trim();
   const say = document.getElementById("editSay").value.trim();
   if (label && label !== editTarget.label) setItemLabel(editTarget, label);
@@ -4571,6 +4594,7 @@ function closeStory() {
 let seEditing = null;
 
 function openStoryEdit(s) {
+  if (!requireEdit()) return;
   seEditing = s
     ? JSON.parse(JSON.stringify(s))
     : { id: "us_" + Date.now(), custom: true, emoji: "🎬", title: "", steps: [] };
@@ -4678,6 +4702,7 @@ function applyRole() {
                       role: t(syncRole === "editor" ? "sh_r_edit" : "sh_r_view") });
     setModeling(true);
   }
+  document.body.classList.toggle("readonly", !canEdit());
   const sc = document.getElementById("shareCard");
   if (sc) sc.style.display = syncRole === "owner" ? "" : "none"; // seul le parent invite
 }
@@ -4732,6 +4757,7 @@ async function refreshProfiles() {
         const b = document.createElement("button");
         b.textContent = t("sh_open");
         b.onclick = async () => {
+          await pushSync();          // on n'abandonne pas les modifications en cours
           store.set("pid", p.pid);
           localStorage.removeItem("vp_syncgen");
           localStorage.removeItem("vp_syncrev");
@@ -5013,6 +5039,7 @@ function atFillCats(sel) {
 }
 // target = carte existante dont on remplace l'image ; null = nouvelle carte
 function openAtelier(target) {
+  if (!requireEdit()) return;
   atTarget = target || null;
   atEl("atStrip").innerHTML = "";
   atEl("atStatus").textContent = "";
@@ -5364,6 +5391,7 @@ function renderRoutines() {
 }
 
 function openRoutineEdit(r) {
+  if (!requireEdit()) return;
   rtEditing = r ? JSON.parse(JSON.stringify(r)) : { id: "rt_" + Date.now(), label: "", emoji: "", steps: [] };
   document.getElementById("rtName").value = rtEditing.label;
   document.getElementById("rtEmoji").value = rtEditing.emoji || "";
