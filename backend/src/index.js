@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, onboardPlan, SafetyError } from "./vertex.js";
+import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, onboardPlan, storyPlan, SafetyError } from "./vertex.js";
 import { getSync, putSync } from "./sync.js";
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
@@ -214,6 +214,22 @@ app.post("/v1/image", meter("image"), async (req, res) => {
     res.json(out); // {mimeType, data}
   } catch (e) {
     handleAIError(res, "image")(e);
+  }
+});
+
+// Scénario social sur mesure ({topic}) — compte dans le quota IA.
+app.post("/v1/story", meter("story"), async (req, res) => {
+  try {
+    const topic = String(req.body?.topic || "").trim().slice(0, 200);
+    if (!topic) return res.status(400).json({ error: "topic_requis" });
+    const story = await storyPlan({
+      topic,
+      childName: req.body?.childName ? String(req.body.childName).slice(0, 40) : null,
+      lang: req.body?.lang,
+    });
+    res.json(story);
+  } catch (e) {
+    handleAIError(res, "story")(e);
   }
 });
 

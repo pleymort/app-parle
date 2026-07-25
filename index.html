@@ -101,6 +101,9 @@
   .picto img { width: var(--img-size); height: var(--img-size); object-fit: cover; border-radius: 14px; }
   .picto .lb { font-size: var(--lb-size); font-weight: 800; color: #24425F; text-align: center; }
   .picto.hiddenItem { opacity: .35; outline: 3px dashed #E08A8A; }
+  /* Case masquée vue par l'enfant : invisible mais elle OCCUPE sa place, pour
+     que les cartes voisines ne se déplacent jamais (dévoilement progressif). */
+  .picto.masked { visibility: hidden; pointer-events: none; }
 
   /* Micro-rebond au toucher (retour sensoriel) */
   @keyframes tapPop { 0% { transform: scale(1); } 40% { transform: scale(.88); } 75% { transform: scale(1.05); } 100% { transform: scale(1); } }
@@ -393,6 +396,18 @@
   .stRow .em { font-size: 26px; }
   .stRow .nm { font-weight: 700; color: #24425F; font-size: 14.5px; flex: 1; }
   .stRow .go { color: #9DB2C7; font-weight: 800; }
+  .stEditBtn { border: none; background: #EEF3F8; border-radius: 9px; width: 34px; height: 34px; font-size: 15px; cursor: pointer; }
+  /* Éditeur de scénario */
+  #stEdit { position: fixed; inset: 0; background: rgba(20,40,60,.45); z-index: 59; display: none; align-items: center; justify-content: center; padding: 16px; }
+  #stEdit.open { display: flex; }
+  #stEditCard { background: #fff; border-radius: 20px; padding: 20px; width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto; }
+  #stEditCard h2 { color: #24425F; font-size: 18px; margin-bottom: 12px; }
+  .stStep { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+  .stStep .sem { width: 56px; flex: 0 0 56px; text-align: center; font-size: 20px; }
+  .stStep textarea { flex: 1; min-height: 54px; resize: vertical; font-size: 14px; }
+  .stStep .sdel { flex: 0 0 38px; border: none; background: #FDECEC; color: #C0392B; border-radius: 9px; height: 38px; cursor: pointer; }
+  #stAiRow { display: flex; gap: 8px; }
+  #stAiRow input { flex: 1; }
 
   /* ---- Atelier photo : transformer un objet réel en pictogramme ----
      Plein écran sombre pour que l'œil aille à l'image. Le cadre carré EST le
@@ -689,6 +704,7 @@
     <h2 data-i18n="st_h">🎬 Scénarios sociaux</h2>
     <div class="hint" data-i18n="st_hint">À lire AVANT l'événement, avec l'enfant. Savoir ce qui va se passer, dans quel ordre et comment ça se termine réduit beaucoup l'angoisse. Fonctionne hors ligne.</div>
     <div id="storyList"></div>
+    <button class="pbtn primary" id="newStoryBtn" data-i18n="se_new">✨ Créer un scénario sur mesure</button>
     </div>
 
     <div class="card">
@@ -1067,6 +1083,38 @@
   </div>
 </div>
 
+<!-- Éditeur de scénario social (parent) : l'IA propose, le parent relit et corrige -->
+<div id="stEdit">
+  <div id="stEditCard">
+    <h2 data-i18n="se_h">Scénario sur mesure</h2>
+    <div class="prow">
+      <label data-i18n="se_topic">La situation à préparer</label>
+      <div id="stAiRow">
+        <input type="text" id="seTopic" data-i18n-ph="se_topic_ph">
+        <button class="pbtn primary" id="seGen" style="width:auto;margin:0" data-i18n="se_gen">✨ Écrire</button>
+      </div>
+      <div class="aiStatus" id="seStatus"></div>
+    </div>
+    <div class="prow">
+      <label data-i18n="se_title">Titre</label>
+      <div class="row2">
+        <input type="text" id="seEmoji" maxlength="4" data-i18n-ph="se_emoji_ph">
+        <input type="text" id="seName">
+      </div>
+    </div>
+    <div class="prow">
+      <label data-i18n="se_steps">Étapes (une phrase courte, à la première personne)</label>
+      <div id="seSteps"></div>
+      <button class="pbtn ghost" id="seAdd" data-i18n="se_add">+ Ajouter une étape</button>
+    </div>
+    <div class="editRow2">
+      <button class="pbtn warn" id="seDel" data-i18n="delete">🗑 Supprimer</button>
+      <button class="pbtn ghost" id="seCancel" data-i18n="cancel">Annuler</button>
+    </div>
+    <button class="pbtn primary" id="seSave" data-i18n="save">✔ Enregistrer</button>
+  </div>
+</div>
+
 <!-- Atelier photo : photographier un objet réel et en faire un picto.
      Beaucoup d'enfants ne reconnaissent que LEUR objet, pas un symbole abstrait. -->
 <div id="atelier">
@@ -1218,7 +1266,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "46"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "47"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1323,7 +1371,7 @@ const DEFAULT_ITEMS = [
 /* ================= État ================= */
 // Clés synchronisées en ligne quand un compte est connecté (vocabulaire +
 // préférences — jamais les secrets locaux : code parent, PIN kiosk, jetons).
-const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines", "childname", "lang"];
+const SYNC_KEYS = ["custom", "hidden", "over", "ord", "catover", "cats", "rate", "reform", "acc", "trash", "routines", "stories", "childname", "lang"];
 
 /* ---- Langue (voix + IA + interface) ----
    Le serveur produit voix et contenus IA dans cette langue ; l'interface est
@@ -1392,6 +1440,16 @@ const STR = {
     st_prev: "← Avant", st_next: "Suite →", st_done: "✓ Fini",
     sg_hint: "Et ensuite ?",
     sync_applied: "Grille mise à jour depuis un autre appareil ✓",
+    se_new: "✨ Créer un scénario sur mesure", se_h: "Scénario sur mesure",
+    se_topic: "La situation à préparer", se_topic_ph: "ex : « on va voir le feu d'artifice »",
+    se_gen: "✨ Écrire", se_title: "Titre", se_emoji_ph: "🎬",
+    se_steps: "Étapes (une phrase courte, à la première personne)", se_add: "+ Ajouter une étape",
+    se_writing: "J'écris le scénario… (~5 s)", se_review: "Relisez et corrigez avant d'enregistrer.",
+    se_fail: "Échec : {msg} — vous pouvez écrire les étapes vous-même.",
+    se_need_topic: "Décrivez la situation en quelques mots.",
+    se_need_title: "Donnez un titre au scénario.", se_need_steps: "Il faut au moins 2 étapes.",
+    se_saved: "Scénario enregistré ✓",
+    pw_stories: "Bibliothèque complète de scénarios",
     acc_predict: "Barre « Et ensuite ? »", acc_predict_hint: "Propose les suites habituelles de l'enfant, dans une barre à part. Les cartes de la grille ne bougent jamais. À décocher si vous suivez une méthode à position fixe.",
     at_title: "Photo de l'objet", at_title_replace: "Vraie photo pour « {label} »",
     at_label_ph: "Le mot à prononcer", at_hint: "Pincez pour zoomer · glissez pour cadrer",
@@ -1484,6 +1542,16 @@ const STR = {
     st_prev: "← Back", st_next: "Next →", st_done: "✓ Done",
     sg_hint: "And then?",
     sync_applied: "Board updated from another device ✓",
+    se_new: "✨ Create a custom story", se_h: "Custom story",
+    se_topic: "The situation to prepare for", se_topic_ph: "e.g. “we're going to see the fireworks”",
+    se_gen: "✨ Write", se_title: "Title", se_emoji_ph: "🎬",
+    se_steps: "Steps (one short sentence, first person)", se_add: "+ Add a step",
+    se_writing: "Writing the story… (~5s)", se_review: "Read it over and edit before saving.",
+    se_fail: "Failed: {msg} — you can write the steps yourself.",
+    se_need_topic: "Describe the situation in a few words.",
+    se_need_title: "Give the story a title.", se_need_steps: "At least 2 steps are needed.",
+    se_saved: "Story saved ✓",
+    pw_stories: "Full library of social stories",
     acc_predict: "“And then?” bar", acc_predict_hint: "Suggests your child's usual follow-ups, in a separate bar. Cards in the grid never move. Untick if you follow a fixed-position method.",
     at_title: "Photo of the object", at_title_replace: "Real photo for “{label}”",
     at_label_ph: "The word to speak", at_hint: "Pinch to zoom · drag to frame",
@@ -1576,6 +1644,16 @@ const STR = {
     st_prev: "← Atrás", st_next: "Seguir →", st_done: "✓ Fin",
     sg_hint: "¿Y después?",
     sync_applied: "Tablero actualizado desde otro dispositivo ✓",
+    se_new: "✨ Crear una historia a medida", se_h: "Historia a medida",
+    se_topic: "La situación a preparar", se_topic_ph: "ej.: «vamos a ver los fuegos artificiales»",
+    se_gen: "✨ Escribir", se_title: "Título", se_emoji_ph: "🎬",
+    se_steps: "Pasos (una frase corta, en primera persona)", se_add: "+ Añadir un paso",
+    se_writing: "Escribiendo la historia… (~5 s)", se_review: "Reléela y corrígela antes de guardar.",
+    se_fail: "Error: {msg} — puedes escribir los pasos tú mismo.",
+    se_need_topic: "Describe la situación en pocas palabras.",
+    se_need_title: "Ponle un título a la historia.", se_need_steps: "Se necesitan al menos 2 pasos.",
+    se_saved: "Historia guardada ✓",
+    pw_stories: "Biblioteca completa de historias sociales",
     acc_predict: "Barra «¿Y después?»", acc_predict_hint: "Propone las continuaciones habituales del niño, en una barra aparte. Las tarjetas de la cuadrícula nunca se mueven. Desmarca si sigues un método de posición fija.",
     at_title: "Foto del objeto", at_title_replace: "Foto real para «{label}»",
     at_label_ph: "La palabra a pronunciar", at_hint: "Pellizca para ampliar · arrastra para encuadrar",
@@ -1726,6 +1804,10 @@ let customCats = store.get("cats", []); // catégories créées : [{id, label, e
 // (anti-double-appui, maintenir pour activer), contraste, thème, animations.
 let acc = store.get("acc", { size: "M", gap: "M", dbl: 0, hold: 0, contrast: false, dark: false, anim: true });
 let routines = store.get("routines", []); // routines « D'abord / Ensuite »
+let customStories = store.get("stories", []); // scénarios sociaux créés par le parent
+// Dernier plan connu, mémorisé pour rester juste hors ligne
+let userPlan = store.get("plan", "free");
+const isPlus = () => ["plus", "parent", "unlimited"].includes(userPlan) || !!backendSecret;
 let kioskOn = store.get("kiosk", false); // mode kiosk actif ?
 let kioskPin = store.get("kioskpin", ""); // code parent (4 chiffres) pour ouvrir les réglages / quitter le kiosk
 
@@ -2183,7 +2265,17 @@ function renderGrid() {
     .map(({ item }) => item);
   for (const item of items) {
     const isHidden = hidden.has(item.id);
-    if (isHidden && !parentMode) continue;
+    // Carte masquée côté enfant : on garde sa CASE, vide. Si on la retirait du
+    // flux, toutes les cartes suivantes se décaleraient — et l'enfant qui a
+    // appris « Encore est en haut à droite » perdrait son repère. C'est le
+    // principe du dévoilement progressif : on démasque sans jamais déplacer.
+    if (isHidden && !parentMode) {
+      const ph = document.createElement("div");
+      ph.className = "picto masked";
+      ph.setAttribute("aria-hidden", "true");
+      gridEl.appendChild(ph);
+      continue;
+    }
     const b = document.createElement("button");
     b.className = "picto" + (isHidden ? " hiddenItem" : "");
     b.dataset.id = item.id;
@@ -2515,6 +2607,7 @@ async function refreshPlan() {
   try {
     const me = await fetch(BACKEND_URL + "/v1/me", { headers: await backendHeaders() }).then(r => r.json());
     if (seq !== refreshPlan._seq) return;
+    if (me.plan) { userPlan = me.plan; store.set("plan", me.plan); renderStories(); }
     gauges.innerHTML = "";
     if (me.plan === "parent") { el.textContent = t("st_parent"); el.classList.add("ok"); return; }
     if (me.plan === "plus") {
@@ -3173,6 +3266,7 @@ function rehydrate() {
   customCats = store.get("cats", []);
   gridOrder = store.get("ord", {});
   routines = store.get("routines", []);
+  customStories = store.get("stories", []);
   trash = store.get("trash", []);
   rate = store.get("rate", rate);
   reformOn = store.get("reform", reformOn);
@@ -3549,6 +3643,70 @@ const SOCIAL = {
       { em: "🤚", txt: "Si j'ai besoin d'aide, je montre ma carte AIDE-MOI." },
       { em: "🏠", txt: "À la fin de la journée, on vient me chercher. On rentre à la maison." },
     ] },
+    { id: "prise_sang", emoji: "💉", plus: true, title: "Une prise de sang", steps: [
+      { em: "🏥", txt: "Aujourd'hui, on prend un peu de mon sang pour le regarder." },
+      { em: "🪑", txt: "Je m'assois. On serre un élastique autour de mon bras." },
+      { em: "💉", txt: "L'aiguille pique une fois. Ça fait mal quelques secondes." },
+      { em: "🤚", txt: "Je peux serrer la main de papa ou maman, et regarder ailleurs." },
+      { em: "🩹", txt: "On met un pansement. C'est fini, on ne recommence pas." },
+      { em: "🏠", txt: "On rentre à la maison. J'ai été très courageux." },
+    ] },
+    { id: "irm", emoji: "🧲", plus: true, title: "Passer une IRM", steps: [
+      { em: "🏥", txt: "Aujourd'hui, une machine va prendre des photos de mon corps." },
+      { em: "🛏️", txt: "Je m'allonge sur un lit qui glisse dans un grand tube." },
+      { em: "🔊", txt: "La machine fait un bruit très fort : toc, toc, toc." },
+      { em: "🎧", txt: "On me donne un casque pour que le bruit soit moins fort." },
+      { em: "🧘", txt: "Je reste immobile. Ça ne fait pas mal du tout." },
+      { em: "🏠", txt: "Quand c'est fini, le lit ressort et on rentre à la maison." },
+    ] },
+    { id: "avion", emoji: "✈️", plus: true, title: "Prendre l'avion", steps: [
+      { em: "🧳", txt: "Aujourd'hui, on prend l'avion. On emporte nos valises." },
+      { em: "🛂", txt: "À l'aéroport, on attend, on montre nos papiers. C'est long." },
+      { em: "💺", txt: "Dans l'avion, je m'assois et j'attache ma ceinture." },
+      { em: "🔊", txt: "Au décollage, ça fait du bruit et ça pousse. Mes oreilles bouchent." },
+      { em: "🤚", txt: "Si c'est trop, je mets mon casque ou je montre ma carte." },
+      { em: "🛬", txt: "L'avion se pose. On descend. On est arrivés." },
+    ] },
+    { id: "demenagement", emoji: "📦", plus: true, title: "On déménage", steps: [
+      { em: "📦", txt: "Bientôt, on va habiter dans une autre maison." },
+      { em: "🧸", txt: "Mes affaires viennent avec moi. Mon doudou aussi." },
+      { em: "🚚", txt: "Un camion emporte les cartons. La maison devient vide." },
+      { em: "🏠", txt: "Dans la nouvelle maison, j'aurai ma chambre à moi." },
+      { em: "🤚", txt: "Au début c'est bizarre. Je peux le dire si c'est trop." },
+      { em: "👨‍👩‍👦", txt: "Ma famille reste la même. On est ensemble." },
+    ] },
+    { id: "urgences", emoji: "🚑", plus: true, title: "Aller aux urgences", steps: [
+      { em: "🚑", txt: "On va à l'hôpital parce que j'ai besoin d'aide maintenant." },
+      { em: "🪑", txt: "On attend. L'attente peut être très longue. Je ne sais pas combien." },
+      { em: "👩‍⚕️", txt: "Beaucoup de gens en blouse passent. Il y a du bruit et des lumières." },
+      { em: "🩺", txt: "Un médecin va me regarder et m'expliquer ce qu'il fait." },
+      { em: "🤚", txt: "Papa ou maman reste avec moi. Je peux montrer ma carte." },
+      { em: "🏠", txt: "Après, soit on rentre, soit on me le dit avant. On me préviendra." },
+    ] },
+    { id: "cantine", emoji: "🍽️", plus: true, title: "Manger à la cantine", steps: [
+      { em: "🍽️", txt: "Aujourd'hui, je mange à la cantine avec les autres enfants." },
+      { em: "🔊", txt: "La cantine est bruyante. Beaucoup d'enfants parlent en même temps." },
+      { em: "🥘", txt: "Je prends un plateau. Je ne suis pas obligé de tout manger." },
+      { em: "🤚", txt: "Si le bruit est trop fort, je le montre à l'adulte." },
+      { em: "🧑‍🏫", txt: "Un adulte est là pour m'aider si je ne trouve pas ma place." },
+      { em: "🏫", txt: "Après le repas, on retourne en classe. C'est fini." },
+    ] },
+    { id: "dodo", emoji: "🌙", plus: true, title: "L'heure du coucher", steps: [
+      { em: "🛁", txt: "C'est le soir. D'abord le bain, puis le pyjama." },
+      { em: "🦷", txt: "Ensuite je brosse mes dents. Toujours dans cet ordre." },
+      { em: "📖", txt: "On lit une histoire dans mon lit." },
+      { em: "💡", txt: "On éteint la lumière. Je peux garder une petite veilleuse." },
+      { em: "🚪", txt: "Papa ou maman est juste à côté. Je peux appeler." },
+      { em: "☀️", txt: "Je dors, et demain matin le soleil revient." },
+    ] },
+    { id: "invite", emoji: "🚪", plus: true, title: "Quelqu'un vient à la maison", steps: [
+      { em: "🚪", txt: "Aujourd'hui, quelqu'un vient chez nous." },
+      { em: "🔔", txt: "La sonnette va sonner. Le bruit est fort mais court." },
+      { em: "👋", txt: "Je peux dire bonjour de loin. Je ne suis pas obligé de faire un bisou." },
+      { em: "🚪", txt: "Je peux aller dans ma chambre si j'ai besoin d'être seul." },
+      { em: "🤚", txt: "Si c'est trop, je montre ma carte PAUSE." },
+      { em: "👋", txt: "La personne repart. La maison redevient calme." },
+    ] },
   ],
   en: [
     { id: "medecin", emoji: "🩺", title: "Going to the doctor", steps: [
@@ -3598,6 +3756,70 @@ const SOCIAL = {
       { em: "🧑‍🏫", txt: "In the classroom there is the teacher, and other children." },
       { em: "🤚", txt: "If I need help, I show my HELP ME card." },
       { em: "🏠", txt: "At the end of the day they come to get me. We go home." },
+    ] },
+    { id: "prise_sang", emoji: "💉", plus: true, title: "A blood test", steps: [
+      { em: "🏥", txt: "Today they take a little of my blood to look at it." },
+      { em: "🪑", txt: "I sit down. They put a tight band around my arm." },
+      { em: "💉", txt: "The needle stings once. It hurts for a few seconds." },
+      { em: "🤚", txt: "I can squeeze mum or dad's hand and look away." },
+      { em: "🩹", txt: "They put on a plaster. It's finished, we do not do it again." },
+      { em: "🏠", txt: "We go home. I was very brave." },
+    ] },
+    { id: "irm", emoji: "🧲", plus: true, title: "Having an MRI scan", steps: [
+      { em: "🏥", txt: "Today a machine takes pictures of the inside of my body." },
+      { em: "🛏️", txt: "I lie on a bed that slides into a big tube." },
+      { em: "🔊", txt: "The machine makes a very loud noise: knock, knock, knock." },
+      { em: "🎧", txt: "They give me headphones so the noise is quieter." },
+      { em: "🧘", txt: "I stay still. It does not hurt at all." },
+      { em: "🏠", txt: "When it's finished the bed slides out and we go home." },
+    ] },
+    { id: "avion", emoji: "✈️", plus: true, title: "Taking a plane", steps: [
+      { em: "🧳", txt: "Today we take a plane. We bring our suitcases." },
+      { em: "🛂", txt: "At the airport we wait and show our papers. It takes a long time." },
+      { em: "💺", txt: "On the plane I sit down and fasten my seatbelt." },
+      { em: "🔊", txt: "At take-off it is loud and it pushes me. My ears feel blocked." },
+      { em: "🤚", txt: "If it's too much, I put on my headphones or show my card." },
+      { em: "🛬", txt: "The plane lands. We get off. We have arrived." },
+    ] },
+    { id: "demenagement", emoji: "📦", plus: true, title: "We are moving house", steps: [
+      { em: "📦", txt: "Soon we will live in a different house." },
+      { em: "🧸", txt: "My things come with me. My cuddly toy too." },
+      { em: "🚚", txt: "A lorry takes the boxes. The house becomes empty." },
+      { em: "🏠", txt: "In the new house I will have my own bedroom." },
+      { em: "🤚", txt: "At first it feels strange. I can say so if it's too much." },
+      { em: "👨‍👩‍👦", txt: "My family stays the same. We are together." },
+    ] },
+    { id: "urgences", emoji: "🚑", plus: true, title: "Going to A&E", steps: [
+      { em: "🚑", txt: "We go to hospital because I need help now." },
+      { em: "🪑", txt: "We wait. The wait can be very long. I don't know how long." },
+      { em: "👩‍⚕️", txt: "Many people in uniforms walk past. There is noise and bright light." },
+      { em: "🩺", txt: "A doctor will look at me and explain what they are doing." },
+      { em: "🤚", txt: "Mum or dad stays with me. I can show my card." },
+      { em: "🏠", txt: "Afterwards we go home, or they tell me first. I will be told." },
+    ] },
+    { id: "cantine", emoji: "🍽️", plus: true, title: "Eating in the canteen", steps: [
+      { em: "🍽️", txt: "Today I eat in the canteen with the other children." },
+      { em: "🔊", txt: "The canteen is noisy. Many children talk at the same time." },
+      { em: "🥘", txt: "I take a tray. I do not have to eat everything." },
+      { em: "🤚", txt: "If the noise is too loud, I show the grown-up." },
+      { em: "🧑‍🏫", txt: "A grown-up is there to help if I can't find my seat." },
+      { em: "🏫", txt: "After the meal we go back to class. It's finished." },
+    ] },
+    { id: "dodo", emoji: "🌙", plus: true, title: "Bedtime", steps: [
+      { em: "🛁", txt: "It is evening. First the bath, then pyjamas." },
+      { em: "🦷", txt: "Then I brush my teeth. Always in this order." },
+      { em: "📖", txt: "We read a story in my bed." },
+      { em: "💡", txt: "We turn off the light. I can keep a small night light." },
+      { em: "🚪", txt: "Mum or dad is just next door. I can call them." },
+      { em: "☀️", txt: "I sleep, and tomorrow morning the sun comes back." },
+    ] },
+    { id: "invite", emoji: "🚪", plus: true, title: "Someone comes to our house", steps: [
+      { em: "🚪", txt: "Today someone is coming to our house." },
+      { em: "🔔", txt: "The doorbell will ring. The sound is loud but short." },
+      { em: "👋", txt: "I can say hello from a distance. I don't have to give a kiss." },
+      { em: "🚪", txt: "I can go to my room if I need to be alone." },
+      { em: "🤚", txt: "If it's too much, I show my PAUSE card." },
+      { em: "👋", txt: "The person leaves. The house becomes quiet again." },
     ] },
   ],
   es: [
@@ -3649,23 +3871,93 @@ const SOCIAL = {
       { em: "🤚", txt: "Si necesito ayuda, enseño mi tarjeta AYÚDAME." },
       { em: "🏠", txt: "Al final del día vienen a buscarme. Volvemos a casa." },
     ] },
+    { id: "prise_sang", emoji: "💉", plus: true, title: "Un análisis de sangre", steps: [
+      { em: "🏥", txt: "Hoy me sacan un poco de sangre para mirarla." },
+      { em: "🪑", txt: "Me siento. Me aprietan una goma en el brazo." },
+      { em: "💉", txt: "La aguja pincha una vez. Duele unos segundos." },
+      { em: "🤚", txt: "Puedo apretar la mano de papá o mamá y mirar a otro lado." },
+      { em: "🩹", txt: "Me ponen una tirita. Se acabó, no se repite." },
+      { em: "🏠", txt: "Volvemos a casa. He sido muy valiente." },
+    ] },
+    { id: "irm", emoji: "🧲", plus: true, title: "Hacerse una resonancia", steps: [
+      { em: "🏥", txt: "Hoy una máquina hace fotos del interior de mi cuerpo." },
+      { em: "🛏️", txt: "Me tumbo en una camilla que entra en un tubo grande." },
+      { em: "🔊", txt: "La máquina hace un ruido muy fuerte: toc, toc, toc." },
+      { em: "🎧", txt: "Me dan unos cascos para que el ruido sea menor." },
+      { em: "🧘", txt: "Me quedo quieto. No duele nada." },
+      { em: "🏠", txt: "Cuando termina, la camilla sale y volvemos a casa." },
+    ] },
+    { id: "avion", emoji: "✈️", plus: true, title: "Coger el avión", steps: [
+      { em: "🧳", txt: "Hoy cogemos el avión. Llevamos nuestras maletas." },
+      { em: "🛂", txt: "En el aeropuerto esperamos y enseñamos los papeles. Es largo." },
+      { em: "💺", txt: "En el avión me siento y me abrocho el cinturón." },
+      { em: "🔊", txt: "Al despegar hace ruido y empuja. Se me tapan los oídos." },
+      { em: "🤚", txt: "Si es demasiado, me pongo los cascos o enseño mi tarjeta." },
+      { em: "🛬", txt: "El avión aterriza. Bajamos. Hemos llegado." },
+    ] },
+    { id: "demenagement", emoji: "📦", plus: true, title: "Nos mudamos", steps: [
+      { em: "📦", txt: "Pronto viviremos en otra casa." },
+      { em: "🧸", txt: "Mis cosas vienen conmigo. Mi peluche también." },
+      { em: "🚚", txt: "Un camión se lleva las cajas. La casa se queda vacía." },
+      { em: "🏠", txt: "En la casa nueva tendré mi propia habitación." },
+      { em: "🤚", txt: "Al principio es raro. Puedo decirlo si es demasiado." },
+      { em: "👨‍👩‍👦", txt: "Mi familia sigue siendo la misma. Estamos juntos." },
+    ] },
+    { id: "urgences", emoji: "🚑", plus: true, title: "Ir a urgencias", steps: [
+      { em: "🚑", txt: "Vamos al hospital porque necesito ayuda ahora." },
+      { em: "🪑", txt: "Esperamos. La espera puede ser muy larga. No sé cuánto." },
+      { em: "👩‍⚕️", txt: "Pasa mucha gente con bata. Hay ruido y luces fuertes." },
+      { em: "🩺", txt: "Un médico me mirará y me explicará lo que hace." },
+      { em: "🤚", txt: "Papá o mamá se queda conmigo. Puedo enseñar mi tarjeta." },
+      { em: "🏠", txt: "Después volvemos a casa, o me lo dicen antes. Me avisarán." },
+    ] },
+    { id: "cantine", emoji: "🍽️", plus: true, title: "Comer en el comedor", steps: [
+      { em: "🍽️", txt: "Hoy como en el comedor con los otros niños." },
+      { em: "🔊", txt: "El comedor hace ruido. Muchos niños hablan a la vez." },
+      { em: "🥘", txt: "Cojo una bandeja. No tengo que comérmelo todo." },
+      { em: "🤚", txt: "Si el ruido es muy fuerte, se lo enseño al adulto." },
+      { em: "🧑‍🏫", txt: "Hay un adulto para ayudarme si no encuentro mi sitio." },
+      { em: "🏫", txt: "Después de comer volvemos a clase. Se acabó." },
+    ] },
+    { id: "dodo", emoji: "🌙", plus: true, title: "La hora de dormir", steps: [
+      { em: "🛁", txt: "Es de noche. Primero el baño, luego el pijama." },
+      { em: "🦷", txt: "Después me lavo los dientes. Siempre en este orden." },
+      { em: "📖", txt: "Leemos un cuento en mi cama." },
+      { em: "💡", txt: "Apagamos la luz. Puedo dejar una lucecita." },
+      { em: "🚪", txt: "Papá o mamá está al lado. Puedo llamarles." },
+      { em: "☀️", txt: "Duermo, y mañana por la mañana vuelve el sol." },
+    ] },
+    { id: "invite", emoji: "🚪", plus: true, title: "Viene alguien a casa", steps: [
+      { em: "🚪", txt: "Hoy viene alguien a nuestra casa." },
+      { em: "🔔", txt: "Va a sonar el timbre. El sonido es fuerte pero corto." },
+      { em: "👋", txt: "Puedo saludar de lejos. No tengo que dar un beso." },
+      { em: "🚪", txt: "Puedo ir a mi habitación si necesito estar solo." },
+      { em: "🤚", txt: "Si es demasiado, enseño mi tarjeta PAUSA." },
+      { em: "👋", txt: "La persona se va. La casa vuelve a estar tranquila." },
+    ] },
   ],
 };
 
 let stRun = null; // { story, idx }
 
 function socialList() {
-  return SOCIAL[lang.slice(0, 2)] || SOCIAL.fr;
+  return (SOCIAL[lang.slice(0, 2)] || SOCIAL.fr).concat(customStories);
 }
 function renderStories() {
   const box = document.getElementById("storyList");
   if (!box) return;
   box.innerHTML = "";
   for (const s of socialList()) {
+    const locked = s.plus && !isPlus();
     const row = document.createElement("div");
     row.className = "stRow";
-    row.innerHTML = `<span class="em">${s.emoji}</span><span class="nm">${s.title}</span><span class="go">▶</span>`;
-    row.onclick = () => startStory(s);
+    row.innerHTML = `<span class="em">${s.emoji}</span><span class="nm">${s.title}</span>` +
+      (locked ? `<span class="go">🔒</span>`
+              : (s.custom ? `<button class="stEditBtn" aria-label="Modifier">✏️</button><span class="go">▶</span>`
+                          : `<span class="go">▶</span>`));
+    row.onclick = () => { if (locked) openPaywall("stories"); else startStory(s); };
+    const eb = row.querySelector(".stEditBtn");
+    if (eb) eb.onclick = (e) => { e.stopPropagation(); openStoryEdit(s); };
     box.appendChild(row);
   }
 }
@@ -3693,6 +3985,81 @@ function closeStory() {
   stRun = null;
   document.getElementById("story").classList.remove("open");
 }
+/* ---- Éditeur de scénario (parent) ----
+   L'IA propose, le parent RELIT et corrige avant que l'enfant voie quoi que ce
+   soit. L'écriture manuelle reste toujours accessible, même sans abonnement :
+   on ne verrouille jamais la possibilité d'aider son enfant à comprendre. */
+let seEditing = null;
+
+function openStoryEdit(s) {
+  seEditing = s
+    ? JSON.parse(JSON.stringify(s))
+    : { id: "us_" + Date.now(), custom: true, emoji: "🎬", title: "", steps: [] };
+  document.getElementById("seTopic").value = "";
+  document.getElementById("seStatus").textContent = "";
+  document.getElementById("seEmoji").value = seEditing.emoji || "🎬";
+  document.getElementById("seName").value = seEditing.title || "";
+  document.getElementById("seDel").style.display = s ? "" : "none";
+  renderSeSteps();
+  document.getElementById("stEdit").classList.add("open");
+}
+function renderSeSteps() {
+  const box = document.getElementById("seSteps");
+  box.innerHTML = "";
+  seEditing.steps.forEach((st, i) => {
+    const d = document.createElement("div");
+    d.className = "stStep";
+    d.innerHTML = `<input class="sem" type="text" maxlength="4" value="${st.em || ""}">
+      <textarea>${st.txt || ""}</textarea>
+      <button class="sdel" aria-label="Supprimer">🗑</button>`;
+    d.querySelector(".sem").onchange = (e) => { st.em = e.target.value.trim() || "•"; };
+    d.querySelector("textarea").onchange = (e) => { st.txt = e.target.value.trim(); };
+    d.querySelector(".sdel").onclick = () => { seEditing.steps.splice(i, 1); renderSeSteps(); };
+    box.appendChild(d);
+  });
+}
+document.getElementById("newStoryBtn").onclick = () => openStoryEdit(null);
+document.getElementById("seAdd").onclick = () => { seEditing.steps.push({ em: "•", txt: "" }); renderSeSteps(); };
+document.getElementById("seCancel").onclick = () => document.getElementById("stEdit").classList.remove("open");
+document.getElementById("stEdit").onclick = (e) => { if (e.target.id === "stEdit") e.currentTarget.classList.remove("open"); };
+
+document.getElementById("seGen").onclick = async () => {
+  const topic = document.getElementById("seTopic").value.trim();
+  const st = document.getElementById("seStatus");
+  if (!topic) { st.textContent = t("se_need_topic"); return; }
+  st.textContent = t("se_writing");
+  try {
+    const j = await backendJson("/v1/story", { topic, childName: store.get("childname", "") || null });
+    seEditing.title = j.title || topic;
+    seEditing.emoji = j.emoji || "🎬";
+    seEditing.steps = (j.steps || []).map((s) => ({ em: s.em || "•", txt: String(s.txt || "").trim() }));
+    document.getElementById("seEmoji").value = seEditing.emoji;
+    document.getElementById("seName").value = seEditing.title;
+    renderSeSteps();
+    st.textContent = t("se_review");
+  } catch (e) { st.textContent = t("se_fail", { msg: e.message }); }
+};
+
+document.getElementById("seSave").onclick = () => {
+  seEditing.emoji = document.getElementById("seEmoji").value.trim() || "🎬";
+  seEditing.title = document.getElementById("seName").value.trim();
+  seEditing.steps = seEditing.steps.filter((s) => s.txt);
+  if (!seEditing.title) { document.getElementById("seStatus").textContent = t("se_need_title"); return; }
+  if (seEditing.steps.length < 2) { document.getElementById("seStatus").textContent = t("se_need_steps"); return; }
+  const i = customStories.findIndex((x) => x.id === seEditing.id);
+  if (i >= 0) customStories[i] = seEditing; else customStories.push(seEditing);
+  store.set("stories", customStories);
+  document.getElementById("stEdit").classList.remove("open");
+  renderStories();
+  toast(t("se_saved"));
+};
+document.getElementById("seDel").onclick = () => {
+  customStories = customStories.filter((x) => x.id !== seEditing.id);
+  store.set("stories", customStories);
+  document.getElementById("stEdit").classList.remove("open");
+  renderStories();
+};
+
 document.getElementById("stClose").onclick = closeStory;
 document.getElementById("stPrev").onclick = () => {
   if (!stRun || stRun.idx === 0) return;
@@ -4594,7 +4961,7 @@ function openPaywall(context) {
     sub.innerHTML = t("pw_qsub");
   } else {
     badge.textContent = "Leova Plus";
-    title.textContent = t("pw_title");
+    title.textContent = context === "stories" ? t("pw_stories") : t("pw_title");
     sub.innerHTML = t("pw_sub");
   }
   document.getElementById("pwallStatus").textContent = "";

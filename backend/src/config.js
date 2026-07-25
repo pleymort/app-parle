@@ -25,17 +25,17 @@ export const config = {
   appSecret: process.env.APP_SECRET || "",
   // Quota gratuit mensuel PAR utilisateur (uid anonyme Firebase).
   freeQuota: JSON.parse(
-    process.env.FREE_QUOTA || '{"reformulate":1000,"tts":1500,"magic":100,"image":50}'
+    process.env.FREE_QUOTA || '{"reformulate":1000,"tts":1500,"magic":100,"image":50,"story":2}'
   ),
   // Quota du plan payant « plus » (users/{uid}.plan = "plus", posé à
   // l'encaissement — intégration paiement à venir). "unlimited" = aucun quota.
   plusQuota: JSON.parse(
-    process.env.PLUS_QUOTA || '{"reformulate":10000,"tts":15000,"magic":1000,"image":400}'
+    process.env.PLUS_QUOTA || '{"reformulate":10000,"tts":15000,"magic":1000,"image":400,"story":150}'
   ),
   // Plafond global mensuel (tous utilisateurs) : garde-fou facture tant
   // qu'App Check n'est pas en place. Le code parent n'y est pas soumis.
   globalCap: JSON.parse(
-    process.env.GLOBAL_CAP || '{"reformulate":20000,"tts":30000,"magic":1500,"image":150}'
+    process.env.GLOBAL_CAP || '{"reformulate":20000,"tts":30000,"magic":1500,"image":150,"story":800}'
   ),
   // Play Billing : package de l'app Android (vérification des achats).
   androidPackage: process.env.ANDROID_PACKAGE || "app.leova",

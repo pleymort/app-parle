@@ -133,6 +133,44 @@ N'invente rien qui n'a pas été cité par le parent. Réponds UNIQUEMENT le tab
   return Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
 }
 
+/* Scénario social sur mesure : prépare l'enfant à un événement précis.
+   Le genre a des règles strictes — première personne, présent, phrases courtes,
+   concret et non ambigu, aucune promesse invérifiable, et surtout : dire
+   comment ça se TERMINE (l'imprévu est la première source d'angoisse). */
+export async function storyPlan({ topic, childName, lang }) {
+  const L = langName(lang);
+  const model = vertex.getGenerativeModel({
+    model: config.textModel,
+    generationConfig: { responseMimeType: "application/json" },
+    safetySettings: SAFETY,
+  });
+  const prompt =
+    `TOUT le contenu produit doit être EN ${L.toUpperCase()}. ` +
+    `Tu écris un « scénario social » (social story) pour préparer un enfant non verbal, autiste` +
+    (childName ? `, prénommé « ${childName} »` : "") + `, à cette situation : « ${topic} ».
+
+RÈGLES DU GENRE, à respecter strictement :
+- 5 à 7 étapes, dans l'ordre chronologique réel de l'événement ;
+- une seule phrase par étape, à la PREMIÈRE PERSONNE (« je »), au présent, 12 mots maximum ;
+- vocabulaire concret et littéral : aucune métaphore, aucune ironie, aucun sous-entendu ;
+- décrire ce que l'enfant va VOIR, ENTENDRE et RESSENTIR (bruits, lumières, sensations), car c'est ce qui surprend ;
+- ne JAMAIS promettre une émotion (« je serai content ») ni un comportement (« je resterai calme ») : on décrit, on n'exige pas ;
+- inclure UNE étape qui donne un moyen d'agir : dire STOP, montrer une carte, lever la main, demander une pause ;
+- la DERNIÈRE étape dit toujours que c'est fini et ce qui se passe après (rentrer à la maison, retrouver son parent) ;
+- rester rassurant sans nier la difficulté ; ne pas mentionner la douleur sauf si le sujet l'impose, et alors sans dramatiser.
+
+Réponds UNIQUEMENT un objet JSON :
+"title" : titre court de la situation (3 à 5 mots) ;
+"emoji" : un émoji représentant la situation ;
+"steps" : tableau de 5 à 7 objets { "em": un émoji illustrant l'étape, "txt": la phrase }.`;
+  const res = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
+  checkBlocked(res);
+  const text = res?.response?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+  const j = JSON.parse(text);
+  if (!j || !Array.isArray(j.steps) || !j.steps.length) throw new Error("scénario vide");
+  return j;
+}
+
 // Transcrit la dictée du parent (bouton 🎤 de l'ajout magique).
 export async function transcribe(mimeType, dataB64, lang) {
   const model = vertex.getGenerativeModel({ model: config.textModel, safetySettings: SAFETY });
