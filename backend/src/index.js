@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
-import { ensureSelfProfile, membership, listProfiles, canReadVocab, canWriteVocab, selfPid } from "./profiles.js";
+import { ensureSelfProfile, membership, listProfiles, canReadVocab, canWriteVocab, selfPid,
+         createInvite, acceptInvite, listMembers, removeMember, touchAccount } from "./profiles.js";
 import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, onboardPlan, storyPlan, SafetyError } from "./vertex.js";
 import { getSync, putSync, ConflictError } from "./sync.js";
 import { tts } from "./tts.js";
@@ -27,9 +28,9 @@ app.use(async (req, res, next) => {
     req.auth = { parent: true };
     return next();
   }
-  const uid = await verifyToken(req.get("authorization"));
-  if (!uid) return res.status(401).json({ error: "unauthorized" });
-  req.auth = { uid };
+  const tok = await verifyToken(req.get("authorization"));
+  if (!tok) return res.status(401).json({ error: "unauthorized" });
+  req.auth = { uid: tok.uid, email: tok.email };
   next();
 });
 
@@ -162,6 +163,7 @@ app.post("/v1/onboard", meter("magic"), async (req, res) => {
 async function resolveProfile(req, res) {
   const uid = req.auth?.uid;
   if (!uid) { res.status(400).json({ error: "compte_requis" }); return null; }
+  touchAccount(uid, req.auth.email).catch(() => {}); // best effort, non bloquant
   const pid = String(req.query.pid || req.body?.pid || selfPid(uid));
   if (pid === selfPid(uid)) {
     await ensureSelfProfile(uid); // migration transparente au premier appel
@@ -215,6 +217,67 @@ app.post("/v1/sync", async (req, res) => {
     }
     console.error("sync/put:", e);
     res.status(500).json({ error: "sync_error" });
+  }
+});
+
+/* ---- Partage avec un professionnel (phase B) ----
+   Seul le PARENT invite : un superviseur ne peut pas en inviter un autre
+   (décision produit) — le parent garde la main sur qui voit son enfant. */
+app.post("/v1/invites", async (req, res) => {
+  try {
+    const ctx = await resolveProfile(req, res);
+    if (!ctx) return;
+    if (ctx.m.role !== "owner") return res.status(403).json({ error: "reserve_au_parent" });
+    const role = req.body?.role === "editor" ? "editor" : "viewer";
+    // Le journal n'est JAMAIS partagé en phase B, même pour un editor.
+    const scopes = { vocab: true, journal: false, notes: true };
+    res.json(await createInvite(ctx.pid, role, scopes, ctx.uid));
+  } catch (e) {
+    console.error("invites/create:", e);
+    res.status(500).json({ error: "invite_error" });
+  }
+});
+
+app.post("/v1/invites/accept", async (req, res) => {
+  try {
+    if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
+    await touchAccount(req.auth.uid, req.auth.email);
+    const code = String(req.body?.code || "").trim();
+    if (!code) return res.status(400).json({ error: "code_requis" });
+    res.json(await acceptInvite(code, req.auth.uid));
+  } catch (e) {
+    const known = ["code_inconnu", "code_expire", "code_deja_utilise", "code_propre_compte"];
+    if (known.includes(e.message)) return res.status(400).json({ error: e.message });
+    console.error("invites/accept:", e);
+    res.status(500).json({ error: "invite_error" });
+  }
+});
+
+// Qui a accès : visible par TOUS les membres (l'équipe autour de l'enfant
+// doit se connaître), mais seul le parent peut retirer un accès.
+app.get("/v1/members", async (req, res) => {
+  try {
+    const ctx = await resolveProfile(req, res);
+    if (!ctx) return;
+    res.json({ members: await listMembers(ctx.pid), me: ctx.uid, role: ctx.m.role });
+  } catch (e) {
+    console.error("members:", e);
+    res.status(500).json({ error: "members_error" });
+  }
+});
+
+app.post("/v1/members/remove", async (req, res) => {
+  try {
+    const ctx = await resolveProfile(req, res);
+    if (!ctx) return;
+    const target = String(req.body?.uid || "");
+    if (ctx.m.role !== "owner") return res.status(403).json({ error: "reserve_au_parent" });
+    if (target === ctx.uid) return res.status(400).json({ error: "retrait_de_soi" });
+    await removeMember(ctx.pid, target);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("members/remove:", e);
+    res.status(500).json({ error: "members_error" });
   }
 });
 

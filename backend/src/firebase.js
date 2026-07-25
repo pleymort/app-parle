@@ -13,7 +13,9 @@ export { FieldValue };
 export async function verifyToken(header) {
   if (!header || !header.startsWith("Bearer ")) return null;
   try {
-    return (await getAuth(app).verifyIdToken(header.slice(7))).uid;
+    const t = await getAuth(app).verifyIdToken(header.slice(7));
+    // L'e-mail sert à afficher au parent QUI a accès au profil de son enfant.
+    return { uid: t.uid, email: t.email || null };
   } catch {
     return null;
   }

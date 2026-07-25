@@ -78,6 +78,27 @@
   .tab .tem { font-size: 22px; }
   .tab.active { background: #4A90D9; color: white; }
 
+  /* ---- Partage / superviseurs ---- */
+  #shCode { display: none; text-align: center; margin-top: 12px; padding: 16px; background: #EAF3FC; border-radius: 14px; }
+  #shCode.show { display: block; }
+  #shCode .code { font-size: 34px; font-weight: 900; letter-spacing: .22em; color: #24425F; font-family: ui-monospace, monospace; }
+  #shCode .sub { font-size: 12.5px; color: #55677A; font-weight: 700; margin-top: 6px; }
+  .memRow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #EDF2F7; }
+  .memRow .who { flex: 1; font-size: 13.5px; font-weight: 700; color: #24425F; word-break: break-all; }
+  .memRow .rl { font-size: 11.5px; font-weight: 800; color: #fff; background: #8FA6BC; border-radius: 8px; padding: 3px 8px; }
+  .memRow .rl.own { background: #35A853; }
+  .memRow button { border: none; background: #FDECEC; color: #C0392B; border-radius: 9px; padding: 7px 11px; font-weight: 800; cursor: pointer; }
+  .profRow { display: flex; align-items: center; gap: 10px; padding: 9px 0; }
+  .profRow .nm { flex: 1; font-weight: 700; color: #24425F; font-size: 14px; }
+  .profRow button { border: none; background: #EAF3FC; color: #24425F; border-radius: 9px; padding: 7px 12px; font-weight: 800; cursor: pointer; }
+  .profRow.cur .nm::after { content: " ✓"; color: #35A853; }
+  /* Bandeau permanent quand on consulte l'enfant de quelqu'un d'autre */
+  #superBar {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 47; display: none;
+    align-items: center; gap: 10px; padding: 7px 14px;
+    background: #24425F; color: #fff; font-weight: 800; font-size: 13px;
+  }
+  body.supervising #superBar { display: flex; }
   /* ---- Bandeau du mode modelage ---- */
   #modelBar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 46; display: none;
@@ -705,6 +726,7 @@
 <div id="gearHint" data-i18n="gear_hint">Maintenez 2 s…</div>
 <!-- Bandeau de modelage : impossible à rater, sinon l'adulte oublie qu'il est
      actif et les données de l'enfant sont polluées. -->
+<div id="superBar"><span id="superWho"></span></div>
 <div id="modelBar"><span data-i18n="mdl_on">🖐️ Mode modelage — vos appuis ne sont pas comptés pour l'enfant</span><button id="modelOff" data-i18n="mdl_off">Terminer</button></div>
 
 <div id="panel">
@@ -969,6 +991,32 @@
     </div>
 
     <div class="psec" data-psec="account">
+
+    <!-- Partage avec les professionnels : l'orthophoniste, l'AESH, l'école.
+         Seul le parent invite ; l'accès se retire à tout moment. -->
+    <div class="card" id="shareCard">
+    <h2 data-i18n="sh_h">👩‍⚕️ Partager avec un professionnel</h2>
+    <div class="hint" data-i18n="sh_hint">Donnez à l'orthophoniste ou à l'AESH le tableau de votre enfant sur leur propre tablette. C'est gratuit pour eux. Le journal d'usage n'est jamais partagé.</div>
+    <div id="shareBody"></div>
+    <div class="row2" style="margin-top:10px">
+      <button class="pbtn ghost" id="shInviteView" data-i18n="sh_inv_view">👀 Inviter — consulter</button>
+      <button class="pbtn ghost" id="shInviteEdit" data-i18n="sh_inv_edit">✏️ Inviter — modifier</button>
+    </div>
+    <div id="shCode"></div>
+    <div class="aiStatus" id="shStatus"></div>
+    </div>
+
+    <div class="card">
+    <h2 data-i18n="sh_join_h">🔗 Rejoindre un enfant</h2>
+    <div class="hint" data-i18n="sh_join_hint">Vous êtes orthophoniste, enseignant ou proche ? Saisissez le code donné par le parent. Aucun abonnement n'est nécessaire.</div>
+    <div class="row2">
+      <input type="text" id="shJoinCode" maxlength="6" data-i18n-ph="sh_join_ph" style="text-transform:uppercase">
+      <button class="pbtn primary" id="shJoinBtn" data-i18n="sh_join_btn">Rejoindre</button>
+    </div>
+    <div class="aiStatus" id="shJoinStatus"></div>
+    <div id="profileList"></div>
+    </div>
+
     <div class="card">
     <h2>Leova Plus</h2>
     <div class="aiStatus" id="planStatus">…</div>
@@ -1342,7 +1390,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "51"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "52"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1534,6 +1582,25 @@ const STR = {
     mdl_btn: "🖐️ Montrer des mots (modelage)", mdl_off: "Terminer",
     mdl_on: "🖐️ Mode modelage — vos appuis ne sont pas comptés pour l'enfant",
     mdl_hint: "À activer quand VOUS touchez les cartes pour montrer à l'enfant comment faire. Vos appuis sont alors tracés à part et n'apparaissent pas dans ses statistiques. S'arrête seul au bout de 15 minutes.",
+    sh_offline: "Liste indisponible hors ligne — reconnectez-vous pour voir qui a accès.",
+    sh_h: "👩‍⚕️ Partager avec un professionnel",
+    sh_hint: "Donnez à l'orthophoniste ou à l'AESH le tableau de votre enfant sur leur propre tablette. C'est gratuit pour eux. Le journal d'usage n'est jamais partagé.",
+    sh_inv_view: "👀 Inviter — consulter", sh_inv_edit: "✏️ Inviter — modifier",
+    sh_making: "Création du code…", sh_code_sub: "Code valable 7 jours, une seule utilisation. Dictez-le à la personne.",
+    sh_r_own: "parent", sh_r_edit: "modifie", sh_r_view: "consulte",
+    sh_revoke: "Retirer", sh_revoke_ask: "Retirer l'accès de {who} ?\nEffet immédiat.",
+    sh_anon: "compte sans e-mail", sh_fail: "Échec : {msg}",
+    sh_join_h: "🔗 Rejoindre un enfant",
+    sh_join_hint: "Vous êtes orthophoniste, enseignant ou proche ? Saisissez le code donné par le parent. Aucun abonnement n'est nécessaire.",
+    sh_join_ph: "CODE", sh_join_btn: "Rejoindre", sh_join_need: "Saisissez le code.",
+    sh_join_acct: "Créez d'abord un compte ci-dessous.", sh_joining: "Vérification…",
+    sh_joined: "C'est fait ✓ — le tableau de l'enfant est maintenant sur cette tablette.",
+    sh_open: "Ouvrir", sh_switched: "Profil changé ✓", sh_child: "l'enfant",
+    sh_super: "👩‍⚕️ Vous utilisez le tableau de {name} ({role}) — vos appuis ne comptent pas pour l'enfant",
+    sh_e_code_inconnu: "Code inconnu. Vérifiez les caractères.",
+    sh_e_code_expire: "Ce code a expiré (7 jours). Demandez-en un nouveau.",
+    sh_e_code_deja_utilise: "Ce code a déjà servi. Demandez-en un nouveau.",
+    sh_e_code_propre_compte: "C'est votre propre code d'invitation.",
     acc_core: "Barre des mots essentiels",
     acc_core_hint: "Garde les mots les plus utiles visibles sur tous les onglets, toujours à la même place : « je veux » puis « pizza » sans changer de catégorie.",
     core_count: "{n} carte(s) sur {max} — touchez pour ajouter ou retirer.",
@@ -1648,6 +1715,25 @@ const STR = {
     mdl_btn: "🖐️ Model words (demonstrating)", mdl_off: "Finish",
     mdl_on: "🖐️ Modelling mode — your taps are not counted for your child",
     mdl_hint: "Turn this on when YOU touch the cards to show your child how. Your taps are then tracked separately and stay out of their statistics. Stops on its own after 15 minutes.",
+    sh_offline: "List unavailable offline — reconnect to see who has access.",
+    sh_h: "👩‍⚕️ Share with a professional",
+    sh_hint: "Give your speech therapist or teaching assistant your child's board on their own tablet. It's free for them. The usage log is never shared.",
+    sh_inv_view: "👀 Invite — view", sh_inv_edit: "✏️ Invite — edit",
+    sh_making: "Creating the code…", sh_code_sub: "Valid 7 days, single use. Read it out to the person.",
+    sh_r_own: "parent", sh_r_edit: "edits", sh_r_view: "views",
+    sh_revoke: "Remove", sh_revoke_ask: "Remove access for {who}?\nTakes effect immediately.",
+    sh_anon: "account with no e-mail", sh_fail: "Failed: {msg}",
+    sh_join_h: "🔗 Join a child",
+    sh_join_hint: "Are you a therapist, teacher or relative? Enter the code the parent gave you. No subscription needed.",
+    sh_join_ph: "CODE", sh_join_btn: "Join", sh_join_need: "Enter the code.",
+    sh_join_acct: "Create an account below first.", sh_joining: "Checking…",
+    sh_joined: "Done ✓ — the child's board is now on this tablet.",
+    sh_open: "Open", sh_switched: "Profile switched ✓", sh_child: "the child",
+    sh_super: "👩‍⚕️ You are using {name}'s board ({role}) — your taps don't count for the child",
+    sh_e_code_inconnu: "Unknown code. Check the characters.",
+    sh_e_code_expire: "This code has expired (7 days). Ask for a new one.",
+    sh_e_code_deja_utilise: "This code has already been used. Ask for a new one.",
+    sh_e_code_propre_compte: "That is your own invitation code.",
     acc_core: "Essential words bar",
     acc_core_hint: "Keeps the most useful words visible on every tab, always in the same place: “I want” then “pizza” without switching category.",
     core_count: "{n} of {max} cards — tap to add or remove.",
@@ -1762,6 +1848,25 @@ const STR = {
     mdl_btn: "🖐️ Mostrar palabras (modelado)", mdl_off: "Terminar",
     mdl_on: "🖐️ Modo modelado — tus toques no cuentan para el niño",
     mdl_hint: "Actívalo cuando SEAS TÚ quien toca las tarjetas para enseñar al niño. Tus toques se registran aparte y no aparecen en sus estadísticas. Se detiene solo a los 15 minutos.",
+    sh_offline: "Lista no disponible sin conexión — reconéctate para ver quién tiene acceso.",
+    sh_h: "👩‍⚕️ Compartir con un profesional",
+    sh_hint: "Da al logopeda o al auxiliar el tablero de tu hijo en su propia tableta. Es gratis para ellos. El registro de uso nunca se comparte.",
+    sh_inv_view: "👀 Invitar — consultar", sh_inv_edit: "✏️ Invitar — modificar",
+    sh_making: "Creando el código…", sh_code_sub: "Válido 7 días, un solo uso. Díctaselo a la persona.",
+    sh_r_own: "familia", sh_r_edit: "modifica", sh_r_view: "consulta",
+    sh_revoke: "Quitar", sh_revoke_ask: "¿Quitar el acceso de {who}?\nEfecto inmediato.",
+    sh_anon: "cuenta sin correo", sh_fail: "Error: {msg}",
+    sh_join_h: "🔗 Unirse a un niño",
+    sh_join_hint: "¿Eres logopeda, docente o allegado? Introduce el código que te dio la familia. No hace falta suscripción.",
+    sh_join_ph: "CÓDIGO", sh_join_btn: "Unirse", sh_join_need: "Introduce el código.",
+    sh_join_acct: "Crea antes una cuenta más abajo.", sh_joining: "Comprobando…",
+    sh_joined: "Listo ✓ — el tablero del niño ya está en esta tableta.",
+    sh_open: "Abrir", sh_switched: "Perfil cambiado ✓", sh_child: "el niño",
+    sh_super: "👩‍⚕️ Estás usando el tablero de {name} ({role}) — tus toques no cuentan para el niño",
+    sh_e_code_inconnu: "Código desconocido. Revisa los caracteres.",
+    sh_e_code_expire: "Este código ha caducado (7 días). Pide uno nuevo.",
+    sh_e_code_deja_utilise: "Este código ya se ha usado. Pide uno nuevo.",
+    sh_e_code_propre_compte: "Ese es tu propio código de invitación.",
     acc_core: "Barra de palabras esenciales",
     acc_core_hint: "Mantiene las palabras más útiles visibles en todas las pestañas, siempre en el mismo sitio: «quiero» y luego «pizza» sin cambiar de categoría.",
     core_count: "{n} de {max} tarjetas — toca para añadir o quitar.",
@@ -4545,6 +4650,142 @@ document.getElementById("stNext").onclick = () => {
   stRun.idx++; stShow();
 };
 
+/* ================= Partage avec les professionnels (phase B) ================= */
+let myProfiles = [];
+
+async function apiJson(path, opts) {
+  const tk = await fbToken();
+  if (!tk) throw new Error("compte requis");
+  const r = await fetch(BACKEND_URL + path, Object.assign({
+    headers: Object.assign({ "content-type": "application/json", Authorization: "Bearer " + tk },
+      (opts && opts.headers) || {}),
+  }, opts || {}));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ("http " + r.status));
+  return j;
+}
+
+// Le rôle change ce que l'on peut faire ET comment on est tracé : sur le
+// profil d'un enfant qui n'est pas le sien, le modelage est FORCÉ, pour que
+// les appuis du professionnel n'entrent jamais dans les statistiques.
+function applyRole() {
+  const supervising = hasAccount() && syncRole !== "owner";
+  document.body.classList.toggle("supervising", supervising);
+  if (supervising) {
+    const p = myProfiles.find((x) => x.pid === syncPid());
+    document.getElementById("superWho").textContent =
+      t("sh_super", { name: (p && p.name) || t("sh_child"),
+                      role: t(syncRole === "editor" ? "sh_r_edit" : "sh_r_view") });
+    setModeling(true);
+  }
+  const sc = document.getElementById("shareCard");
+  if (sc) sc.style.display = syncRole === "owner" ? "" : "none"; // seul le parent invite
+}
+
+async function refreshShare() {
+  if (!hasAccount()) return;
+  const box = document.getElementById("shareBody");
+  try {
+    const j = await apiJson("/v1/members?pid=" + encodeURIComponent(syncPid()));
+    syncRole = j.role;
+    box.innerHTML = "";
+    for (const m of j.members) {
+      const row = document.createElement("div");
+      row.className = "memRow";
+      row.innerHTML = `<span class="who">${m.email || t("sh_anon")}</span>` +
+        `<span class="rl${m.role === "owner" ? " own" : ""}">${t("sh_r_" + (m.role === "owner" ? "own" : m.role === "editor" ? "edit" : "view"))}</span>`;
+      if (j.role === "owner" && m.uid !== j.me) {
+        const b = document.createElement("button");
+        b.textContent = t("sh_revoke");
+        b.onclick = async () => {
+          if (!confirm(t("sh_revoke_ask", { who: m.email || "" }))) return;
+          await apiJson("/v1/members/remove", { method: "POST",
+            body: JSON.stringify({ pid: syncPid(), uid: m.uid }) });
+          refreshShare();
+        };
+        row.appendChild(b);
+      }
+      box.appendChild(row);
+    }
+    applyRole();
+  } catch (e) {
+    // Hors ligne ou serveur injoignable : on ne montre pas une erreur technique
+    // à un parent, on explique ce qui se passe.
+    box.innerHTML = `<div class="hint">${
+      String(e.message).includes("fetch") || !navigator.onLine ? t("sh_offline") : e.message}</div>`;
+  }
+}
+
+async function refreshProfiles() {
+  if (!hasAccount()) return;
+  const box = document.getElementById("profileList");
+  try {
+    const j = await apiJson("/v1/profiles");
+    myProfiles = j.profiles || [];
+    box.innerHTML = "";
+    if (myProfiles.length < 2) return; // un seul enfant : pas de sélecteur
+    for (const p of myProfiles) {
+      const row = document.createElement("div");
+      row.className = "profRow" + (p.pid === syncPid() ? " cur" : "");
+      row.innerHTML = `<span class="nm">${p.name || t("sh_child")} — ${t("sh_r_" + (p.role === "owner" ? "own" : p.role === "editor" ? "edit" : "view"))}</span>`;
+      if (p.pid !== syncPid()) {
+        const b = document.createElement("button");
+        b.textContent = t("sh_open");
+        b.onclick = async () => {
+          store.set("pid", p.pid);
+          localStorage.removeItem("vp_syncgen");
+          localStorage.removeItem("vp_syncrev");
+          if (await pullSync(true)) rehydrate();
+          await refreshShare();
+          refreshProfiles();
+          toast(t("sh_switched"));
+        };
+        row.appendChild(b);
+      }
+      box.appendChild(row);
+    }
+  } catch {}
+}
+
+async function makeInvite(role) {
+  const st = document.getElementById("shStatus");
+  st.textContent = t("sh_making");
+  try {
+    const j = await apiJson("/v1/invites", { method: "POST",
+      body: JSON.stringify({ pid: syncPid(), role }) });
+    const box = document.getElementById("shCode");
+    box.className = "show";
+    box.innerHTML = `<div class="code">${j.code}</div><div class="sub">${t("sh_code_sub")}</div>`;
+    st.textContent = "";
+    refreshShare();
+  } catch (e) { st.textContent = t("sh_fail", { msg: e.message }); }
+}
+document.getElementById("shInviteView").onclick = () => makeInvite("viewer");
+document.getElementById("shInviteEdit").onclick = () => makeInvite("editor");
+
+document.getElementById("shJoinBtn").onclick = async () => {
+  const st = document.getElementById("shJoinStatus");
+  const code = document.getElementById("shJoinCode").value.trim().toUpperCase();
+  if (!code) { st.textContent = t("sh_join_need"); return; }
+  if (!hasAccount()) { st.textContent = t("sh_join_acct"); return; }
+  st.textContent = t("sh_joining");
+  try {
+    const j = await apiJson("/v1/invites/accept", { method: "POST", body: JSON.stringify({ code }) });
+    store.set("pid", j.pid);
+    localStorage.removeItem("vp_syncgen");
+    localStorage.removeItem("vp_syncrev");
+    syncRole = j.role;
+    if (await pullSync(true)) rehydrate();
+    document.getElementById("shJoinCode").value = "";
+    st.textContent = t("sh_joined");
+    await refreshShare();
+    refreshProfiles();
+  } catch (e) {
+    st.textContent = t("sh_e_" + e.message) !== "sh_e_" + e.message
+      ? t("sh_e_" + e.message) : t("sh_fail", { msg: e.message });
+  }
+};
+
 /* ================= Atelier photo =================
    Beaucoup d'enfants autistes ne reconnaissent pas un symbole abstrait, mais
    reconnaissent LEUR objet. L'atelier réduit « photo → carte » à trois gestes :
@@ -5412,6 +5653,7 @@ function showPsec(name) {
   document.getElementById("panelCard").scrollTop = 0;
   if (name === "home") refreshDash();
   if (name === "vocab") { renderTrash(); renderRoutines(); renderStories(); }
+  if (name === "account") { refreshShare(); refreshProfiles(); }
   if (name === "voice") renderVoices();
   if (name === "journal") renderJournal();
 }

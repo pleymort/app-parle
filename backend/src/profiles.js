@@ -7,6 +7,7 @@
 //
 // Effet de bord voulu : un parent peut avoir plusieurs enfants, et une
 // orthophoniste peut suivre plusieurs enfants depuis une seule tablette.
+import { randomBytes } from "node:crypto";
 import { db, FieldValue } from "./firebase.js";
 
 export const OWNER_SCOPES = { vocab: true, journal: true, notes: true };
@@ -53,6 +54,14 @@ export async function ensureSelfProfile(uid) {
 }
 
 /** Appartenance d'un compte à un profil, ou null s'il n'y a aucun accès. */
+/** Mémorise l'e-mail du compte : c'est ce que le parent verra dans la liste
+    des personnes ayant accès au profil de son enfant. */
+export async function touchAccount(uid, email) {
+  if (!email) return;
+  await db.collection("accounts").doc(uid).set(
+    { email, seenAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
 export async function membership(uid, pid) {
   const m = await memberRef(pid, uid).get();
   return m.exists ? m.data() : null;
@@ -74,3 +83,68 @@ export async function listProfiles(uid) {
 export const canWriteVocab = (m) => !!m && (m.role === "owner" || m.role === "editor");
 /** Peut-il le lire ? (un viewer voit le tableau : c'est le minimum pour modeler) */
 export const canReadVocab = (m) => !!m && m.scopes?.vocab !== false;
+
+/* ---- Invitations ----
+   Un code court, lisible à voix haute au téléphone, à usage unique et de
+   courte durée. Alphabet sans caractères confondables (ni O/0, ni I/1). */
+const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const INVITE_TTL_MS = 7 * 24 * 3600 * 1000;
+
+function newCode() {
+  return Array.from(randomBytes(6), (n) => ALPHABET[n % ALPHABET.length]).join("");
+}
+
+export async function createInvite(pid, role, scopes, byUid) {
+  // Une collision est très improbable, mais elle donnerait l'accès au mauvais
+  // enfant : on vérifie, et on retente.
+  for (let i = 0; i < 5; i++) {
+    const code = newCode();
+    const ref = db.collection("invites").doc(code);
+    const created = await db.runTransaction(async (t) => {
+      if ((await t.get(ref)).exists) return false;
+      t.set(ref, {
+        pid, role, scopes: scopes || {}, createdBy: byUid,
+        createdAt: FieldValue.serverTimestamp(),
+        expiresAt: Date.now() + INVITE_TTL_MS,
+        usedBy: null,
+      });
+      return true;
+    });
+    if (created) return { code, expiresAt: Date.now() + INVITE_TTL_MS };
+  }
+  throw new Error("code_indisponible");
+}
+
+/** Consomme un code et rattache le compte au profil. */
+export async function acceptInvite(code, uid) {
+  const ref = db.collection("invites").doc(String(code).toUpperCase().trim());
+  const inv = await db.runTransaction(async (t) => {
+    const snap = await t.get(ref);
+    if (!snap.exists) throw new Error("code_inconnu");
+    const d = snap.data();
+    if (d.usedBy) throw new Error("code_deja_utilise");
+    if (d.expiresAt < Date.now()) throw new Error("code_expire");
+    if (d.createdBy === uid) throw new Error("code_propre_compte");
+    t.update(ref, { usedBy: uid, usedAt: FieldValue.serverTimestamp() });
+    return d;
+  });
+  await addMember(inv.pid, uid, inv.role, inv.scopes, inv.createdBy);
+  const p = await db.collection("profiles").doc(inv.pid).get();
+  return { pid: inv.pid, role: inv.role, name: p.get("name") };
+}
+
+/** Qui a accès à ce profil. Les superviseurs se voient entre eux (décision
+    produit) : une équipe autour d'un enfant doit se connaître. */
+export async function listMembers(pid) {
+  const snap = await db.collection("profiles").doc(pid).collection("members").get();
+  const out = [];
+  for (const d of snap.docs) {
+    const a = await db.collection("accounts").doc(d.id).get();
+    out.push({
+      uid: d.id, role: d.get("role"), scopes: d.get("scopes") || {},
+      email: a.exists ? a.get("email") || null : null,
+      acceptedAt: d.get("acceptedAt") ? d.get("acceptedAt").toMillis() : null,
+    });
+  }
+  return out;
+}
