@@ -994,6 +994,10 @@
     <button class="pbtn ghost" id="exportBtn" style="margin:0" data-i18n="exp_btn">⬇️ Exporter le vocabulaire</button>
     <label class="pbtn ghost"><span data-i18n="imp_btn">⬆️ Importer un fichier</span><input type="file" id="importFile" accept=".json,application/json" style="display:none"></label>
     <button class="pbtn ghost" id="printBtn" data-i18n="print_btn">🖨 Imprimer le tableau</button>
+    <button class="pbtn ghost" id="obzExportBtn" data-i18n="obz_exp">🌍 Exporter au format standard (.obz)</button>
+    <label class="pbtn ghost"><span data-i18n="obz_imp">🌍 Importer un .obz / .obf</span><input type="file" id="obzFile" accept=".obz,.obf,application/zip,application/json" style="display:none"></label>
+    <div class="aiStatus" id="obzStatus"></div>
+    <div class="hint" data-i18n="obz_hint">Open Board Format : le format d'échange commun aux applications de CAA. Permet de récupérer un vocabulaire venu d'une autre application, ou d'emporter le vôtre ailleurs.</div>
     <div class="aiStatus" id="exportStatus"></div>
     <div class="hint" data-i18n="exp_hint">Partagez ou imprimez le tableau.</div>
     </div>
@@ -1324,7 +1328,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "48"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "49"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1508,6 +1512,11 @@ const STR = {
     se_need_title: "Donnez un titre au scénario.", se_need_steps: "Il faut au moins 2 étapes.",
     se_saved: "Scénario enregistré ✓",
     pw_stories: "Bibliothèque complète de scénarios",
+    obz_board: "tableau", obz_exp: "🌍 Exporter au format standard (.obz)", obz_imp: "🌍 Importer un .obz / .obf",
+    obz_hint: "Open Board Format : le format d'échange commun aux applications de CAA. Permet de récupérer un vocabulaire venu d'une autre application, ou d'emporter le vôtre ailleurs.",
+    obz_making: "Préparation de l'archive…", obz_done: "Fichier .obz créé ✓ ({n} Ko)",
+    obz_reading: "Lecture du fichier…", obz_imported: "Import terminé ✓ — {cats} catégorie(s), {items} carte(s) ajoutées.",
+    obz_fail: "Échec : {msg}",
     acc_core: "Barre des mots essentiels",
     acc_core_hint: "Garde les mots les plus utiles visibles sur tous les onglets, toujours à la même place : « je veux » puis « pizza » sans changer de catégorie.",
     core_count: "{n} carte(s) sur {max} — touchez pour ajouter ou retirer.",
@@ -1614,6 +1623,11 @@ const STR = {
     se_need_title: "Give the story a title.", se_need_steps: "At least 2 steps are needed.",
     se_saved: "Story saved ✓",
     pw_stories: "Full library of social stories",
+    obz_board: "board", obz_exp: "🌍 Export to the standard format (.obz)", obz_imp: "🌍 Import an .obz / .obf",
+    obz_hint: "Open Board Format: the exchange format shared by AAC apps. Bring in a vocabulary from another app, or take yours elsewhere.",
+    obz_making: "Preparing the archive…", obz_done: ".obz file created ✓ ({n} KB)",
+    obz_reading: "Reading the file…", obz_imported: "Import complete ✓ — {cats} category(ies), {items} card(s) added.",
+    obz_fail: "Failed: {msg}",
     acc_core: "Essential words bar",
     acc_core_hint: "Keeps the most useful words visible on every tab, always in the same place: “I want” then “pizza” without switching category.",
     core_count: "{n} of {max} cards — tap to add or remove.",
@@ -1720,6 +1734,11 @@ const STR = {
     se_need_title: "Ponle un título a la historia.", se_need_steps: "Se necesitan al menos 2 pasos.",
     se_saved: "Historia guardada ✓",
     pw_stories: "Biblioteca completa de historias sociales",
+    obz_board: "tablero", obz_exp: "🌍 Exportar al formato estándar (.obz)", obz_imp: "🌍 Importar un .obz / .obf",
+    obz_hint: "Open Board Format: el formato de intercambio común de las apps de CAA. Permite traer un vocabulario de otra app, o llevarte el tuyo a otra parte.",
+    obz_making: "Preparando el archivo…", obz_done: "Archivo .obz creado ✓ ({n} KB)",
+    obz_reading: "Leyendo el archivo…", obz_imported: "Importación completa ✓ — {cats} categoría(s), {items} tarjeta(s) añadidas.",
+    obz_fail: "Error: {msg}",
     acc_core: "Barra de palabras esenciales",
     acc_core_hint: "Mantiene las palabras más útiles visibles en todas las pestañas, siempre en el mismo sitio: «quiero» y luego «pizza» sin cambiar de categoría.",
     core_count: "{n} de {max} tarjetas — toca para añadir o quitar.",
@@ -2179,12 +2198,14 @@ async function searchArasaac(word) {
 }
 
 // Redimensionne n'importe quelle image (URL ou dataURL) en carré 256px sur fond blanc
-function toSquare256(srcUrl) {
+function toSquare256(srcUrl) { return toSquare(srcUrl, 256); }
+
+// Version paramétrable (l'import OBF et l'atelier photo travaillent en 512)
+function toSquare(srcUrl, size) {
   return new Promise((res, rej) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      const size = 256;
       const canvas = document.createElement("canvas");
       canvas.width = size; canvas.height = size;
       const ctx = canvas.getContext("2d");
@@ -3746,6 +3767,250 @@ document.getElementById("editSave").onclick = () => {
   toast("Modifications enregistrées ✓");
 };
 
+
+/* ================= Open Board Format (.obf / .obz) =================
+   Standard d'échange de tableaux de CAA (openboardformat.org) : un .obf est
+   un tableau en JSON, un .obz est une archive ZIP contenant plusieurs .obf,
+   leurs images et un manifest. C'est le seul format que les autres apps
+   savent lire — il évite d'enfermer les familles dans Leova, et permet
+   d'importer un vocabulaire existant plutôt que de tout recréer.
+
+   ZIP écrit à la main : l'app est un fichier unique servi sous CSP stricte,
+   aucune bibliothèque externe n'est chargeable. */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+const utf8 = (str) => new TextEncoder().encode(str);
+
+/* Écrit une archive ZIP sans compression (méthode 0). Les images embarquées
+   sont déjà du JPEG/PNG : les recompresser ne gagnerait quasiment rien. */
+function zipWrite(files) {
+  const chunks = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = utf8(f.name), data = f.data, crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true);
+    lh.setUint16(6, 0, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    chunks.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, 0, true); ch.setUint16(14, 0, true);
+    ch.setUint32(16, crc, true);
+    ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((n, c) => n + c.length, 0);
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true);
+  eo.setUint16(8, files.length, true); eo.setUint16(10, files.length, true);
+  eo.setUint32(12, cdSize, true); eo.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, new Uint8Array(eo.buffer)], { type: "application/zip" });
+}
+
+/* Lit une archive ZIP via son catalogue central. Gère le stockage brut
+   (méthode 0) et deflate (méthode 8, via DecompressionStream). */
+async function zipRead(arrayBuffer) {
+  const u8 = new Uint8Array(arrayBuffer), dv = new DataView(arrayBuffer);
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= 0 && i > u8.length - 66000; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("archive illisible (fin introuvable)");
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const out = new Map();
+  for (let n = 0; n < count; n++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true);
+    const csize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
+    const lNameLen = dv.getUint16(lho + 26, true);
+    const lExtraLen = dv.getUint16(lho + 28, true);
+    const start = lho + 30 + lNameLen + lExtraLen;
+    let data = u8.subarray(start, start + csize);
+    if (method === 8) {
+      const ds = new DecompressionStream("deflate-raw");
+      const blob = await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
+      data = new Uint8Array(blob);
+    } else if (method !== 0) {
+      throw new Error("compression non gérée (" + method + ")");
+    }
+    out.set(name, data);
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  return out;
+}
+
+const dataUrlToBytes = (u) => {
+  const bin = atob(u.slice(u.indexOf(",") + 1));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+};
+const extOf = (mime) => (mime.includes("png") ? "png" : mime.includes("svg") ? "svg" : "jpg");
+
+/* Export : un tableau racine qui pointe vers un tableau par catégorie.
+   Les photos embarquées deviennent de vrais fichiers dans l'archive. */
+async function exportOBZ() {
+  const files = [], paths = { boards: {}, images: {} };
+  const catList = cats();
+  let imgSeq = 0;
+  const locale = lang.slice(0, 2);
+
+  const mkGrid = (n) => {
+    const columns = Math.max(1, Math.min(6, n || 1));
+    return { rows: Math.max(1, Math.ceil(n / columns)), columns };
+  };
+  const layout = (ids, g) => {
+    const order = [];
+    for (let r = 0; r < g.rows; r++) {
+      order.push(Array.from({ length: g.columns }, (_, c) => ids[r * g.columns + c] || null));
+    }
+    return order;
+  };
+
+  // Un tableau par catégorie
+  for (const c of catList) {
+    const items = allItems().filter((i) => i.cat === c.id && !hidden.has(i.id));
+    const buttons = [], boardImages = [];
+    for (const it of items) {
+      const b = { id: it.id, label: it.label };
+      const say = it.say || it.label;
+      if (say !== it.label) b.vocalization = say;
+      if (it.photo) {
+        const imgId = "i" + ++imgSeq;
+        if (it.photo.startsWith("data:")) {
+          const mime = it.photo.slice(5, it.photo.indexOf(";"));
+          const name = "images/" + imgId + "." + extOf(mime);
+          files.push({ name, data: dataUrlToBytes(it.photo) });
+          paths.images[imgId] = name;
+          boardImages.push({ id: imgId, path: name, content_type: mime });
+        } else {
+          boardImages.push({ id: imgId, url: it.photo, content_type: "image/png" });
+        }
+        b.image_id = imgId;
+      } else if (it.emoji) {
+        b.label = it.label; // l'émoji n'est pas transportable en OBF : le mot suffit
+      }
+      buttons.push(b);
+    }
+    const g = mkGrid(buttons.length);
+    const board = {
+      format: "open-board-0.1", id: c.id, locale, name: c.label,
+      buttons, images: boardImages, sounds: [],
+      grid: { rows: g.rows, columns: g.columns, order: layout(buttons.map((b) => b.id), g) },
+    };
+    const path = "boards/" + c.id + ".obf";
+    files.push({ name: path, data: utf8(JSON.stringify(board)) });
+    paths.boards[c.id] = path;
+  }
+
+  // Tableau racine : une case par catégorie
+  const rootButtons = catList.map((c, i) => ({
+    id: "c" + i, label: c.label, load_board: { id: c.id, path: "boards/" + c.id + ".obf" },
+  }));
+  const rg = mkGrid(rootButtons.length);
+  const root = {
+    format: "open-board-0.1", id: "root", locale,
+    name: (store.get("childname", "") || "Leova") + " — " + t("obz_board"),
+    buttons: rootButtons, images: [], sounds: [],
+    grid: { rows: rg.rows, columns: rg.columns, order: layout(rootButtons.map((b) => b.id), rg) },
+  };
+  files.push({ name: "boards/root.obf", data: utf8(JSON.stringify(root)) });
+  paths.boards.root = "boards/root.obf";
+  files.push({ name: "manifest.json", data: utf8(JSON.stringify(
+    { format: "open-board-0.1", root: "boards/root.obf", paths })) });
+  return zipWrite(files);
+}
+
+/* Import : chaque tableau devient une catégorie, chaque case une carte.
+   On AJOUTE au vocabulaire existant — jamais de remplacement silencieux. */
+async function importOBF(file) {
+  const buf = await file.arrayBuffer();
+  let boards = [], zip = null;
+  if (file.name.toLowerCase().endsWith(".obz")) {
+    zip = await zipRead(buf);
+    const man = zip.get("manifest.json");
+    const manifest = man ? JSON.parse(new TextDecoder().decode(man)) : null;
+    const rootPath = manifest && manifest.root;
+    for (const [name, bytes] of zip) {
+      if (!name.toLowerCase().endsWith(".obf")) continue;
+      if (rootPath && name === rootPath) continue; // la racine ne porte que des liens
+      try { boards.push(JSON.parse(new TextDecoder().decode(bytes))); } catch {}
+    }
+  } else {
+    boards = [JSON.parse(new TextDecoder().decode(new Uint8Array(buf)))];
+  }
+  if (!boards.length) throw new Error("aucun tableau trouvé");
+
+  let addedCats = 0, addedItems = 0;
+  for (const board of boards) {
+    const name = (board.name || "Importé").trim();
+    // Réutilise une catégorie de même nom plutôt que d'en créer un doublon
+    let cat = cats().find((c) => c.label.toLowerCase() === name.toLowerCase());
+    if (!cat) {
+      cat = { id: "ic_" + Date.now() + "_" + addedCats, label: name, emoji: "📥" };
+      customCats.push(cat);
+      addedCats++;
+    }
+    const imgById = {};
+    for (const im of board.images || []) imgById[im.id] = im;
+    for (const b of board.buttons || []) {
+      if (b.load_board) continue;              // lien vers un autre tableau
+      const label = (b.label || b.vocalization || "").trim();
+      if (!label) continue;
+      if (allItems().some((i) => i.label.toLowerCase() === label.toLowerCase())) continue;
+      let photo = null;
+      const im = b.image_id && imgById[b.image_id];
+      if (im) {
+        try {
+          if (im.data && im.data.startsWith("data:")) photo = await toSquare(im.data, 512);
+          else if (im.path && zip && zip.get(im.path)) {
+            const blob = new Blob([zip.get(im.path)], { type: im.content_type || "image/png" });
+            const url = URL.createObjectURL(blob);
+            photo = await toSquare(url, 512);
+            URL.revokeObjectURL(url);
+          } else if (im.url) photo = im.url;
+        } catch {}
+      }
+      customItems.push({
+        id: "oi_" + Date.now() + "_" + addedItems,
+        cat: cat.id, label, say: b.vocalization || label,
+        emoji: photo ? null : "🔤", photo,
+      });
+      addedItems++;
+    }
+  }
+  store.set("cats", customCats);
+  store.set("custom", customItems);
+  renderTabs(); renderGrid();
+  return { cats: addedCats, items: addedItems };
+}
+
 /* ================= Scénarios sociaux =================
    Des récits courts, à la première personne, qui préparent l'enfant à une
    situation avant qu'elle arrive : ce qui va se passer, dans quel ordre, et
@@ -5002,6 +5267,31 @@ document.getElementById("importFile").onchange = async (e) => {
   } catch (err) { st.textContent = "Fichier illisible : " + err.message; }
 };
 
+
+document.getElementById("obzExportBtn").onclick = async () => {
+  const st = document.getElementById("obzStatus");
+  st.textContent = t("obz_making");
+  try {
+    const blob = await exportOBZ();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "leova-" + new Date().toISOString().slice(0, 10) + ".obz";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    st.textContent = t("obz_done", { n: Math.round(blob.size / 1024) });
+  } catch (e) { st.textContent = t("obz_fail", { msg: e.message }); }
+};
+document.getElementById("obzFile").onchange = async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  const st = document.getElementById("obzStatus");
+  st.textContent = t("obz_reading");
+  try {
+    const r = await importOBF(f);
+    st.textContent = t("obz_imported", { cats: r.cats, items: r.items });
+  } catch (err) { st.textContent = t("obz_fail", { msg: err.message }); }
+};
 document.getElementById("printBtn").onclick = () => {
   const w = window.open("", "_blank");
   if (!w) { alert("Impression impossible ici — ouvrez la version web sur un ordinateur (pleymort.github.io/app-parle)."); return; }

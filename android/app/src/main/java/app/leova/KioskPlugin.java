@@ -29,6 +29,7 @@ public class KioskPlugin extends Plugin {
         activity.runOnUiThread(() -> {
             try {
                 activity.startLockTask();
+                if (activity instanceof MainActivity) ((MainActivity) activity).applyKioskHardening(true);
                 call.resolve();
             } catch (Exception e) {
                 call.reject(e.getMessage());
@@ -43,6 +44,7 @@ public class KioskPlugin extends Plugin {
         activity.runOnUiThread(() -> {
             try {
                 activity.stopLockTask();
+                if (activity instanceof MainActivity) ((MainActivity) activity).applyKioskHardening(false);
                 call.resolve();
             } catch (Exception e) {
                 call.reject(e.getMessage());
