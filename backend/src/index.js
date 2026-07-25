@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { config } from "./config.js";
+import { ensureSelfProfile, membership, listProfiles, canReadVocab, canWriteVocab, selfPid } from "./profiles.js";
 import { reformulate, magicPlan, genImage, cleanPhoto, transcribe, onboardPlan, storyPlan, SafetyError } from "./vertex.js";
-import { getSync, putSync } from "./sync.js";
+import { getSync, putSync, ConflictError } from "./sync.js";
 import { tts } from "./tts.js";
 import { verifyToken } from "./firebase.js";
 import { checkAndCount, getUsage } from "./meter.js";
@@ -156,12 +157,39 @@ app.post("/v1/onboard", meter("magic"), async (req, res) => {
 
 // Sauvegarde / restauration du vocabulaire (nécessite un compte — pas le
 // code parent seul : il faut un uid stable pour retrouver sa sauvegarde).
-app.get("/v1/sync", async (req, res) => {
+// Résout le profil visé et vérifie l'appartenance. Sans ?pid=, on retombe sur
+// le profil personnel du compte (clients antérieurs à la phase A).
+async function resolveProfile(req, res) {
+  const uid = req.auth?.uid;
+  if (!uid) { res.status(400).json({ error: "compte_requis" }); return null; }
+  const pid = String(req.query.pid || req.body?.pid || selfPid(uid));
+  if (pid === selfPid(uid)) {
+    await ensureSelfProfile(uid); // migration transparente au premier appel
+  }
+  const m = await membership(uid, pid);
+  if (!m) { res.status(403).json({ error: "acces_refuse" }); return null; }
+  return { uid, pid, m };
+}
+
+app.get("/v1/profiles", async (req, res) => {
   try {
     if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
-    const data = await getSync(req.auth.uid);
+    await ensureSelfProfile(req.auth.uid);
+    res.json({ profiles: await listProfiles(req.auth.uid) });
+  } catch (e) {
+    console.error("profiles:", e);
+    res.status(500).json({ error: "profiles_error" });
+  }
+});
+
+app.get("/v1/sync", async (req, res) => {
+  try {
+    const ctx = await resolveProfile(req, res);
+    if (!ctx) return;
+    if (!canReadVocab(ctx.m)) return res.status(403).json({ error: "acces_refuse" });
+    const data = await getSync(ctx.pid, ctx.uid);
     if (!data) return res.status(404).json({ error: "aucune_sauvegarde" });
-    res.json(data);
+    res.json({ ...data, role: ctx.m.role });
   } catch (e) {
     console.error("sync/get:", e);
     res.status(500).json({ error: "sync_error" });
@@ -170,14 +198,21 @@ app.get("/v1/sync", async (req, res) => {
 
 app.post("/v1/sync", async (req, res) => {
   try {
-    if (!req.auth?.uid) return res.status(400).json({ error: "compte_requis" });
-    const { state, rev } = req.body || {};
+    const ctx = await resolveProfile(req, res);
+    if (!ctx) return;
+    if (!canWriteVocab(ctx.m)) return res.status(403).json({ error: "lecture_seule" });
+    const { state, rev, gen } = req.body || {};
     if (!state || typeof state !== "object" || !Number.isFinite(rev)) {
       return res.status(400).json({ error: "state_requis" });
     }
-    await putSync(req.auth.uid, state, rev);
-    res.json({ ok: true, rev });
+    const newGen = await putSync(ctx.pid, state, rev, gen);
+    res.json({ ok: true, rev, gen: newGen });
   } catch (e) {
+    if (e instanceof ConflictError) {
+      // Quelqu'un d'autre a écrit entre-temps : on renvoie l'état courant
+      // pour que le client refasse sa modification par-dessus.
+      return res.status(409).json({ error: "conflit", current: e.current });
+    }
     console.error("sync/put:", e);
     res.status(500).json({ error: "sync_error" });
   }

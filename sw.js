@@ -1,4 +1,4 @@
-const CACHE = "leova-v50";
+const CACHE = "leova-v51";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (e) => {

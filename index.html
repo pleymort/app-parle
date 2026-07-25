@@ -1342,7 +1342,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "50"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "51"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -3389,6 +3389,10 @@ document.getElementById("addBtn").onclick = () => {
    Conflit : dernier écrivain gagne. */
 let syncTimer = null;
 const hasAccount = () => !!(fbAuth && fbAuth.email);
+/* Profil courant. Par défaut le profil personnel du compte : la séparation
+   compte/profil est invisible tant qu'on n'a qu'un enfant. */
+const syncPid = () => store.get("pid", "") || (fbAuth && fbAuth.uid ? "p_" + fbAuth.uid : "");
+let syncRole = "owner"; // rôle sur le profil courant, renvoyé par le serveur
 const setAcctStatus = (t) => { document.getElementById("acctStatus").textContent = t; };
 
 function collectState() {
@@ -3403,18 +3407,36 @@ function scheduleSync() {
   syncTimer = setTimeout(pushSync, 4000);
 }
 
-async function pushSync() {
+/* Écriture avec détection de conflit : on renvoie la génération lue. Si un
+   autre appareil (ou plus tard l'orthophoniste) a écrit entre-temps, le
+   serveur répond 409 — on récupère alors l'état courant et on rejoue notre
+   modification par-dessus, plutôt que d'écraser silencieusement son travail. */
+async function pushSync(retry) {
   if (!hasAccount() || !navigator.onLine) return;
   try {
-    const t = await fbToken();
-    if (!t) return;
+    const tk = await fbToken();
+    if (!tk) return;
     const rev = Date.now();
+    const body = { state: collectState(), rev, pid: syncPid() };
+    const gen = store.get("syncgen", null);
+    if (gen !== null) body.gen = gen;
     const r = await fetch(BACKEND_URL + "/v1/sync", {
       method: "POST",
-      headers: { "content-type": "application/json", Authorization: "Bearer " + t },
-      body: JSON.stringify({ state: collectState(), rev }),
+      headers: { "content-type": "application/json", Authorization: "Bearer " + tk },
+      body: JSON.stringify(body),
     });
+    if (r.status === 409 && !retry) {
+      const j = await r.json().catch(() => ({}));
+      if (j.current) {
+        // On prend la version du serveur comme base, puis on réécrit la nôtre.
+        localStorage.setItem("vp_syncgen", JSON.stringify(j.current.gen));
+        localStorage.setItem("vp_syncrev", JSON.stringify(j.current.rev));
+      }
+      return pushSync(true);
+    }
     if (r.ok) {
+      const j = await r.json().catch(() => ({}));
+      if (j.gen) localStorage.setItem("vp_syncgen", JSON.stringify(j.gen));
       localStorage.setItem("vp_syncrev", JSON.stringify(rev));
       setAcctStatus(t("acct_saved", { email: fbAuth.email }));
     }
@@ -3427,9 +3449,12 @@ async function pullSync(force) {
   if (!hasAccount() || !navigator.onLine) return false;
   const t = await fbToken();
   if (!t) return false;
-  const r = await fetch(BACKEND_URL + "/v1/sync", { headers: { Authorization: "Bearer " + t } });
+  const r = await fetch(BACKEND_URL + "/v1/sync?pid=" + encodeURIComponent(syncPid()),
+    { headers: { Authorization: "Bearer " + t } });
   if (!r.ok) return false;
-  const { state, rev } = await r.json();
+  const { state, rev, gen, role } = await r.json();
+  if (gen) localStorage.setItem("vp_syncgen", JSON.stringify(gen));
+  if (role) syncRole = role;
   if (!state || (!force && rev <= store.get("syncrev", 0))) return false;
   for (const k of SYNC_KEYS) {
     if (state[k] !== null && state[k] !== undefined) {
@@ -3500,9 +3525,11 @@ async function syncPoll() {
   try {
     const tk = await fbToken();
     if (!tk) return;
-    const r = await fetch(BACKEND_URL + "/v1/sync", { headers: { Authorization: "Bearer " + tk } });
+    const r = await fetch(BACKEND_URL + "/v1/sync?pid=" + encodeURIComponent(syncPid()),
+      { headers: { Authorization: "Bearer " + tk } });
     if (!r.ok) return;
-    const { state, rev } = await r.json();
+    const { state, rev, gen } = await r.json();
+    if (gen) localStorage.setItem("vp_syncgen", JSON.stringify(gen));
     if (!state || rev <= store.get("syncrev", 0)) return;
     localStorage.setItem("vp_syncrev", JSON.stringify(rev));
     syncPending = state;
