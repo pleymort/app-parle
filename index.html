@@ -353,6 +353,50 @@
   .editRow2 { display: flex; gap: 8px; margin-top: 14px; }
   .editRow2 .pbtn { flex: 1; margin: 0; }
 
+  /* ---- Atelier photo : transformer un objet réel en pictogramme ----
+     Plein écran sombre pour que l'œil aille à l'image. Le cadre carré EST le
+     picto final : ce que le parent voit est exactement ce qui sera enregistré. */
+  #atelier { position: fixed; inset: 0; z-index: 58; display: none; background: #101A24; }
+  #atelier.open { display: flex; flex-direction: column; }
+  #atTop { display: flex; align-items: center; gap: 12px; padding: 12px 14px 0; }
+  #atTitle { color: #fff; font-weight: 800; font-size: 16px; flex: 1; }
+  #atStage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px; min-height: 0; }
+  #atFrame {
+    position: relative; width: min(56vh, 88vw); aspect-ratio: 1; border-radius: 22px;
+    overflow: hidden; background: #fff; touch-action: none; cursor: grab;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.22), 0 18px 50px rgba(0,0,0,.5);
+  }
+  #atFrame.busy { opacity: .55; }
+  #atCanvas { width: 100%; height: 100%; display: block; }
+  #atSpin {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.75); color: #24425F; font-weight: 800; font-size: 15px; text-align: center; padding: 20px;
+  }
+  #atFrame.busy #atSpin { display: flex; }
+  #atPanel { background: #17242F; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); }
+  #atTools { display: flex; gap: 8px; margin-bottom: 10px; }
+  .atTool {
+    flex: 1; min-height: 46px; border: none; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #EAF2FA; font-size: 14px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px;
+  }
+  .atTool.on { background: #4A90D9; color: #fff; }
+  .atTool:disabled { opacity: .4; cursor: default; }
+  #atCancel { flex: 0 0 46px; font-size: 18px; }
+  #atLabelRow { display: flex; gap: 8px; align-items: stretch; }
+  #atLabelRow input {
+    flex: 1; min-height: 48px; border-radius: 12px; border: none; padding: 0 14px;
+    font-size: 17px; font-weight: 700; background: #fff; color: #1C2B3A;
+  }
+  #atLabelRow .atTool { flex: 0 0 56px; }
+  #atCat { width: 100%; min-height: 44px; border-radius: 12px; border: none; padding: 0 12px; margin-top: 8px; font-size: 15px; font-weight: 700; }
+  #atStatus { color: #9FB6CC; font-size: 13px; font-weight: 700; min-height: 18px; margin: 8px 2px 0; }
+  #atStrip { display: flex; gap: 8px; overflow-x: auto; margin-top: 8px; }
+  #atStrip img { width: 46px; height: 46px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.25); }
+  #atSave { width: 100%; margin-top: 10px; border: none; border-radius: 14px; background: #35A853; color: #fff; font-size: 17px; font-weight: 800; padding: 16px; cursor: pointer; }
+  #atSave:disabled { background: #45596B; color: #93A7B8; cursor: default; }
+  #atHint { color: #7F94A8; font-size: 12px; font-weight: 700; text-align: center; margin-top: 8px; }
+
   /* ---- Gestionnaire de voix ---- */
   .voiceRow {
     display: flex; align-items: center; gap: 8px;
@@ -591,6 +635,13 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Deuxième chemin de création, au même rang que l'ajout magique :
+         photographier de vrais objets, en rafale. -->
+    <div class="card">
+    <button class="pbtn primary" id="openAtelierBtn" style="margin:0" data-i18n="at_open">📸 Photographier un objet réel</button>
+    <div class="hint" data-i18n="at_open_hint">Beaucoup d'enfants reconnaissent leur objet bien mieux qu'un dessin.</div>
     </div>
 
     <div class="card">
@@ -914,6 +965,9 @@
     </div>
     <div class="prow">
       <label data-i18n="edit_img">Changer l'image</label>
+      <!-- Chemin principal : la vraie photo de l'objet, en un geste depuis la carte -->
+      <button class="pbtn primary" id="editReal" data-i18n="edit_real">📸 Photographier l'objet réel</button>
+      <button class="pbtn ghost" id="editAlt" style="display:none" data-i18n="edit_alt">🔄 Autre version</button>
       <div class="aiBtns">
         <button class="pbtn ghost" id="editPick" data-i18n="edit_pick">🔍 Pictos</button>
         <button class="pbtn ghost" id="editGen" data-i18n="edit_gen">✨ Dessiner (IA)</button>
@@ -943,6 +997,40 @@
     </div>
   </div>
 </div>
+
+<!-- Atelier photo : photographier un objet réel et en faire un picto.
+     Beaucoup d'enfants ne reconnaissent que LEUR objet, pas un symbole abstrait. -->
+<div id="atelier">
+  <div id="atTop">
+    <button class="atTool" id="atCancel" aria-label="Fermer">✕</button>
+    <div id="atTitle" data-i18n="at_title">Photo de l'objet</div>
+  </div>
+  <div id="atStage">
+    <div id="atFrame">
+      <canvas id="atCanvas"></canvas>
+      <div id="atSpin" data-i18n="at_working">Détourage en cours…</div>
+    </div>
+  </div>
+  <div id="atPanel">
+    <div id="atTools">
+      <button class="atTool" id="atMode" data-i18n="at_cut">🪄 Détouré</button>
+      <button class="atTool" id="atRotate" aria-label="Pivoter">↻</button>
+      <button class="atTool" id="atRetake" data-i18n="at_retake">📷 Reprendre</button>
+      <button class="atTool" id="atGalBtn" aria-label="Galerie">🖼</button>
+    </div>
+    <div id="atLabelRow">
+      <input type="text" id="atLabel" data-i18n-ph="at_label_ph">
+      <button class="atTool" id="atMic" aria-label="Dicter">🎙</button>
+    </div>
+    <select id="atCat"></select>
+    <div id="atStatus"></div>
+    <div id="atStrip"></div>
+    <button id="atSave" data-i18n="at_save">✔ Créer la carte</button>
+    <div id="atHint" data-i18n="at_hint">Pincez pour zoomer · glissez pour cadrer</div>
+  </div>
+</div>
+<input type="file" id="atCam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="atGal" accept="image/*" style="display:none">
 
 <div id="pinOverlay">
   <div id="pinCard">
@@ -1061,7 +1149,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "44"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "45"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1231,6 +1319,25 @@ const STR = {
     coach_name: "Touchez une carte — écoutez « {name} » parler ✨", coach_noname: "Touchez une carte — écoutez la tablette parler ✨",
     coach_parent: "👉 Maintenez l'icône ⚙️ (en bas à droite) 2 s pour le mode parent : ajouter des cartes, mettre de vraies photos, sauvegarder.",
     gear_hint: "Maintenez 2 s…",
+    at_title: "Photo de l'objet", at_title_replace: "Vraie photo pour « {label} »",
+    at_label_ph: "Le mot à prononcer", at_hint: "Pincez pour zoomer · glissez pour cadrer",
+    at_cut: "🪄 Détouré", at_raw: "🖼 Photo réelle", at_docut: "🪄 Détourer",
+    at_retake: "📷 Reprendre", at_working: "Détourage en cours…",
+    at_save: "✔ Créer la carte", at_save_replace: "✔ Utiliser cette photo",
+    at_cut_ok: "Objet détouré ✓ — touchez 🪄 pour revoir la photo réelle.",
+    at_cut_fail: "Détourage impossible ({msg}) — la photo recadrée fonctionne très bien.",
+    at_offline: "Hors ligne : le détourage arrivera plus tard, la photo suffit.",
+    at_err_read: "Impossible de lire cette photo.",
+    at_need_label: "Écrivez (ou dictez 🎙) le mot à prononcer.",
+    at_saved: "« {label} » créé ✓ — photographiez l'objet suivant.",
+    at_done_replace: "Photo de « {label} » enregistrée ✓",
+    at_speak: "Dites le mot… puis retouchez ⏹.", at_hearing: "Transcription…",
+    at_hear_fail: "Je n'ai pas compris — écrivez le mot.",
+    at_mic_denied: "Micro refusé — autorisez-le dans les réglages Android.",
+    at_open: "📸 Photographier un objet réel",
+    at_open_hint: "Beaucoup d'enfants reconnaissent leur objet bien mieux qu'un dessin.",
+    edit_real: "📸 Photographier l'objet réel", edit_alt: "🔄 Autre version",
+    edit_alt_done: "Autre version appliquée — Enregistrer pour la garder.",
     done_name: "Le tableau de {name} est prêt ! 🎉", done_noname: "Le tableau est prêt ! 🎉",
     gen_think: "Je réfléchis au tableau de {name}…", gen_make: "Je crée « {label} »…",
     gen_fail: "Échec : {msg} — vous pourrez personnaliser plus tard via le mode parent (⚙️, appui long).",
@@ -1299,6 +1406,25 @@ const STR = {
     coach_name: "Touch a card — hear “{name}” speak ✨", coach_noname: "Touch a card — hear the tablet speak ✨",
     coach_parent: "👉 Press and hold the ⚙️ icon (bottom-right) for 2s for parent mode: add cards, use real photos, back up.",
     gear_hint: "Hold 2s…",
+    at_title: "Photo of the object", at_title_replace: "Real photo for “{label}”",
+    at_label_ph: "The word to speak", at_hint: "Pinch to zoom · drag to frame",
+    at_cut: "🪄 Cut out", at_raw: "🖼 Real photo", at_docut: "🪄 Cut out",
+    at_retake: "📷 Retake", at_working: "Cutting out…",
+    at_save: "✔ Create card", at_save_replace: "✔ Use this photo",
+    at_cut_ok: "Object cut out ✓ — tap 🪄 to see the real photo again.",
+    at_cut_fail: "Cut-out failed ({msg}) — the cropped photo works very well.",
+    at_offline: "Offline: cut-out will come later, the photo is enough.",
+    at_err_read: "Could not read this photo.",
+    at_need_label: "Type (or dictate 🎙) the word to speak.",
+    at_saved: "“{label}” created ✓ — photograph the next object.",
+    at_done_replace: "Photo for “{label}” saved ✓",
+    at_speak: "Say the word… then tap ⏹.", at_hearing: "Transcribing…",
+    at_hear_fail: "I didn't catch that — type the word.",
+    at_mic_denied: "Mic denied — allow it in Android settings.",
+    at_open: "📸 Photograph a real object",
+    at_open_hint: "Many children recognise their own object far better than a drawing.",
+    edit_real: "📸 Photograph the real object", edit_alt: "🔄 Other version",
+    edit_alt_done: "Other version applied — Save to keep it.",
     done_name: "{name}'s board is ready! 🎉", done_noname: "The board is ready! 🎉",
     gen_think: "Designing {name}'s board…", gen_make: "Creating “{label}”…",
     gen_fail: "Failed: {msg} — you can personalize later in parent mode (⚙️, long press).",
@@ -1367,6 +1493,25 @@ const STR = {
     coach_name: "Toca una tarjeta — escucha hablar a “{name}” ✨", coach_noname: "Toca una tarjeta — escucha hablar a la tableta ✨",
     coach_parent: "👉 Mantén pulsado el icono ⚙️ (abajo a la derecha) 2 s para el modo padre: añadir tarjetas, usar fotos reales, copia de seguridad.",
     gear_hint: "Mantén 2 s…",
+    at_title: "Foto del objeto", at_title_replace: "Foto real para «{label}»",
+    at_label_ph: "La palabra a pronunciar", at_hint: "Pellizca para ampliar · arrastra para encuadrar",
+    at_cut: "🪄 Recortado", at_raw: "🖼 Foto real", at_docut: "🪄 Recortar",
+    at_retake: "📷 Repetir", at_working: "Recortando…",
+    at_save: "✔ Crear la tarjeta", at_save_replace: "✔ Usar esta foto",
+    at_cut_ok: "Objeto recortado ✓ — toca 🪄 para ver de nuevo la foto real.",
+    at_cut_fail: "No se pudo recortar ({msg}) — la foto encuadrada funciona muy bien.",
+    at_offline: "Sin conexión: el recorte llegará después, la foto basta.",
+    at_err_read: "No se pudo leer esta foto.",
+    at_need_label: "Escribe (o dicta 🎙) la palabra a pronunciar.",
+    at_saved: "«{label}» creada ✓ — fotografía el siguiente objeto.",
+    at_done_replace: "Foto de «{label}» guardada ✓",
+    at_speak: "Di la palabra… y luego toca ⏹.", at_hearing: "Transcribiendo…",
+    at_hear_fail: "No lo he entendido — escribe la palabra.",
+    at_mic_denied: "Micrófono denegado — actívalo en los ajustes de Android.",
+    at_open: "📸 Fotografiar un objeto real",
+    at_open_hint: "Muchos niños reconocen su propio objeto mucho mejor que un dibujo.",
+    edit_real: "📸 Fotografiar el objeto real", edit_alt: "🔄 Otra versión",
+    edit_alt_done: "Otra versión aplicada — Guardar para conservarla.",
     done_name: "¡El tablero de {name} está listo! 🎉", done_noname: "¡El tablero está listo! 🎉",
     gen_think: "Pensando el tablero de {name}…", gen_make: "Creando “{label}”…",
     gen_fail: "Error: {msg} — podrás personalizar más tarde en el modo padre (⚙️, pulsación larga).",
@@ -1525,14 +1670,19 @@ function allItems() {
 // formulaire/magique, ob_… de l'onboarding) — jamais par préfixe seul.
 const customOf = (id) => customItems.find(x => x.id === id);
 
-/* Change l'image (photo OU émoji) d'un picto, de base ou personnalisé */
+/* Change l'image (photo OU émoji) d'un picto, de base ou personnalisé.
+   photoAlt = l'AUTRE rendu de la même prise (objet détouré ↔ photo réelle) :
+   si l'enfant ne reconnaît pas l'un, le parent bascule sans re-photographier. */
 function setItemVisual(item, vis) {
+  // photoAlt est toujours réécrit : une nouvelle image annule l'ancienne
+  // « autre version », qui n'aurait plus rien à voir avec la carte.
+  const patch = { photo: vis.photo || null, emoji: vis.emoji || null, photoAlt: vis.photoAlt || null };
   const it = customOf(item.id);
   if (it) {
-    it.photo = vis.photo || null; it.emoji = vis.emoji || null;
+    Object.assign(it, patch);
     store.set("custom", customItems);
   } else {
-    overrides[item.id] = { ...(overrides[item.id] || {}), photo: vis.photo || null, emoji: vis.emoji || null };
+    overrides[item.id] = { ...(overrides[item.id] || {}), ...patch };
     store.set("over", overrides);
   }
 }
@@ -3058,6 +3208,8 @@ function openEdit(item) {
   document.getElementById("editPicks").innerHTML = "";
   document.getElementById("editStatus").textContent = "";
   document.getElementById("editHide").textContent = hidden.has(item.id) ? "👁 Réafficher" : "🙈 Masquer";
+  // « Autre version » n'a de sens que si l'atelier a gardé les deux rendus
+  document.getElementById("editAlt").style.display = item.photoAlt ? "" : "none";
   editPreview();
   refreshRecUI(); // état de la vraie voix enregistrée (asynchrone)
   document.getElementById("editSheet").classList.add("open");
@@ -3105,6 +3257,24 @@ document.getElementById("editGen").onclick = async () => {
   } catch (e) { st.textContent = "Échec : " + e.message; }
 };
 
+// Depuis la carte elle-même : mode parent → toucher la carte → photographier.
+// Aucun passage par le menu Vocabulaire.
+document.getElementById("editReal").onclick = () => {
+  const target = editTarget;
+  closeEdit();
+  openAtelier(target);
+};
+
+// Bascule objet détouré ↔ photo réelle, sans re-photographier
+document.getElementById("editAlt").onclick = () => {
+  const cur = (editVisSel && editVisSel.photo) || editTarget.photo;
+  const alt = editTarget.photoAlt;
+  if (!alt) return;
+  editVisSel = { photo: alt, emoji: null, photoAlt: cur };
+  editPreview();
+  document.getElementById("editStatus").textContent = t("edit_alt_done");
+};
+
 document.getElementById("editPhoto").onchange = async (e) => {
   const f = e.target.files[0];
   if (!f) return;
@@ -3147,6 +3317,355 @@ document.getElementById("editSave").onclick = () => {
   closeEdit();
   toast("Modifications enregistrées ✓");
 };
+
+/* ================= Atelier photo =================
+   Beaucoup d'enfants autistes ne reconnaissent pas un symbole abstrait, mais
+   reconnaissent LEUR objet. L'atelier réduit « photo → carte » à trois gestes :
+   viser (la caméra s'ouvre directement), cadrer (le carré affiché EST le picto
+   final), nommer. Le détourage sur fond blanc part automatiquement ; en cas
+   d'échec ou hors quota, la photo recadrée reste parfaitement utilisable. */
+const AT_SIZE = 512;      // côté du picto enregistré
+const AT_ALT_SIZE = 256;  // version de secours (l'autre rendu), plus légère
+const atEl = (id) => document.getElementById(id);
+
+let atRaw = null, atCut = null;  // Image() : photo brute / version détourée
+let atUse = "raw";               // rendu affiché : "raw" | "cut"
+let atRot = 0, atZoom = 1, atPanX = 0, atPanY = 0;
+let atTarget = null;             // carte à mettre à jour (null = création)
+
+const atImg = () => (atUse === "cut" && atCut ? atCut : atRaw);
+
+// Dimensions apparentes une fois la rotation appliquée
+function atDims(img) {
+  const swap = atRot % 180 !== 0;
+  return { w: swap ? img.height : img.width, h: swap ? img.width : img.height };
+}
+// Échelle « couvre le carré », multipliée par le zoom du parent
+function atScale(img) {
+  const { w, h } = atDims(img);
+  return (AT_SIZE / Math.min(w, h)) * atZoom;
+}
+// Empêche de glisser au-delà du bord : le carré reste toujours rempli
+function atClampPan() {
+  const img = atImg(); if (!img) return;
+  const { w, h } = atDims(img), s = atScale(img);
+  const mx = Math.max(0, (w * s - AT_SIZE) / 2), my = Math.max(0, (h * s - AT_SIZE) / 2);
+  atPanX = Math.max(-mx, Math.min(mx, atPanX));
+  atPanY = Math.max(-my, Math.min(my, atPanY));
+}
+function atRender() {
+  const cv = atEl("atCanvas");
+  if (cv.width !== AT_SIZE) { cv.width = AT_SIZE; cv.height = AT_SIZE; }
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, AT_SIZE, AT_SIZE);
+  const img = atImg(); if (!img) return;
+  atClampPan();
+  const s = atScale(img);
+  ctx.save();
+  ctx.translate(AT_SIZE / 2 + atPanX, AT_SIZE / 2 + atPanY);
+  ctx.rotate((atRot * Math.PI) / 180);
+  ctx.drawImage(img, (-img.width * s) / 2, (-img.height * s) / 2, img.width * s, img.height * s);
+  ctx.restore();
+}
+function atReset() { atRot = 0; atZoom = 1; atPanX = 0; atPanY = 0; }
+
+/* Cadrage automatique sur le sujet : après détourage le fond est blanc uni, on
+   cherche la boîte des pixels non blancs et on zoome dessus. Sans ça, un objet
+   photographié d'un peu loin donne un picto minuscule et illisible. */
+function atAutoFrame(img) {
+  atReset();
+  const N = 200; // analyse en basse résolution : suffisant et instantané
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  x.fillStyle = "#fff";
+  x.fillRect(0, 0, N, N);
+  const fit = Math.min(N / img.width, N / img.height);
+  const dw = img.width * fit, dh = img.height * fit;
+  const ox = (N - dw) / 2, oy = (N - dh) / 2;
+  x.drawImage(img, ox, oy, dw, dh);
+  let d;
+  try { d = x.getImageData(0, 0, N, N).data; } catch { return; } // canvas « sali »
+  let x0 = N, y0 = N, x1 = -1, y1 = -1;
+  for (let py = 0; py < N; py++) {
+    for (let px = 0; px < N; px++) {
+      const i = (py * N + px) * 4;
+      if (d[i] < 240 || d[i + 1] < 240 || d[i + 2] < 240) {
+        if (px < x0) x0 = px;
+        if (px > x1) x1 = px;
+        if (py < y0) y0 = py;
+        if (py > y1) y1 = py;
+      }
+    }
+  }
+  if (x1 < 0) return; // image entièrement blanche : on ne touche à rien
+  const bx0 = (x0 - ox) / fit, bx1 = (x1 - ox) / fit;
+  const by0 = (y0 - oy) / fit, by1 = (y1 - oy) / fit;
+  const bw = Math.max(1, bx1 - bx0), bh = Math.max(1, by1 - by0);
+  const base = AT_SIZE / Math.min(img.width, img.height);
+  const want = (AT_SIZE * 0.86) / Math.max(bw, bh); // 14 % de marge autour du sujet
+  atZoom = Math.max(1, Math.min(4, want / base));
+  const s = base * atZoom;
+  atPanX = -((bx0 + bx1) / 2 - img.width / 2) * s;
+  atPanY = -((by0 + by1) / 2 - img.height / 2) * s;
+}
+
+/* ---- Gestes : un doigt = glisser, deux doigts = pincer pour zoomer ---- */
+const atPts = new Map();
+let atGrabState = null;
+const atCentroid = (a) => ({
+  x: a.reduce((s, p) => s + p.x, 0) / a.length,
+  y: a.reduce((s, p) => s + p.y, 0) / a.length,
+});
+const atSpread = (a) => (a.length < 2 ? 0 : Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y));
+function atGrab() {
+  const a = [...atPts.values()];
+  atGrabState = a.length ? { c: atCentroid(a), d: atSpread(a), zoom: atZoom, panX: atPanX, panY: atPanY } : null;
+}
+function atInitGestures() {
+  const f = atEl("atFrame");
+  f.addEventListener("pointerdown", (e) => {
+    if (!atRaw) return;
+    f.setPointerCapture(e.pointerId);
+    atPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    atGrab();
+  });
+  f.addEventListener("pointermove", (e) => {
+    if (!atPts.has(e.pointerId) || !atGrabState) return;
+    atPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const a = [...atPts.values()];
+    const k = AT_SIZE / f.getBoundingClientRect().width; // écran → canvas
+    if (a.length >= 2 && atGrabState.d > 0) {
+      atZoom = Math.max(1, Math.min(6, atGrabState.zoom * (atSpread(a) / atGrabState.d)));
+    }
+    const c = atCentroid(a);
+    atPanX = atGrabState.panX + (c.x - atGrabState.c.x) * k;
+    atPanY = atGrabState.panY + (c.y - atGrabState.c.y) * k;
+    atRender();
+  });
+  const lift = (e) => { atPts.delete(e.pointerId); atGrab(); };
+  f.addEventListener("pointerup", lift);
+  f.addEventListener("pointercancel", lift);
+}
+
+/* ---- Chargement / export ---- */
+function atLoadImage(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+// Les appareils sortent du 12 Mpx : inutile et lourd pour une tablette
+async function atDownscale(file, max) {
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await atLoadImage(url);
+    const s = Math.min(1, max / Math.max(im.width, im.height));
+    if (s === 1) return im;
+    const c = document.createElement("canvas");
+    c.width = Math.round(im.width * s);
+    c.height = Math.round(im.height * s);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    return await atLoadImage(c.toDataURL("image/jpeg", 0.9));
+  } finally { URL.revokeObjectURL(url); }
+}
+function atExport() {
+  atRender();
+  return atEl("atCanvas").toDataURL("image/jpeg", 0.82);
+}
+// L'autre rendu de la même prise, en 256 px : sert de version de secours
+function atExportAlt() {
+  if (!atCut) return null;
+  const keep = { use: atUse, rot: atRot, zoom: atZoom, px: atPanX, py: atPanY };
+  atUse = keep.use === "cut" ? "raw" : "cut";
+  if (atUse === "cut") atAutoFrame(atCut); else atReset();
+  atRender();
+  const small = document.createElement("canvas");
+  small.width = small.height = AT_ALT_SIZE;
+  small.getContext("2d").drawImage(atEl("atCanvas"), 0, 0, AT_ALT_SIZE, AT_ALT_SIZE);
+  const alt = small.toDataURL("image/jpeg", 0.78);
+  atUse = keep.use; atRot = keep.rot; atZoom = keep.zoom; atPanX = keep.px; atPanY = keep.py;
+  atRender();
+  return alt;
+}
+
+/* ---- Détourage (automatique à la prise de vue) ---- */
+function atSetMode() {
+  const b = atEl("atMode");
+  if (!atCut) {
+    b.textContent = t("at_docut");
+    b.classList.remove("on");
+    b.disabled = !atRaw || !navigator.onLine;
+  } else {
+    b.disabled = false;
+    b.classList.toggle("on", atUse === "cut");
+    b.textContent = atUse === "cut" ? t("at_cut") : t("at_raw");
+  }
+  atEl("atSave").disabled = !atRaw;
+}
+async function atCutout() {
+  if (!atRaw) return;
+  if (!navigator.onLine) { atEl("atStatus").textContent = t("at_offline"); return; }
+  atEl("atFrame").classList.add("busy");
+  atEl("atStatus").textContent = "";
+  try {
+    const c = document.createElement("canvas");
+    const s = Math.min(1, 1024 / Math.max(atRaw.width, atRaw.height));
+    c.width = Math.round(atRaw.width * s);
+    c.height = Math.round(atRaw.height * s);
+    c.getContext("2d").drawImage(atRaw, 0, 0, c.width, c.height);
+    atCut = await atLoadImage(await cleanPhoto(c.toDataURL("image/jpeg", 0.9)));
+    atUse = "cut";
+    atAutoFrame(atCut);
+    atEl("atStatus").textContent = t("at_cut_ok");
+  } catch (e) {
+    atUse = "raw";
+    atEl("atStatus").textContent = t("at_cut_fail", { msg: e.message });
+  } finally {
+    atEl("atFrame").classList.remove("busy");
+    atRender();
+    atSetMode();
+  }
+}
+
+/* ---- Ouverture / enregistrement ---- */
+function atFillCats(sel) {
+  const s = atEl("atCat");
+  s.innerHTML = "";
+  for (const c of cats()) {
+    const o = document.createElement("option");
+    o.value = c.id;
+    o.textContent = c.emoji + " " + c.label;
+    if (c.id === sel) o.selected = true;
+    s.appendChild(o);
+  }
+}
+// target = carte existante dont on remplace l'image ; null = nouvelle carte
+function openAtelier(target) {
+  atTarget = target || null;
+  atEl("atStrip").innerHTML = "";
+  atEl("atStatus").textContent = "";
+  atEl("atTitle").textContent = target ? t("at_title_replace", { label: target.label }) : t("at_title");
+  atEl("atLabel").value = target ? target.label : "";
+  atEl("atCat").style.display = target ? "none" : "";
+  if (!target) atFillCats(currentCat);
+  atEl("atSave").textContent = target ? t("at_save_replace") : t("at_save");
+  atEl("atCam").click(); // la caméra s'ouvre directement — l'atelier suit
+}
+function closeAtelier() {
+  atEl("atelier").classList.remove("open");
+  atRaw = atCut = null;
+  atPts.clear();
+}
+async function atStart(file, input) {
+  if (input) input.value = ""; // permet de reprendre exactement la même photo
+  if (!file) return;
+  atEl("atelier").classList.add("open");
+  atEl("atStatus").textContent = "";
+  atCut = null;
+  atUse = "raw";
+  atReset();
+  atSetMode();
+  try { atRaw = await atDownscale(file, 1400); }
+  catch { atEl("atStatus").textContent = t("at_err_read"); return; }
+  atRender();
+  atSetMode();
+  atCutout(); // détourage automatique : le parent n'a rien à demander
+}
+
+function atInit() {
+  atInitGestures();
+  atEl("openAtelierBtn").onclick = () => openAtelier(null);
+  atEl("atCam").onchange = (e) => atStart(e.target.files[0], e.target);
+  atEl("atGal").onchange = (e) => atStart(e.target.files[0], e.target);
+  atEl("atCancel").onclick = closeAtelier;
+  atEl("atRetake").onclick = () => atEl("atCam").click();
+  atEl("atGalBtn").onclick = () => atEl("atGal").click();
+  atEl("atRotate").onclick = () => { atRot = (atRot + 90) % 360; atPanX = atPanY = 0; atRender(); };
+  atEl("atMode").onclick = () => {
+    if (!atCut) { atCutout(); return; }      // 1re fois / après échec : (re)lancer
+    atUse = atUse === "cut" ? "raw" : "cut"; // ensuite : simple bascule A/B
+    if (atUse === "cut") atAutoFrame(atCut); else atReset();
+    atRender();
+    atSetMode();
+  };
+
+  atEl("atSave").onclick = () => {
+    if (!atRaw) return;
+    const label = atEl("atLabel").value.trim();
+    if (!label) { atEl("atStatus").textContent = t("at_need_label"); atEl("atLabel").focus(); return; }
+    const photo = atExport();      // exactement ce que le parent voit
+    const photoAlt = atExportAlt(); // l'autre rendu, pour basculer plus tard
+    if (atTarget) {
+      setItemVisual(atTarget, { photo, photoAlt });
+      if (label !== atTarget.label) setItemLabel(atTarget, label);
+      renderGrid();
+      closeAtelier();
+      toast(t("at_done_replace", { label }));
+      return;
+    }
+    const cat = atEl("atCat").value || currentCat;
+    const existing = allItems().find((i) => i.label.toLowerCase() === label.toLowerCase());
+    if (existing) {
+      setItemVisual(existing, { photo, photoAlt });
+      currentCat = existing.cat;
+    } else {
+      customItems.push({ id: "c_" + Date.now(), cat, label, say: label, emoji: null, photo, photoAlt });
+      store.set("custom", customItems);
+      currentCat = cat;
+    }
+    ensureVoice(label);
+    renderTabs();
+    renderGrid();
+    const im = document.createElement("img"); // bandelette de la session
+    im.src = photo; im.title = label;
+    atEl("atStrip").appendChild(im);
+    atEl("atLabel").value = "";
+    atEl("atStatus").textContent = t("at_saved", { label });
+    atEl("atCam").click(); // mode rafale : on enchaîne sur l'objet suivant
+  };
+
+  // Dictée du mot : plus rapide que taper sur une tablette
+  let atRec = null;
+  atEl("atMic").onclick = async () => {
+    if (atRec) { atRec.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      atRec = new MediaRecorder(stream);
+      atRec.ondataavailable = (ev) => chunks.push(ev.data);
+      atRec.onstop = async () => {
+        stream.getTracks().forEach((tr) => tr.stop());
+        atRec = null;
+        atEl("atMic").textContent = "🎙";
+        atEl("atMic").classList.remove("on");
+        atEl("atStatus").textContent = t("at_hearing");
+        try {
+          const blob = new Blob(chunks, { type: chunks[0]?.type || "audio/webm" });
+          const b64 = await new Promise((res) => {
+            const r = new FileReader();
+            r.onload = () => res(String(r.result).split(",")[1]);
+            r.readAsDataURL(blob);
+          });
+          atEl("atLabel").value = (await transcribeAudio(blob.type, b64)).replace(/[.!?]+$/, "");
+          atEl("atStatus").textContent = "";
+        } catch { atEl("atStatus").textContent = t("at_hear_fail"); }
+      };
+      atRec.start();
+      atEl("atMic").textContent = "⏹";
+      atEl("atMic").classList.add("on");
+      atEl("atStatus").textContent = t("at_speak");
+    } catch {
+      const settings = AppSettings();
+      if (settings && confirm("Le micro est bloqué pour Leova.\nOuvrir les réglages Android pour l'autoriser ?")) settings.open();
+      else atEl("atStatus").textContent = t("at_mic_denied");
+    }
+  };
+}
+atInit();
 
 /* ---- Corbeille (liste dans l'onglet Vocabulaire) ---- */
 function renderTrash() {

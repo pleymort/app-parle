@@ -174,7 +174,13 @@ export async function cleanPhoto(mimeType, dataB64) {
   const res = await model.generateContent({
     contents: [{ role: "user", parts: [
       { inlineData: { mimeType, data: dataB64 } },
-      { text: "Détoure le sujet principal de cette photo et place-le sur un fond blanc uni. Rends-le net et lisible comme un pictogramme de communication pour enfant. Aucun texte." },
+      { text:
+        "Détoure le sujet principal de cette photo et place-le seul, centré, sur un fond blanc uni, sans ombre portée.\n" +
+        "RÈGLE ABSOLUE : garde le sujet PHOTOGRAPHIQUE tel qu'il est. Conserve exactement ses couleurs, ses motifs, " +
+        "ses inscriptions, ses autocollants, ses éraflures et ses traces d'usure. Ne le redessine pas, ne le stylise pas, " +
+        "ne l'embellis pas, et ne le remplace JAMAIS par un objet générique, neuf ou dessiné : cette image sert à un enfant " +
+        "qui ne reconnaît que CET objet précis, et la moindre modification la rend inutilisable.\n" +
+        "N'améliore que la netteté, la luminosité et le contraste. N'ajoute aucun texte, aucun cadre, aucun décor." },
     ] }],
   });
   return extractImage(res);
