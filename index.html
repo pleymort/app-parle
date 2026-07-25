@@ -35,8 +35,22 @@
   #playBtn { background: #35A853; color: white; }
   #clearBtn { background: #F1F5F9; color: #8899AA; font-size: 26px; }
 
-  /* ---- Prédiction (suggestions de carte suivante) ---- */
-  #suggest { display: none; align-items: center; gap: 8px; padding: 8px 10px 0; flex-wrap: wrap; }
+  /* ---- Prédiction (suggestions de carte suivante) ----
+     La barre garde TOUJOURS la même hauteur, même vide. Si elle apparaissait
+     et disparaissait, la grille (flex:1) serait décalée ET redimensionnée à
+     chaque suggestion : les cartes bougeraient sous le doigt de l'enfant, ce
+     qui casse la planification motrice — la mémoire de l'emplacement des
+     cartes, sur laquelle repose l'automatisme. */
+  #suggest {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px 0;
+    flex-wrap: nowrap; overflow-x: auto; min-height: 52px; box-sizing: border-box;
+    scrollbar-width: none;
+  }
+  #suggest::-webkit-scrollbar { display: none; }
+  #suggest .sg, #suggest .sgHint { flex: 0 0 auto; }
+  /* Prédiction désactivée : la barre disparaît complètement et définitivement,
+     la mise en page reste donc constante dans ce mode aussi. */
+  body.noPredict #suggest { display: none; }
   .sgHint { font-size: 12px; font-weight: 800; color: #9DB2C7; }
   .sg {
     border: none; border-radius: 12px; background: #FFFFFF;
@@ -353,6 +367,33 @@
   .editRow2 { display: flex; gap: 8px; margin-top: 14px; }
   .editRow2 .pbtn { flex: 1; margin: 0; }
 
+  /* ---- Scénarios sociaux : un récit illustré, une phrase à la fois ---- */
+  #story { position: fixed; inset: 0; z-index: 57; display: none; background: #FFFFFF; }
+  #story.open { display: flex; flex-direction: column; }
+  body.dark #story { background: #131C25; }
+  #stTop { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  #stTitle { flex: 1; font-weight: 800; font-size: 15px; color: #24425F; }
+  body.dark #stTitle { color: #D7E6F5; }
+  #stClose { border: none; background: #EEF3F8; border-radius: 12px; width: 44px; height: 44px; font-size: 18px; cursor: pointer; }
+  #stDots { display: flex; gap: 5px; padding: 0 14px 8px; }
+  #stDots span { height: 5px; flex: 1; border-radius: 3px; background: #E1E9F1; }
+  #stDots span.on { background: #4A90D9; }
+  #stBody { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 10px 24px; min-height: 0; text-align: center; }
+  #stVis { font-size: 108px; line-height: 1; }
+  #stVis img { width: 190px; height: 190px; border-radius: 22px; object-fit: cover; }
+  #stText { font-size: 27px; font-weight: 800; color: #1C2B3A; line-height: 1.35; max-width: 640px; }
+  body.dark #stText { color: #E6EEF6; }
+  #stNav { display: flex; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); }
+  #stNav button { flex: 1; border: none; border-radius: 16px; font-size: 18px; font-weight: 800; padding: 18px; cursor: pointer; }
+  #stPrev { flex: 0 0 92px; background: #EEF3F8; color: #55677A; }
+  #stNext { background: #4A90D9; color: #fff; }
+  #stPrev:disabled { opacity: .4; cursor: default; }
+  .stRow { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; cursor: pointer; }
+  .stRow:hover { background: #F2F6FA; }
+  .stRow .em { font-size: 26px; }
+  .stRow .nm { font-weight: 700; color: #24425F; font-size: 14.5px; flex: 1; }
+  .stRow .go { color: #9DB2C7; font-weight: 800; }
+
   /* ---- Atelier photo : transformer un objet réel en pictogramme ----
      Plein écran sombre pour que l'œil aille à l'image. Le cadre carré EST le
      picto final : ce que le parent voit est exactement ce qui sera enregistré. */
@@ -645,6 +686,12 @@
     </div>
 
     <div class="card">
+    <h2 data-i18n="st_h">🎬 Scénarios sociaux</h2>
+    <div class="hint" data-i18n="st_hint">À lire AVANT l'événement, avec l'enfant. Savoir ce qui va se passer, dans quel ordre et comment ça se termine réduit beaucoup l'angoisse. Fonctionne hors ligne.</div>
+    <div id="storyList"></div>
+    </div>
+
+    <div class="card">
     <button class="pbtn ghost" id="photoWizBtn" style="margin:0" data-i18n="photowiz_btn">👨‍👩‍👦 Assistant photos des proches</button>
     <div class="hint" data-i18n="photowiz_hint">Passe en revue les personnes sans photo…</div>
     </div>
@@ -747,6 +794,10 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
         <input type="checkbox" id="accAnim" checked> <span data-i18n="acc_anim">Animations et vibration</span>
       </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-top:8px">
+        <input type="checkbox" id="accPredict" checked> <span data-i18n="acc_predict">Barre « Et ensuite ? »</span>
+      </label>
+      <div class="hint" data-i18n="acc_predict_hint">Propose les suites habituelles de l'enfant, dans une barre à part. Les cartes de la grille ne bougent jamais. À décocher si vous suivez une méthode à position fixe.</div>
     </div>
     </div>
     </div>
@@ -998,6 +1049,24 @@
   </div>
 </div>
 
+<!-- Lecteur de scénario social : prépare l'enfant à un événement, une phrase
+     à la fois. Textes pré-écrits : aucun appel IA, fonctionne hors ligne. -->
+<div id="story">
+  <div id="stTop">
+    <div id="stTitle">…</div>
+    <button id="stClose" aria-label="Fermer">✕</button>
+  </div>
+  <div id="stDots"></div>
+  <div id="stBody">
+    <div id="stVis"></div>
+    <div id="stText"></div>
+  </div>
+  <div id="stNav">
+    <button id="stPrev" data-i18n="st_prev">← Avant</button>
+    <button id="stNext" data-i18n="st_next">Suite →</button>
+  </div>
+</div>
+
 <!-- Atelier photo : photographier un objet réel et en faire un picto.
      Beaucoup d'enfants ne reconnaissent que LEUR objet, pas un symbole abstrait. -->
 <div id="atelier">
@@ -1149,7 +1218,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "45"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "46"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1319,6 +1388,11 @@ const STR = {
     coach_name: "Touchez une carte — écoutez « {name} » parler ✨", coach_noname: "Touchez une carte — écoutez la tablette parler ✨",
     coach_parent: "👉 Maintenez l'icône ⚙️ (en bas à droite) 2 s pour le mode parent : ajouter des cartes, mettre de vraies photos, sauvegarder.",
     gear_hint: "Maintenez 2 s…",
+    st_h: "🎬 Scénarios sociaux", st_hint: "À lire AVANT l'événement, avec l'enfant. Savoir ce qui va se passer, dans quel ordre et comment ça se termine réduit beaucoup l'angoisse. Fonctionne hors ligne.",
+    st_prev: "← Avant", st_next: "Suite →", st_done: "✓ Fini",
+    sg_hint: "Et ensuite ?",
+    sync_applied: "Grille mise à jour depuis un autre appareil ✓",
+    acc_predict: "Barre « Et ensuite ? »", acc_predict_hint: "Propose les suites habituelles de l'enfant, dans une barre à part. Les cartes de la grille ne bougent jamais. À décocher si vous suivez une méthode à position fixe.",
     at_title: "Photo de l'objet", at_title_replace: "Vraie photo pour « {label} »",
     at_label_ph: "Le mot à prononcer", at_hint: "Pincez pour zoomer · glissez pour cadrer",
     at_cut: "🪄 Détouré", at_raw: "🖼 Photo réelle", at_docut: "🪄 Détourer",
@@ -1359,7 +1433,7 @@ const STR = {
     kiosk_h: "🔒 Mode kiosk", kiosk_sub: "Verrouille la tablette sur Leova : l'enfant ne peut plus sortir de l'app. On revient aux réglages avec le code parent.", pin_l: "Code parent (4 chiffres) — pour ouvrir les réglages et quitter le kiosk", pin_set: "Définir / modifier le code", kiosk_chk: "Activer le mode kiosk", kiosk_hint: "Le verrouillage utilise l'épinglage d'écran d'Android (sortie en maintenant Retour + Aperçu). Verrouillage total : provisionner la tablette en « propriétaire d'appareil ».",
     rate_l: "Vitesse de la voix", test_voice: "🔊 Tester la voix", reform_chk: "Reformuler la bande-phrase en phrase naturelle", genvoices: "🎙️ Générer toutes les voix (une seule fois)", vmgr_h: "🎛️ Gestionnaire de voix", vmgr_sub: "Écoutez chaque mot ; 🔄 re-télécharge sa voix depuis le serveur (utile si un mot sonne différemment des autres).",
     ai_h: "Intelligence artificielle", code_l: "Code d'accès Leova (facultatif — accès illimité)", code_ph: "Collez le code d'accès (il reste sur la tablette)", test_backend: "🔌 Tester le serveur", ai_hint: "L'IA passe par le serveur Leova (Europe, RGPD) et marche SANS code, avec un quota mensuel gratuit. Le code d'accès lève les quotas.",
-    j_h: "📊 Ce qu'il a dit", j_7days: "Les 7 derniers jours (mots touchés)", j_top: "Mots préférés (30 jours)", j_new: "Nouveaux mots (7 jours)", j_phrases: "Dernières phrases", j_report: "🖨 Rapport pour l'orthophoniste (30 jours)", j_hint: "Le journal reste sur cette tablette (non synchronisé). Le rapport s'imprime depuis la version web sur un ordinateur.",
+    j_h: "📊 Ce qu'il a dit", j_7days: "Les 7 derniers jours (mots touchés)", j_top: "Mots préférés (30 jours)", j_new: "Nouveaux mots (7 jours)", j_phrases: "Dernières phrases", j_report: "🖨 Journal d'usage à partager (30 jours)", j_hint: "Le journal reste sur cette tablette (non synchronisé). Il s'imprime depuis la version web sur un ordinateur. C'est un relevé d'utilisation, à partager avec qui vous voulez — il ne constitue pas un bilan.",
     plus_btn: "💜 Passer à Leova Plus", restore_btn: "↺ Restaurer un achat", acct_l: "Compte & synchronisation (maison ↔ école)", acct_email_ph: "E-mail", acct_pass_ph: "Mot de passe (6 caractères min.)", acct_btn: "Créer mon compte / Me connecter", acct_forgot: "Mot de passe oublié", sync_now: "🔄 Synchroniser maintenant", acct_out: "Se déconnecter (la tablette garde tout)", acct_hint: "Sauvegarde le vocabulaire en ligne (Europe) et le synchronise entre plusieurs tablettes : maison, école/AESH…",
     exp_h: "📦 Exporter / importer / imprimer", exp_btn: "⬇️ Exporter le vocabulaire (fichier)", imp_btn: "⬆️ Importer un fichier", print_btn: "🖨 Imprimer le tableau (classeur papier)", exp_hint: "Partagez le tableau avec une autre famille, ou imprimez un classeur PECS papier de secours (depuis la version web sur ordinateur).",
     close: "Fermer", exit_parent: "Quitter le mode parent", cancel: "Annuler", save: "✔ Enregistrer", delete: "🗑 Supprimer", hide: "🙈 Masquer",
@@ -1406,6 +1480,11 @@ const STR = {
     coach_name: "Touch a card — hear “{name}” speak ✨", coach_noname: "Touch a card — hear the tablet speak ✨",
     coach_parent: "👉 Press and hold the ⚙️ icon (bottom-right) for 2s for parent mode: add cards, use real photos, back up.",
     gear_hint: "Hold 2s…",
+    st_h: "🎬 Social stories", st_hint: "Read BEFORE the event, with your child. Knowing what will happen, in what order and how it ends greatly reduces anxiety. Works offline.",
+    st_prev: "← Back", st_next: "Next →", st_done: "✓ Done",
+    sg_hint: "And then?",
+    sync_applied: "Board updated from another device ✓",
+    acc_predict: "“And then?” bar", acc_predict_hint: "Suggests your child's usual follow-ups, in a separate bar. Cards in the grid never move. Untick if you follow a fixed-position method.",
     at_title: "Photo of the object", at_title_replace: "Real photo for “{label}”",
     at_label_ph: "The word to speak", at_hint: "Pinch to zoom · drag to frame",
     at_cut: "🪄 Cut out", at_raw: "🖼 Real photo", at_docut: "🪄 Cut out",
@@ -1446,7 +1525,7 @@ const STR = {
     kiosk_h: "🔒 Kiosk mode", kiosk_sub: "Locks the tablet on Leova: the child can't leave the app. You return to settings with the parent code.", pin_l: "Parent code (4 digits) — to open settings and exit kiosk", pin_set: "Set / change the code", kiosk_chk: "Enable kiosk mode", kiosk_hint: "Locking uses Android screen pinning (exit by holding Back + Overview). For a fully locked kiosk, provision the tablet as “device owner”.",
     rate_l: "Voice speed", test_voice: "🔊 Test the voice", reform_chk: "Rephrase the sentence strip into a natural sentence", genvoices: "🎙️ Generate all voices (once)", vmgr_h: "🎛️ Voice manager", vmgr_sub: "Listen to each word; 🔄 re-downloads its voice from the server (useful if a word sounds different).",
     ai_h: "Artificial intelligence", code_l: "Leova access code (optional — unlimited)", code_ph: "Paste the access code (it stays on the tablet)", test_backend: "🔌 Test the server", ai_hint: "AI runs through the Leova server (Europe, GDPR) and works WITHOUT a code, with a free monthly quota. The access code removes the quotas.",
-    j_h: "📊 What they said", j_7days: "The last 7 days (words touched)", j_top: "Favorite words (30 days)", j_new: "New words (7 days)", j_phrases: "Latest sentences", j_report: "🖨 Report for the therapist (30 days)", j_hint: "The journal stays on this tablet (not synced). The report prints from the web version on a computer.",
+    j_h: "📊 What they said", j_7days: "The last 7 days (words touched)", j_top: "Favorite words (30 days)", j_new: "New words (7 days)", j_phrases: "Latest sentences", j_report: "🖨 Usage log to share (30 days)", j_hint: "The log stays on this tablet (not synced). It prints from the web version on a computer. It is a record of use, to share with whoever you like — it is not an assessment.",
     plus_btn: "💜 Get Leova Plus", restore_btn: "↺ Restore a purchase", acct_l: "Account & sync (home ↔ school)", acct_email_ph: "Email", acct_pass_ph: "Password (6 characters min.)", acct_btn: "Create account / Sign in", acct_forgot: "Forgot password", sync_now: "🔄 Sync now", acct_out: "Sign out (the tablet keeps everything)", acct_hint: "Backs up the vocabulary online (Europe) and syncs it across tablets: home, school…",
     exp_h: "📦 Export / import / print", exp_btn: "⬇️ Export the vocabulary (file)", imp_btn: "⬆️ Import a file", print_btn: "🖨 Print the board (paper binder)", exp_hint: "Share the board with another family, or print a backup paper PECS binder (from the web version on a computer).",
     close: "Close", exit_parent: "Exit parent mode", cancel: "Cancel", save: "✔ Save", delete: "🗑 Delete", hide: "🙈 Hide",
@@ -1493,6 +1572,11 @@ const STR = {
     coach_name: "Toca una tarjeta — escucha hablar a “{name}” ✨", coach_noname: "Toca una tarjeta — escucha hablar a la tableta ✨",
     coach_parent: "👉 Mantén pulsado el icono ⚙️ (abajo a la derecha) 2 s para el modo padre: añadir tarjetas, usar fotos reales, copia de seguridad.",
     gear_hint: "Mantén 2 s…",
+    st_h: "🎬 Historias sociales", st_hint: "Léelas ANTES del evento, con tu hijo. Saber qué va a pasar, en qué orden y cómo termina reduce mucho la angustia. Funciona sin conexión.",
+    st_prev: "← Atrás", st_next: "Seguir →", st_done: "✓ Fin",
+    sg_hint: "¿Y después?",
+    sync_applied: "Tablero actualizado desde otro dispositivo ✓",
+    acc_predict: "Barra «¿Y después?»", acc_predict_hint: "Propone las continuaciones habituales del niño, en una barra aparte. Las tarjetas de la cuadrícula nunca se mueven. Desmarca si sigues un método de posición fija.",
     at_title: "Foto del objeto", at_title_replace: "Foto real para «{label}»",
     at_label_ph: "La palabra a pronunciar", at_hint: "Pellizca para ampliar · arrastra para encuadrar",
     at_cut: "🪄 Recortado", at_raw: "🖼 Foto real", at_docut: "🪄 Recortar",
@@ -1533,7 +1617,7 @@ const STR = {
     kiosk_h: "🔒 Modo kiosco", kiosk_sub: "Bloquea la tableta en Leova: el niño no puede salir de la app. Se vuelve a los ajustes con el código de padre.", pin_l: "Código de padre (4 dígitos) — para abrir los ajustes y salir del kiosco", pin_set: "Definir / cambiar el código", kiosk_chk: "Activar el modo kiosco", kiosk_hint: "El bloqueo usa el anclaje de pantalla de Android (salir manteniendo Atrás + Vista general). Para un bloqueo total, aprovisiona la tableta como «propietario del dispositivo».",
     rate_l: "Velocidad de la voz", test_voice: "🔊 Probar la voz", reform_chk: "Reformular la tira en una frase natural", genvoices: "🎙️ Generar todas las voces (una vez)", vmgr_h: "🎛️ Gestor de voces", vmgr_sub: "Escucha cada palabra; 🔄 vuelve a descargar su voz del servidor (útil si una palabra suena diferente).",
     ai_h: "Inteligencia artificial", code_l: "Código de acceso Leova (opcional — ilimitado)", code_ph: "Pega el código de acceso (se queda en la tableta)", test_backend: "🔌 Probar el servidor", ai_hint: "La IA pasa por el servidor Leova (Europa, RGPD) y funciona SIN código, con una cuota mensual gratuita. El código elimina las cuotas.",
-    j_h: "📊 Lo que ha dicho", j_7days: "Los últimos 7 días (palabras tocadas)", j_top: "Palabras favoritas (30 días)", j_new: "Palabras nuevas (7 días)", j_phrases: "Últimas frases", j_report: "🖨 Informe para el logopeda (30 días)", j_hint: "El diario se queda en esta tableta (no sincronizado). El informe se imprime desde la versión web en un ordenador.",
+    j_h: "📊 Lo que ha dicho", j_7days: "Los últimos 7 días (palabras tocadas)", j_top: "Palabras favoritas (30 días)", j_new: "Palabras nuevas (7 días)", j_phrases: "Últimas frases", j_report: "🖨 Registro de uso para compartir (30 días)", j_hint: "El registro se queda en esta tableta (no sincronizado). Se imprime desde la versión web en un ordenador. Es un registro de uso, para compartir con quien quieras — no es una valoración.",
     plus_btn: "💜 Obtener Leova Plus", restore_btn: "↺ Restaurar una compra", acct_l: "Cuenta y sincronización (casa ↔ escuela)", acct_email_ph: "Correo", acct_pass_ph: "Contraseña (mín. 6 caracteres)", acct_btn: "Crear cuenta / Iniciar sesión", acct_forgot: "Olvidé la contraseña", sync_now: "🔄 Sincronizar ahora", acct_out: "Cerrar sesión (la tableta lo conserva todo)", acct_hint: "Guarda el vocabulario en línea (Europa) y lo sincroniza entre varias tabletas: casa, escuela…",
     exp_h: "📦 Exportar / importar / imprimir", exp_btn: "⬇️ Exportar el vocabulario (archivo)", imp_btn: "⬆️ Importar un archivo", print_btn: "🖨 Imprimir el tablero (cuaderno de papel)", exp_hint: "Comparte el tablero con otra familia, o imprime un cuaderno PECS de papel de respaldo (desde la versión web en un ordenador).",
     close: "Cerrar", exit_parent: "Salir del modo padre", cancel: "Cancelar", save: "✔ Guardar", delete: "🗑 Eliminar", hide: "🙈 Ocultar",
@@ -2046,6 +2130,7 @@ function applyAcc() {
   r.setProperty("--grid-gap", (ACC_GAPS[acc.gap] !== undefined ? ACC_GAPS[acc.gap] : 12) + "px");
   document.body.classList.toggle("hc", !!acc.contrast);
   document.body.classList.toggle("dark", !!acc.dark);
+  document.body.classList.toggle("noPredict", acc.predict === false);
 }
 
 /* La carte touchée « vole » vers la bande-phrase (lien visuel geste → phrase) */
@@ -2244,7 +2329,10 @@ function bumpBigram(prev, next) {
 // (vues au moins 2 fois — pas de suggestion tant que l'habitude n'existe pas).
 function renderSuggest() {
   const box = document.getElementById("suggest");
-  if (parentMode || !strip.length) { box.style.display = "none"; return; }
+  // On vide la barre sans jamais la masquer : sa hauteur est réservée en CSS,
+  // donc la grille ne bouge pas d'un pixel (cf. planification motrice).
+  box.innerHTML = "";
+  if (acc.predict === false || parentMode || !strip.length) return;
   const last = strip[strip.length - 1].label;
   const cands = Object.entries(bigrams)
     .filter(([k, n]) => k.startsWith(last + "→") && n >= 2)
@@ -2253,9 +2341,8 @@ function renderSuggest() {
     .slice(0, 3)
     .map((c) => allItems().find((i) => i.label === c.label && !hidden.has(i.id)))
     .filter(Boolean);
-  if (!cands.length) { box.style.display = "none"; return; }
-  box.style.display = "flex";
-  box.innerHTML = `<span class="sgHint">Et ensuite ?</span>`;
+  if (!cands.length) return;
+  box.innerHTML = `<span class="sgHint">${t("sg_hint")}</span>`;
   for (const item of cands) {
     const b = document.createElement("button");
     b.className = "sg";
@@ -2385,6 +2472,7 @@ function openPanel() {
   document.getElementById("accContrast").checked = !!acc.contrast;
   document.getElementById("accDark").checked = !!acc.dark;
   document.getElementById("accAnim").checked = acc.anim !== false;
+  document.getElementById("accPredict").checked = acc.predict !== false;
   showPsec("home"); // toujours ouvrir sur le tableau de bord
   document.getElementById("reformChk").checked = reformOn;
   document.getElementById("kioskChk").checked = kioskOn;
@@ -2925,6 +3013,12 @@ document.getElementById("accHold").onchange = (e) => { acc.hold = parseInt(e.tar
 document.getElementById("accContrast").onchange = (e) => { acc.contrast = e.target.checked; saveAcc(); };
 document.getElementById("accDark").onchange = (e) => { acc.dark = e.target.checked; saveAcc(); };
 document.getElementById("accAnim").onchange = (e) => { acc.anim = e.target.checked; saveAcc(); };
+document.getElementById("accPredict").onchange = (e) => {
+  acc.predict = e.target.checked;
+  saveAcc();
+  document.body.classList.toggle("noPredict", !e.target.checked);
+  renderSuggest();
+};
 
 document.getElementById("reformChk").onchange = (e) => {
   reformOn = e.target.checked;
@@ -3052,6 +3146,86 @@ async function pullSync(force) {
   return true;
 }
 
+/* ---- Synchronisation multi-appareils (quasi temps réel) ----
+   Cas d'usage : le parent corrige la grille depuis son téléphone pendant que
+   l'enfant se sert de la tablette. Deux règles absolues :
+   (1) on ne RECHARGE JAMAIS la page — on ré-hydrate les variables en mémoire,
+       sinon l'enfant perd son écran et sa phrase en cours ;
+   (2) on n'applique jamais pendant qu'il s'exprime — on attend un moment calme. */
+const SYNC_POLL_MS = 45000;
+let syncPending = null;   // état reçu du cloud, en attente d'un moment calme
+let syncPollTimer = null;
+
+// L'enfant (ou le parent) est-il en train de faire quelque chose à ne pas casser ?
+function busyNow() {
+  if (strip.length) return true;   // une phrase est en cours de construction
+  if (stRun || rtRun) return true; // scénario social / routine en cours
+  return ["atelier", "routinePlayer", "story", "editSheet", "paywall", "panel"]
+    .some((id) => { const el = document.getElementById(id); return el && el.classList.contains("open"); });
+}
+
+// Ré-hydrate l'app depuis le stockage local, sans rechargement
+function rehydrate() {
+  customItems = store.get("custom", []);
+  hidden = new Set(store.get("hidden", []));
+  overrides = store.get("over", {});
+  catOver = store.get("catover", {});
+  customCats = store.get("cats", []);
+  gridOrder = store.get("ord", {});
+  routines = store.get("routines", []);
+  trash = store.get("trash", []);
+  rate = store.get("rate", rate);
+  reformOn = store.get("reform", reformOn);
+  acc = store.get("acc", acc);
+  const nl = store.get("lang", lang);
+  if (nl !== lang) { lang = nl; applyI18n(); }
+  applyAcc();
+  renderTabs(); renderGrid(); renderSuggest();
+}
+
+// Applique maintenant si c'est calme, sinon patiente et réessaie
+function applyPendingSync() {
+  if (!syncPending || busyNow()) return;
+  const state = syncPending;
+  syncPending = null;
+  for (const k of SYNC_KEYS) {
+    if (state[k] !== null && state[k] !== undefined) {
+      localStorage.setItem("vp_" + k, JSON.stringify(state[k]));
+    }
+  }
+  rehydrate();
+  toast(t("sync_applied"));
+}
+
+// Interroge le cloud ; met en attente si l'enfant est occupé
+async function syncPoll() {
+  if (!hasAccount() || !navigator.onLine || document.hidden) return;
+  try {
+    const tk = await fbToken();
+    if (!tk) return;
+    const r = await fetch(BACKEND_URL + "/v1/sync", { headers: { Authorization: "Bearer " + tk } });
+    if (!r.ok) return;
+    const { state, rev } = await r.json();
+    if (!state || rev <= store.get("syncrev", 0)) return;
+    localStorage.setItem("vp_syncrev", JSON.stringify(rev));
+    syncPending = state;
+    applyPendingSync(); // sinon : appliqué dès que l'enfant a fini
+  } catch {}
+}
+
+let syncApplyTimer = null;
+function startSyncPolling() {
+  clearInterval(syncPollTimer);
+  clearInterval(syncApplyTimer);
+  if (!hasAccount()) return;
+  syncPollTimer = setInterval(syncPoll, SYNC_POLL_MS);
+  // Vérification légère : dès que l'enfant repose la tablette, on applique
+  syncApplyTimer = setInterval(applyPendingSync, 3000);
+}
+// Reprise de l'app au premier plan : on regarde tout de suite s'il y a du neuf
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncPoll(); });
+window.addEventListener("online", syncPoll);
+
 async function fbAuthCall(action, body) {
   const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:" + action + "?key=" + FB_API_KEY, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
@@ -3102,6 +3276,7 @@ async function completeSignIn(j, email, isNew) {
   }
   await pushSync();
   refreshAcct();
+  startSyncPolling(); // l'appareil suit désormais les modifications des autres
 }
 
 document.getElementById("acctBtn").onclick = async () => {
@@ -3179,7 +3354,7 @@ document.getElementById("acctForgot").onclick = async () => {
 
 document.getElementById("syncNowBtn").onclick = async () => {
   setAcctStatus("Synchronisation…");
-  if (await pullSync(false)) { window.location.reload(); return; }
+  if (await pullSync(false)) { rehydrate(); setAcctStatus(t("sync_applied")); return; }
   await pushSync();
 };
 
@@ -3316,6 +3491,217 @@ document.getElementById("editSave").onclick = () => {
   renderGrid();
   closeEdit();
   toast("Modifications enregistrées ✓");
+};
+
+/* ================= Scénarios sociaux =================
+   Des récits courts, à la première personne, qui préparent l'enfant à une
+   situation avant qu'elle arrive : ce qui va se passer, dans quel ordre, et
+   surtout comment ça se termine. L'imprévu est la première source d'angoisse ;
+   raconter l'événement à l'avance le rend prévisible.
+   Textes pré-écrits (aucun appel IA, aucun quota, marche hors ligne). */
+const SOCIAL = {
+  fr: [
+    { id: "medecin", emoji: "🩺", title: "Aller chez le médecin", steps: [
+      { em: "🚗", txt: "Aujourd'hui, je vais chez le médecin. Papa ou maman vient avec moi." },
+      { em: "🪑", txt: "D'abord, on attend dans la salle d'attente. Je peux prendre un livre." },
+      { em: "🚪", txt: "Le médecin ouvre la porte et dit mon prénom. C'est à moi." },
+      { em: "👕", txt: "Le médecin regarde ma gorge et écoute mon cœur. Ça chatouille un peu." },
+      { em: "🤚", txt: "Si je n'aime pas, je peux dire STOP ou montrer ma carte." },
+      { em: "🏠", txt: "Après, c'est fini. On rentre à la maison. J'ai été très courageux." },
+    ] },
+    { id: "coiffeur", emoji: "✂️", title: "Aller chez le coiffeur", steps: [
+      { em: "✂️", txt: "Aujourd'hui, on coupe mes cheveux. Ça ne fait pas mal." },
+      { em: "🪑", txt: "Je m'assois sur le grand fauteuil. On met une cape sur moi." },
+      { em: "💧", txt: "On mouille un peu mes cheveux avec de l'eau." },
+      { em: "✂️", txt: "Les ciseaux font un petit bruit : clic, clic. Les cheveux tombent." },
+      { em: "🤚", txt: "Si c'est trop, je peux dire PAUSE. On attend un moment." },
+      { em: "🪞", txt: "Après, je me regarde dans le miroir. C'est fini, on rentre." },
+    ] },
+    { id: "courses", emoji: "🛒", title: "Aller au supermarché", steps: [
+      { em: "🛒", txt: "On va faire les courses. Je pousse le chariot avec papa ou maman." },
+      { em: "🍎", txt: "On prend ce qui est sur la liste. Pas tout ce que je vois." },
+      { em: "🔊", txt: "Le magasin fait du bruit. Je peux mettre mon casque si je veux." },
+      { em: "🤚", txt: "Si c'est trop fort, je montre ma carte PAUSE. On sort respirer." },
+      { em: "💳", txt: "À la caisse, on attend notre tour, puis on paye." },
+      { em: "🏠", txt: "Après, on rentre ranger les courses. C'est fini." },
+    ] },
+    { id: "anniv", emoji: "🎂", title: "Un anniversaire", steps: [
+      { em: "🎈", txt: "Aujourd'hui, c'est un anniversaire. Il y aura d'autres enfants." },
+      { em: "🎁", txt: "On apporte un cadeau. Le cadeau est pour l'autre enfant, pas pour moi." },
+      { em: "🎂", txt: "On chante, on souffle les bougies. La chanson est un peu forte." },
+      { em: "🤚", txt: "Si c'est trop, je peux aller dans une pièce calme. C'est permis." },
+      { em: "🍰", txt: "Ensuite on mange du gâteau. Je goûte si je veux." },
+      { em: "👋", txt: "À la fin, on dit au revoir et on rentre à la maison." },
+    ] },
+    { id: "dentiste", emoji: "🦷", title: "Aller chez le dentiste", steps: [
+      { em: "🦷", txt: "Aujourd'hui, le dentiste regarde mes dents." },
+      { em: "🪑", txt: "Je m'allonge sur le fauteuil. Le fauteuil bouge tout seul, doucement." },
+      { em: "💡", txt: "Une lumière s'allume au-dessus de moi. Elle est forte mais elle ne brûle pas." },
+      { em: "🪥", txt: "Le dentiste compte mes dents avec un petit miroir. J'ouvre grand la bouche." },
+      { em: "🤚", txt: "Si je veux m'arrêter, je lève la main. Le dentiste s'arrête." },
+      { em: "⭐", txt: "Après, c'est fini. On rentre. Mes dents sont propres." },
+    ] },
+    { id: "ecole", emoji: "🎒", title: "Le premier jour d'école", steps: [
+      { em: "🎒", txt: "Demain, je retourne à l'école. Je prends mon sac." },
+      { em: "🚗", txt: "Papa ou maman m'accompagne jusqu'à la porte." },
+      { em: "👋", txt: "On se dit au revoir. Papa ou maman revient TOUJOURS me chercher." },
+      { em: "🧑‍🏫", txt: "Dans la classe, il y a la maîtresse ou le maître, et des enfants." },
+      { em: "🤚", txt: "Si j'ai besoin d'aide, je montre ma carte AIDE-MOI." },
+      { em: "🏠", txt: "À la fin de la journée, on vient me chercher. On rentre à la maison." },
+    ] },
+  ],
+  en: [
+    { id: "medecin", emoji: "🩺", title: "Going to the doctor", steps: [
+      { em: "🚗", txt: "Today I'm going to the doctor. Mum or dad comes with me." },
+      { em: "🪑", txt: "First we wait in the waiting room. I can look at a book." },
+      { em: "🚪", txt: "The doctor opens the door and says my name. It's my turn." },
+      { em: "👕", txt: "The doctor looks at my throat and listens to my heart. It tickles a bit." },
+      { em: "🤚", txt: "If I don't like it, I can say STOP or show my card." },
+      { em: "🏠", txt: "Then it's finished. We go home. I was very brave." },
+    ] },
+    { id: "coiffeur", emoji: "✂️", title: "Getting a haircut", steps: [
+      { em: "✂️", txt: "Today we cut my hair. It does not hurt." },
+      { em: "🪑", txt: "I sit on the big chair. They put a cape on me." },
+      { em: "💧", txt: "They wet my hair a little with water." },
+      { em: "✂️", txt: "The scissors make a small sound: click, click. The hair falls down." },
+      { em: "🤚", txt: "If it's too much, I can say PAUSE. We wait a moment." },
+      { em: "🪞", txt: "Then I look in the mirror. It's finished, we go home." },
+    ] },
+    { id: "courses", emoji: "🛒", title: "Going to the supermarket", steps: [
+      { em: "🛒", txt: "We're going shopping. I push the trolley with mum or dad." },
+      { em: "🍎", txt: "We take what is on the list. Not everything I see." },
+      { em: "🔊", txt: "The shop is noisy. I can put on my headphones if I want." },
+      { em: "🤚", txt: "If it's too loud, I show my PAUSE card. We go out for air." },
+      { em: "💳", txt: "At the till we wait our turn, then we pay." },
+      { em: "🏠", txt: "Then we go home and put the shopping away. It's finished." },
+    ] },
+    { id: "anniv", emoji: "🎂", title: "A birthday party", steps: [
+      { em: "🎈", txt: "Today is a birthday party. There will be other children." },
+      { em: "🎁", txt: "We bring a present. The present is for the other child, not for me." },
+      { em: "🎂", txt: "We sing and blow out the candles. The song is a bit loud." },
+      { em: "🤚", txt: "If it's too much, I can go to a quiet room. That is allowed." },
+      { em: "🍰", txt: "Then we eat cake. I taste it if I want to." },
+      { em: "👋", txt: "At the end we say goodbye and go home." },
+    ] },
+    { id: "dentiste", emoji: "🦷", title: "Going to the dentist", steps: [
+      { em: "🦷", txt: "Today the dentist looks at my teeth." },
+      { em: "🪑", txt: "I lie back on the chair. The chair moves by itself, slowly." },
+      { em: "💡", txt: "A light comes on above me. It is bright but it does not burn." },
+      { em: "🪥", txt: "The dentist counts my teeth with a little mirror. I open wide." },
+      { em: "🤚", txt: "If I want to stop, I raise my hand. The dentist stops." },
+      { em: "⭐", txt: "Then it's finished. We go home. My teeth are clean." },
+    ] },
+    { id: "ecole", emoji: "🎒", title: "The first day of school", steps: [
+      { em: "🎒", txt: "Tomorrow I go back to school. I take my bag." },
+      { em: "🚗", txt: "Mum or dad walks with me to the door." },
+      { em: "👋", txt: "We say goodbye. Mum or dad ALWAYS comes back for me." },
+      { em: "🧑‍🏫", txt: "In the classroom there is the teacher, and other children." },
+      { em: "🤚", txt: "If I need help, I show my HELP ME card." },
+      { em: "🏠", txt: "At the end of the day they come to get me. We go home." },
+    ] },
+  ],
+  es: [
+    { id: "medecin", emoji: "🩺", title: "Ir al médico", steps: [
+      { em: "🚗", txt: "Hoy voy al médico. Papá o mamá viene conmigo." },
+      { em: "🪑", txt: "Primero esperamos en la sala de espera. Puedo mirar un libro." },
+      { em: "🚪", txt: "El médico abre la puerta y dice mi nombre. Me toca a mí." },
+      { em: "👕", txt: "El médico mira mi garganta y escucha mi corazón. Hace un poco de cosquillas." },
+      { em: "🤚", txt: "Si no me gusta, puedo decir STOP o enseñar mi tarjeta." },
+      { em: "🏠", txt: "Después se acabó. Volvemos a casa. He sido muy valiente." },
+    ] },
+    { id: "coiffeur", emoji: "✂️", title: "Ir a la peluquería", steps: [
+      { em: "✂️", txt: "Hoy me cortan el pelo. No duele." },
+      { em: "🪑", txt: "Me siento en el sillón grande. Me ponen una capa." },
+      { em: "💧", txt: "Me mojan un poco el pelo con agua." },
+      { em: "✂️", txt: "Las tijeras hacen un ruidito: clic, clic. El pelo se cae." },
+      { em: "🤚", txt: "Si es demasiado, puedo decir PAUSA. Esperamos un momento." },
+      { em: "🪞", txt: "Después me miro en el espejo. Se acabó, volvemos a casa." },
+    ] },
+    { id: "courses", emoji: "🛒", title: "Ir al supermercado", steps: [
+      { em: "🛒", txt: "Vamos a hacer la compra. Empujo el carro con papá o mamá." },
+      { em: "🍎", txt: "Cogemos lo que está en la lista. No todo lo que veo." },
+      { em: "🔊", txt: "La tienda hace ruido. Puedo ponerme los cascos si quiero." },
+      { em: "🤚", txt: "Si es demasiado fuerte, enseño mi tarjeta PAUSA. Salimos a respirar." },
+      { em: "💳", txt: "En la caja esperamos nuestro turno y luego pagamos." },
+      { em: "🏠", txt: "Después volvemos a casa y guardamos la compra. Se acabó." },
+    ] },
+    { id: "anniv", emoji: "🎂", title: "Un cumpleaños", steps: [
+      { em: "🎈", txt: "Hoy hay un cumpleaños. Habrá otros niños." },
+      { em: "🎁", txt: "Llevamos un regalo. El regalo es para el otro niño, no para mí." },
+      { em: "🎂", txt: "Cantamos y soplamos las velas. La canción es un poco fuerte." },
+      { em: "🤚", txt: "Si es demasiado, puedo ir a una sala tranquila. Está permitido." },
+      { em: "🍰", txt: "Luego comemos tarta. La pruebo si quiero." },
+      { em: "👋", txt: "Al final decimos adiós y volvemos a casa." },
+    ] },
+    { id: "dentiste", emoji: "🦷", title: "Ir al dentista", steps: [
+      { em: "🦷", txt: "Hoy el dentista mira mis dientes." },
+      { em: "🪑", txt: "Me tumbo en el sillón. El sillón se mueve solo, despacio." },
+      { em: "💡", txt: "Se enciende una luz encima de mí. Es fuerte pero no quema." },
+      { em: "🪥", txt: "El dentista cuenta mis dientes con un espejito. Abro mucho la boca." },
+      { em: "🤚", txt: "Si quiero parar, levanto la mano. El dentista para." },
+      { em: "⭐", txt: "Después se acabó. Volvemos a casa. Mis dientes están limpios." },
+    ] },
+    { id: "ecole", emoji: "🎒", title: "El primer día de cole", steps: [
+      { em: "🎒", txt: "Mañana vuelvo al cole. Cojo mi mochila." },
+      { em: "🚗", txt: "Papá o mamá me acompaña hasta la puerta." },
+      { em: "👋", txt: "Nos decimos adiós. Papá o mamá vuelve SIEMPRE a buscarme." },
+      { em: "🧑‍🏫", txt: "En la clase está el maestro o la maestra, y otros niños." },
+      { em: "🤚", txt: "Si necesito ayuda, enseño mi tarjeta AYÚDAME." },
+      { em: "🏠", txt: "Al final del día vienen a buscarme. Volvemos a casa." },
+    ] },
+  ],
+};
+
+let stRun = null; // { story, idx }
+
+function socialList() {
+  return SOCIAL[lang.slice(0, 2)] || SOCIAL.fr;
+}
+function renderStories() {
+  const box = document.getElementById("storyList");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const s of socialList()) {
+    const row = document.createElement("div");
+    row.className = "stRow";
+    row.innerHTML = `<span class="em">${s.emoji}</span><span class="nm">${s.title}</span><span class="go">▶</span>`;
+    row.onclick = () => startStory(s);
+    box.appendChild(row);
+  }
+}
+function startStory(s) {
+  stRun = { story: s, idx: 0 };
+  closePanel();
+  document.getElementById("stTitle").textContent = s.title;
+  document.getElementById("story").classList.add("open");
+  stShow();
+}
+function stShow() {
+  const { story, idx } = stRun;
+  const step = story.steps[idx];
+  document.getElementById("stVis").innerHTML = `<span class="em">${step.em}</span>`;
+  document.getElementById("stText").textContent = step.txt;
+  document.getElementById("stDots").innerHTML =
+    story.steps.map((_, i) => `<span class="${i <= idx ? "on" : ""}"></span>`).join("");
+  document.getElementById("stPrev").disabled = idx === 0;
+  document.getElementById("stNext").textContent =
+    idx === story.steps.length - 1 ? t("st_done") : t("st_next");
+  speak(step.txt);
+}
+function closeStory() {
+  speakSeq++; // coupe la lecture en cours
+  stRun = null;
+  document.getElementById("story").classList.remove("open");
+}
+document.getElementById("stClose").onclick = closeStory;
+document.getElementById("stPrev").onclick = () => {
+  if (!stRun || stRun.idx === 0) return;
+  stRun.idx--; stShow();
+};
+document.getElementById("stNext").onclick = () => {
+  if (!stRun) return;
+  if (stRun.idx >= stRun.story.steps.length - 1) { closeStory(); return; }
+  stRun.idx++; stShow();
 };
 
 /* ================= Atelier photo =================
@@ -3684,7 +4070,7 @@ function renderTrash() {
 
 /* ================= Journal (local à la tablette) =================
    Chaque mot touché et chaque phrase lue sont notés ici — pour la vue
-   « 📊 Journal » et le rapport orthophoniste. Jamais envoyé au serveur. */
+   « 📊 Journal » et le journal d'usage. Jamais envoyé au serveur. */
 let journal = store.get("journal", []);
 let jSaveTimer = null;
 
@@ -3778,8 +4164,10 @@ document.getElementById("reportBtn").onclick = () => {
     table { border-collapse: collapse; } td, th { border: 1px solid #bbb; padding: 4px 10px; font-size: 13px; text-align: left; }
     p { font-size: 13px; } .sub { color: #666; }
   </style></head><body>
-  <h1>Leova — rapport d'utilisation</h1>
+  <h1>Leova — journal d'utilisation</h1>
   <p class="sub">${name} · 30 derniers jours · généré le ${new Date().toLocaleDateString("fr-FR")} (données de cette tablette)</p>
+  <p class="sub">Ce document est un simple relevé d'utilisation de l'application, produit automatiquement.
+  Il ne constitue ni un bilan, ni une évaluation, ni un avis professionnel d'aucune sorte.</p>
   <h2>En bref</h2>
   <p>${words30.length} mots touchés · ${phrases30.length} phrases lues (▶) · ${Object.keys(freq).length} mots différents · ${days} jour${days > 1 ? "s" : ""} d'utilisation · ${Math.round(words30.length / days)} mots/jour actif.</p>
   <h2>Mots les plus utilisés</h2>
@@ -4124,7 +4512,7 @@ function showPsec(name) {
   document.querySelectorAll("#panelCard .psec").forEach((s) => s.classList.toggle("on", s.dataset.psec === name));
   document.getElementById("panelCard").scrollTop = 0;
   if (name === "home") refreshDash();
-  if (name === "vocab") { renderTrash(); renderRoutines(); }
+  if (name === "vocab") { renderTrash(); renderRoutines(); renderStories(); }
   if (name === "voice") renderVoices();
   if (name === "journal") renderJournal();
 }
@@ -4340,7 +4728,7 @@ obEl("obGo").onclick = async () => {
       existing: allItems().map((i) => i.label),
     })).plans || [];
     hidePersonalDefaults();
-    if (childName) store.set("childname", childName); // pour le rapport orthophoniste
+    if (childName) store.set("childname", childName); // pour le journal d'usage
     const prevNote = visualNote;
     visualNote = () => {};
     let n = 0;
@@ -4404,11 +4792,13 @@ if (!store.get("onboarded", false)) {
   }
 }
 
-// Compte connecté : récupère la sauvegarde si une autre tablette a modifié
-// le vocabulaire depuis (dernier écrivain gagne).
+// Compte connecté : récupère la sauvegarde si un autre appareil a modifié le
+// vocabulaire depuis, puis surveille en continu (le parent peut corriger la
+// grille depuis son téléphone pendant que l'enfant se sert de la tablette).
 if (hasAccount() && navigator.onLine) {
-  pullSync(false).then((changed) => { if (changed) window.location.reload(); });
+  pullSync(false).then((changed) => { if (changed) rehydrate(); });
 }
+startSyncPolling();
 
 // Si le kiosk était actif, on re-verrouille au démarrage (l'app a pu être relancée).
 if (kioskOn && Kiosk()) Kiosk().enable().catch(() => {});
