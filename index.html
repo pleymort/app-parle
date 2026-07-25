@@ -78,6 +78,15 @@
   .tab .tem { font-size: 22px; }
   .tab.active { background: #4A90D9; color: white; }
 
+  /* ---- Bandeau du mode modelage ---- */
+  #modelBar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 46; display: none;
+    align-items: center; gap: 12px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: #7C5CFF; color: #fff; font-weight: 800; font-size: 14px;
+  }
+  body.modeling #modelBar { display: flex; }
+  #modelBar span { flex: 1; }
+  #modelBar button { border: none; background: rgba(255,255,255,.2); color: #fff; font-weight: 800; border-radius: 10px; padding: 8px 14px; cursor: pointer; }
   /* ---- Plateau : barre noyau + (onglets · grille) ----
      Le noyau est toujours à l'écran, à une position qui ne change JAMAIS,
      quel que soit l'onglet affiché. C'est ce qui permet de composer
@@ -694,6 +703,9 @@
 
 <button id="gear" aria-label="Mode parent">⚙️</button>
 <div id="gearHint" data-i18n="gear_hint">Maintenez 2 s…</div>
+<!-- Bandeau de modelage : impossible à rater, sinon l'adulte oublie qu'il est
+     actif et les données de l'enfant sont polluées. -->
+<div id="modelBar"><span data-i18n="mdl_on">🖐️ Mode modelage — vos appuis ne sont pas comptés pour l'enfant</span><button id="modelOff" data-i18n="mdl_off">Terminer</button></div>
 
 <div id="panel">
   <div id="panelCard">
@@ -1005,6 +1017,8 @@
 
     <div class="row2" style="margin-top:2px">
       <button class="pbtn ghost" id="closePanel" data-i18n="close">Fermer</button>
+      <button class="pbtn ghost" id="modelBtn" data-i18n="mdl_btn">🖐️ Montrer des mots (modelage)</button>
+      <div class="hint" data-i18n="mdl_hint">À activer quand VOUS touchez les cartes pour montrer à l'enfant comment faire. Vos appuis sont alors tracés à part et n'apparaissent pas dans ses statistiques. S'arrête seul au bout de 15 minutes.</div>
       <button class="pbtn warn" id="exitParent" data-i18n="exit_parent">Quitter le mode parent</button>
     </div>
   </div>
@@ -1328,7 +1342,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "49"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "50"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1517,6 +1531,9 @@ const STR = {
     obz_making: "Préparation de l'archive…", obz_done: "Fichier .obz créé ✓ ({n} Ko)",
     obz_reading: "Lecture du fichier…", obz_imported: "Import terminé ✓ — {cats} catégorie(s), {items} carte(s) ajoutées.",
     obz_fail: "Échec : {msg}",
+    mdl_btn: "🖐️ Montrer des mots (modelage)", mdl_off: "Terminer",
+    mdl_on: "🖐️ Mode modelage — vos appuis ne sont pas comptés pour l'enfant",
+    mdl_hint: "À activer quand VOUS touchez les cartes pour montrer à l'enfant comment faire. Vos appuis sont alors tracés à part et n'apparaissent pas dans ses statistiques. S'arrête seul au bout de 15 minutes.",
     acc_core: "Barre des mots essentiels",
     acc_core_hint: "Garde les mots les plus utiles visibles sur tous les onglets, toujours à la même place : « je veux » puis « pizza » sans changer de catégorie.",
     core_count: "{n} carte(s) sur {max} — touchez pour ajouter ou retirer.",
@@ -1628,6 +1645,9 @@ const STR = {
     obz_making: "Preparing the archive…", obz_done: ".obz file created ✓ ({n} KB)",
     obz_reading: "Reading the file…", obz_imported: "Import complete ✓ — {cats} category(ies), {items} card(s) added.",
     obz_fail: "Failed: {msg}",
+    mdl_btn: "🖐️ Model words (demonstrating)", mdl_off: "Finish",
+    mdl_on: "🖐️ Modelling mode — your taps are not counted for your child",
+    mdl_hint: "Turn this on when YOU touch the cards to show your child how. Your taps are then tracked separately and stay out of their statistics. Stops on its own after 15 minutes.",
     acc_core: "Essential words bar",
     acc_core_hint: "Keeps the most useful words visible on every tab, always in the same place: “I want” then “pizza” without switching category.",
     core_count: "{n} of {max} cards — tap to add or remove.",
@@ -1739,6 +1759,9 @@ const STR = {
     obz_making: "Preparando el archivo…", obz_done: "Archivo .obz creado ✓ ({n} KB)",
     obz_reading: "Leyendo el archivo…", obz_imported: "Importación completa ✓ — {cats} categoría(s), {items} tarjeta(s) añadidas.",
     obz_fail: "Error: {msg}",
+    mdl_btn: "🖐️ Mostrar palabras (modelado)", mdl_off: "Terminar",
+    mdl_on: "🖐️ Modo modelado — tus toques no cuentan para el niño",
+    mdl_hint: "Actívalo cuando SEAS TÚ quien toca las tarjetas para enseñar al niño. Tus toques se registran aparte y no aparecen en sus estadísticas. Se detiene solo a los 15 minutos.",
     acc_core: "Barra de palabras esenciales",
     acc_core_hint: "Mantiene las palabras más útiles visibles en todas las pestañas, siempre en el mismo sitio: «quiero» y luego «pizza» sin cambiar de categoría.",
     core_count: "{n} de {max} tarjetas — toca para añadir o quitar.",
@@ -4863,9 +4886,18 @@ function renderTrash() {
    Chaque mot touché et chaque phrase lue sont notés ici — pour la vue
    « 📊 Journal » et le journal d'usage. Jamais envoyé au serveur. */
 let journal = store.get("journal", []);
+// Volontairement NON persisté : le modelage repart toujours à l'arrêt. Un
+// adulte oublie de le désactiver, et des semaines de données seraient perdues.
+let modelingMode = false;
+let modelingTimer = null;
 let jSaveTimer = null;
 
 function logJ(e) {
+  // Mode modelage : c'est l'ADULTE qui montre un mot sur la tablette de
+  // l'enfant. Sans cette marque, sa démonstration serait comptée comme une
+  // production de l'enfant — et toute statistique en deviendrait fausse,
+  // donc inutilisable par un professionnel.
+  if (modelingMode) e.m = 1;
   journal.push(e);
   if (journal.length > 4000) journal = journal.slice(-4000);
   // Écriture débouncée : pas de gros JSON à chaque toucher de l'enfant
@@ -4877,10 +4909,32 @@ document.addEventListener("visibilitychange", () => {
 });
 
 const J_DAY = 86400000;
-function jSince(days, kind) {
+// Par défaut on ne rend QUE les productions de l'enfant ; withModeled=true
+// pour obtenir aussi les démonstrations de l'adulte (comptées à part).
+function jSince(days, kind, withModeled) {
   const since = Date.now() - days * J_DAY;
-  return journal.filter((e) => e.k === kind && e.t >= since);
+  return journal.filter((e) => e.k === kind && e.t >= since && (withModeled || !e.m));
 }
+
+
+/* ---- Mode modelage ----
+   L'adulte montre des mots sur la tablette de l'enfant (stimulation par le
+   langage assisté). Ces appuis doivent être tracés SÉPARÉMENT, sinon les
+   statistiques de l'enfant sont fausses. Extinction automatique au bout de
+   15 min : un adulte oublie toujours de désactiver. */
+function setModeling(on) {
+  modelingMode = on;
+  document.body.classList.toggle("modeling", on);
+  clearTimeout(modelingTimer);
+  if (on) modelingTimer = setTimeout(() => setModeling(false), 15 * 60 * 1000);
+  const b = document.getElementById("modelBtn");
+  if (b) b.classList.toggle("on", on);
+}
+document.getElementById("modelBtn").onclick = () => {
+  setModeling(!modelingMode);
+  if (modelingMode) { closePanel(); exitParentMode(); } // on rend la main à la grille
+};
+document.getElementById("modelOff").onclick = () => setModeling(false);
 
 function renderJournal() {
   const today = new Date().toDateString();
@@ -4939,7 +4993,8 @@ document.getElementById("reportBtn").onclick = () => {
   const w = window.open("", "_blank");
   if (!w) { alert("Impression impossible ici — ouvrez la version web sur un ordinateur (pleymort.github.io/app-parle)."); return; }
   const name = store.get("childname", "") || "l'enfant";
-  const words30 = jSince(30, "w");
+  const words30 = jSince(30, "w");                       // enfant seul
+  const modeled30 = jSince(30, "w", true).filter((e) => e.m); // démonstrations adulte
   const phrases30 = jSince(30, "p");
   const freq = {};
   for (const e of words30) freq[e.w] = (freq[e.w] || 0) + 1;
@@ -4960,6 +5015,7 @@ document.getElementById("reportBtn").onclick = () => {
   <p class="sub">Ce document est un simple relevé d'utilisation de l'application, produit automatiquement.
   Il ne constitue ni un bilan, ni une évaluation, ni un avis professionnel d'aucune sorte.</p>
   <h2>En bref</h2>
+  <p>${modeled30.length ? `Sur la période, l'adulte a également montré ${modeled30.length} mot(s) en mode modelage. Ces démonstrations sont exclues des chiffres ci-dessous, qui ne portent que sur les productions de l'enfant.` : `Aucune démonstration adulte n'a été enregistrée sur la période : tous les chiffres ci-dessous sont des productions de l'enfant.`}</p>
   <p>${words30.length} mots touchés · ${phrases30.length} phrases lues (▶) · ${Object.keys(freq).length} mots différents · ${days} jour${days > 1 ? "s" : ""} d'utilisation · ${Math.round(words30.length / days)} mots/jour actif.</p>
   <h2>Mots les plus utilisés</h2>
   <table><tr><th>Mot</th><th>Fois</th></tr>${top.map(([m, n]) => `<tr><td>${m}</td><td>${n}</td></tr>`).join("")}</table>
