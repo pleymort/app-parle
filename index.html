@@ -991,7 +991,9 @@
     <div class="card">
     <h2 data-i18n="j_phrases">Dernières phrases</h2>
     <div id="jPhrases"></div>
-    <button class="pbtn primary" id="reportBtn" data-i18n="j_report">🖨 Rapport (30 jours)</button>
+    <button class="pbtn primary" id="reportBtn" data-i18n="j_report">🖨 Journal d'usage à partager (30 jours)</button>
+    <button class="pbtn ghost" id="csvBtn" data-i18n="j_csv">⬇️ Exporter les données (CSV)</button>
+    <div class="hint" data-i18n="j_csv_hint">Un appui par ligne, avec la distinction enfant / démonstration adulte. Tout est calculé sur cette tablette : rien n'est envoyé sur un serveur.</div>
     <div class="hint" data-i18n="j_hint">Le journal reste sur cette tablette.</div>
     </div>
     </div>
@@ -1396,7 +1398,7 @@
 <script>
 "use strict";
 
-const APP_VERSION = "53"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
+const APP_VERSION = "54"; // affiché dans le panneau parent — à incrémenter à chaque mise à jour
 
 /* ================= Vocabulaire de départ =================
    Adapté à un enfant de 6 ans qui utilise déjà PECS + ~10 signes Makaton.
@@ -1608,6 +1610,9 @@ const STR = {
     sh_e_code_expire: "Ce code a expiré (7 jours). Demandez-en un nouveau.",
     sh_e_code_deja_utilise: "Ce code a déjà servi. Demandez-en un nouveau.",
     sh_e_code_propre_compte: "C'est votre propre code d'invitation.",
+    j_csv: "⬇️ Exporter les données (CSV)",
+    j_csv_hint: "Un appui par ligne, avec la distinction enfant / démonstration adulte. Tout est calculé sur cette tablette : rien n'est envoyé sur un serveur.",
+    rp_thisweek: "cette semaine", rp_weeksago: "il y a {n} sem.",
     acc_core: "Barre des mots essentiels",
     acc_core_hint: "Garde les mots les plus utiles visibles sur tous les onglets, toujours à la même place : « je veux » puis « pizza » sans changer de catégorie.",
     core_count: "{n} carte(s) sur {max} — touchez pour ajouter ou retirer.",
@@ -1742,6 +1747,9 @@ const STR = {
     sh_e_code_expire: "This code has expired (7 days). Ask for a new one.",
     sh_e_code_deja_utilise: "This code has already been used. Ask for a new one.",
     sh_e_code_propre_compte: "That is your own invitation code.",
+    j_csv: "⬇️ Export the data (CSV)",
+    j_csv_hint: "One tap per row, distinguishing child from adult demonstration. Everything is computed on this tablet: nothing is sent to a server.",
+    rp_thisweek: "this week", rp_weeksago: "{n} wk ago",
     acc_core: "Essential words bar",
     acc_core_hint: "Keeps the most useful words visible on every tab, always in the same place: “I want” then “pizza” without switching category.",
     core_count: "{n} of {max} cards — tap to add or remove.",
@@ -1876,6 +1884,9 @@ const STR = {
     sh_e_code_expire: "Este código ha caducado (7 días). Pide uno nuevo.",
     sh_e_code_deja_utilise: "Este código ya se ha usado. Pide uno nuevo.",
     sh_e_code_propre_compte: "Ese es tu propio código de invitación.",
+    j_csv: "⬇️ Exportar los datos (CSV)",
+    j_csv_hint: "Un toque por línea, distinguiendo niño y demostración adulta. Todo se calcula en esta tableta: no se envía nada a un servidor.",
+    rp_thisweek: "esta semana", rp_weeksago: "hace {n} sem.",
     acc_core: "Barra de palabras esenciales",
     acc_core_hint: "Mantiene las palabras más útiles visibles en todas las pestañas, siempre en el mismo sitio: «quiero» y luego «pizza» sin cambiar de categoría.",
     core_count: "{n} de {max} tarjetas — toca para añadir o quitar.",
@@ -5231,6 +5242,72 @@ document.getElementById("modelBtn").onclick = () => {
 };
 document.getElementById("modelOff").onclick = () => setModeling(false);
 
+/* ---- Métriques d'usage ----
+   Tout se calcule SUR LA TABLETTE, à partir du journal local. Aucune donnée
+   ne part sur un serveur : le parent imprime ou exporte s'il veut transmettre.
+   La métrique qui compte cliniquement n'est pas le nombre d'appuis mais le
+   nombre de mots DIFFÉRENTS : c'est elle qui traduit une expansion du
+   vocabulaire, là où les appuis totaux mesurent surtout la répétition. */
+function usageStats(days, offsetDays) {
+  const now = Date.now();
+  const to = now - (offsetDays || 0) * J_DAY;
+  const from = to - days * J_DAY;
+  const inRange = (e) => e.t >= from && e.t < to;
+  const words = journal.filter((e) => e.k === "w" && !e.m && inRange(e));
+  const modeled = journal.filter((e) => e.k === "w" && e.m && inRange(e));
+  const phrases = journal.filter((e) => e.k === "p" && !e.m && inRange(e));
+  const uniq = new Set(words.map((e) => e.w));
+  const days_ = new Set(words.map((e) => new Date(e.t).toDateString()));
+  return {
+    total: words.length, unique: uniq.size, phrases: phrases.length,
+    modeled: modeled.length, activeDays: days_.size,
+    perDay: days_.size ? Math.round(words.length / days_.size) : 0,
+    words: uniq,
+  };
+}
+
+// Mots apparus (ou disparus) entre la période précédente et la période courante
+function usageDelta(days) {
+  const cur = usageStats(days, 0), prev = usageStats(days, days);
+  const gained = [...cur.words].filter((w) => !prev.words.has(w));
+  const lost = [...prev.words].filter((w) => !cur.words.has(w));
+  return { cur, prev, gained, lost };
+}
+
+// Courbe des mots différents par semaine : la progression se voit mieux que
+// dans un total cumulé.
+function weeklyUnique(weeks) {
+  const out = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const st = usageStats(7, i * 7);
+    out.push({ label: i === 0 ? t("rp_thisweek") : t("rp_weeksago", { n: i }), unique: st.unique, total: st.total });
+  }
+  return out;
+}
+
+// Export CSV : un appui par ligne, pour que l'orthophoniste puisse retravailler
+// les données dans son propre outil.
+function exportCsv() {
+  const rows = [["date", "heure", "type", "contenu", "modelage_adulte"]];
+  for (const e of journal) {
+    const d = new Date(e.t);
+    rows.push([
+      d.toISOString().slice(0, 10),
+      d.toTimeString().slice(0, 8),
+      e.k === "w" ? "mot" : "phrase",
+      '"' + String(e.w || e.p || "").replace(/"/g, '""') + '"',
+      e.m ? "oui" : "non",
+    ]);
+  }
+  const blob = new Blob(["﻿" + rows.map((r) => r.join(";")).join("\r\n")],
+    { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "leova-journal-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
 function renderJournal() {
   const today = new Date().toDateString();
   const wToday = journal.filter((e) => e.k === "w" && new Date(e.t).toDateString() === today).length;
@@ -5284,12 +5361,27 @@ function renderJournal() {
   }
 }
 
+document.getElementById("csvBtn").onclick = exportCsv;
 document.getElementById("reportBtn").onclick = () => {
   const w = window.open("", "_blank");
   if (!w) { alert("Impression impossible ici — ouvrez la version web sur un ordinateur (pleymort.github.io/app-parle)."); return; }
   const name = store.get("childname", "") || "l'enfant";
   const words30 = jSince(30, "w");                       // enfant seul
   const modeled30 = jSince(30, "w", true).filter((e) => e.m); // démonstrations adulte
+  const d = usageDelta(30);          // période courante vs précédente
+  const wk = weeklyUnique(8);        // 8 semaines de mots différents
+  // Répartition par catégorie : où l'enfant puise-t-il son vocabulaire ?
+  const catAgg = {};
+  for (const e of words30) {
+    const it = allItems().find((i) => i.label === e.w);
+    const key = it ? it.cat : "?";
+    (catAgg[key] = catAgg[key] || { n: 0, w: new Set() }).n++;
+    catAgg[key].w.add(e.w);
+  }
+  const byCat = Object.entries(catAgg).map(([id, v]) => ({
+    label: (cats().find((c) => c.id === id) || {}).label || "—",
+    n: v.n, uniq: v.w.size,
+  })).sort((a, b) => b.n - a.n);
   const phrases30 = jSince(30, "p");
   const freq = {};
   for (const e of words30) freq[e.w] = (freq[e.w] || 0) + 1;
@@ -5309,6 +5401,35 @@ document.getElementById("reportBtn").onclick = () => {
   <p class="sub">${name} · 30 derniers jours · généré le ${new Date().toLocaleDateString("fr-FR")} (données de cette tablette)</p>
   <p class="sub">Ce document est un simple relevé d'utilisation de l'application, produit automatiquement.
   Il ne constitue ni un bilan, ni une évaluation, ni un avis professionnel d'aucune sorte.</p>
+  <h2>Évolution — 30 derniers jours contre les 30 précédents</h2>
+  <table>
+    <tr><th></th><th>Période précédente</th><th>Période en cours</th><th>Écart</th></tr>
+    <tr><td><b>Mots différents</b></td><td>${d.prev.unique}</td><td><b>${d.cur.unique}</b></td>
+        <td>${d.cur.unique - d.prev.unique >= 0 ? "+" : ""}${d.cur.unique - d.prev.unique}</td></tr>
+    <tr><td>Appuis au total</td><td>${d.prev.total}</td><td>${d.cur.total}</td>
+        <td>${d.cur.total - d.prev.total >= 0 ? "+" : ""}${d.cur.total - d.prev.total}</td></tr>
+    <tr><td>Phrases lues</td><td>${d.prev.phrases}</td><td>${d.cur.phrases}</td>
+        <td>${d.cur.phrases - d.prev.phrases >= 0 ? "+" : ""}${d.cur.phrases - d.prev.phrases}</td></tr>
+    <tr><td>Jours d'utilisation</td><td>${d.prev.activeDays}</td><td>${d.cur.activeDays}</td>
+        <td>${d.cur.activeDays - d.prev.activeDays >= 0 ? "+" : ""}${d.cur.activeDays - d.prev.activeDays}</td></tr>
+  </table>
+  <p class="sub">Le nombre de mots <b>différents</b> est l'indicateur d'expansion du vocabulaire :
+  les appuis totaux mesurent surtout la répétition.</p>
+
+  <h2>Mots apparus sur la période</h2>
+  <p>${d.gained.length ? d.gained.join(" · ") : "—"}</p>
+  <h2>Mots présents avant et non revus sur la période</h2>
+  <p>${d.lost.length ? d.lost.join(" · ") : "—"}<br><span class="sub">Une absence n'est pas une perte :
+  elle peut simplement refléter un changement de contexte (vacances, saison, activité).</span></p>
+
+  <h2>Mots différents, semaine par semaine</h2>
+  <table><tr><th>Semaine</th><th>Mots différents</th><th>Appuis</th></tr>
+  ${wk.map((w) => `<tr><td>${w.label}</td><td><b>${w.unique}</b></td><td>${w.total}</td></tr>`).join("")}</table>
+
+  <h2>Répartition par catégorie</h2>
+  <table><tr><th>Catégorie</th><th>Mots différents</th><th>Appuis</th></tr>
+  ${byCat.map((c) => `<tr><td>${c.label}</td><td>${c.uniq}</td><td>${c.n}</td></tr>`).join("")}</table>
+
   <h2>En bref</h2>
   <p>${modeled30.length ? `Sur la période, l'adulte a également montré ${modeled30.length} mot(s) en mode modelage. Ces démonstrations sont exclues des chiffres ci-dessous, qui ne portent que sur les productions de l'enfant.` : `Aucune démonstration adulte n'a été enregistrée sur la période : tous les chiffres ci-dessous sont des productions de l'enfant.`}</p>
   <p>${words30.length} mots touchés · ${phrases30.length} phrases lues (▶) · ${Object.keys(freq).length} mots différents · ${days} jour${days > 1 ? "s" : ""} d'utilisation · ${Math.round(words30.length / days)} mots/jour actif.</p>
